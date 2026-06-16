@@ -1,9 +1,33 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35913.81 d17.13
+VisualStudioVersion = 17.13.35913.81
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engine.Editor", "Editor\Engine.Editor.csproj", "{8F8032E0-F0FC-E24F-A6B6-7856BA9E0D4C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engine.Core", "Engine\Engine.Core.csproj", "{A9DF574B-5DFB-40BC-8D49-6BB5E15AC3CC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engine.Gameplay", "Engine.Gameplay\Engine.Gameplay.csproj", "{A10F0F05-E490-4227-9F26-7A0C755317B2}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8F8032E0-F0FC-E24F-A6B6-7856BA9E0D4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F8032E0-F0FC-E24F-A6B6-7856BA9E0D4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F8032E0-F0FC-E24F-A6B6-7856BA9E0D4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F8032E0-F0FC-E24F-A6B6-7856BA9E0D4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A9DF574B-5DFB-40BC-8D49-6BB5E15AC3CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A9DF574B-5DFB-40BC-8D49-6BB5E15AC3CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A9DF574B-5DFB-40BC-8D49-6BB5E15AC3CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A9DF574B-5DFB-40BC-8D49-6BB5E15AC3CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A10F0F05-E490-4227-9F26-7A0C755317B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A10F0F05-E490-4227-9F26-7A0C755317B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A10F0F05-E490-4227-9F26-7A0C755317B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A10F0F05-E490-4227-9F26-7A0C755317B2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
