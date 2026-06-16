@@ -92,7 +92,7 @@
             ProjectFolderTreeView = new TreeView();
             ProjectFolderSearchBar = new Editor.TextSearchBarControl();
             ConsoleTabPage = new TabPage();
-            textBox1 = new TextBox();
+            ConsoleTextBox = new TextBox();
             menuStrip1.SuspendLayout();
             SceneHierarchy.SuspendLayout();
             PropertiesWindow.SuspendLayout();
@@ -234,68 +234,68 @@
             // 
             addNewAssetToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { gameObjectToolStripMenuItem, componentToolStripMenuItem, gameSystemToolStripMenuItem, gameManagerToolStripMenuItem, gameEventToolStripMenuItem, databaseToolStripMenuItem, resourceToolStripMenuItem });
             addNewAssetToolStripMenuItem.Name = "addNewAssetToolStripMenuItem";
-            addNewAssetToolStripMenuItem.Size = new Size(180, 22);
+            addNewAssetToolStripMenuItem.Size = new Size(176, 22);
             addNewAssetToolStripMenuItem.Text = "Add New Asset";
             // 
             // gameObjectToolStripMenuItem
             // 
             gameObjectToolStripMenuItem.Name = "gameObjectToolStripMenuItem";
-            gameObjectToolStripMenuItem.Size = new Size(180, 22);
+            gameObjectToolStripMenuItem.Size = new Size(169, 22);
             gameObjectToolStripMenuItem.Text = "GameObject";
             // 
             // componentToolStripMenuItem
             // 
             componentToolStripMenuItem.Name = "componentToolStripMenuItem";
-            componentToolStripMenuItem.Size = new Size(180, 22);
+            componentToolStripMenuItem.Size = new Size(169, 22);
             componentToolStripMenuItem.Text = "GameComponent";
             componentToolStripMenuItem.Click += componentToolStripMenuItem_Click;
             // 
             // gameSystemToolStripMenuItem
             // 
             gameSystemToolStripMenuItem.Name = "gameSystemToolStripMenuItem";
-            gameSystemToolStripMenuItem.Size = new Size(180, 22);
+            gameSystemToolStripMenuItem.Size = new Size(169, 22);
             gameSystemToolStripMenuItem.Text = "GameSystem";
             // 
             // gameManagerToolStripMenuItem
             // 
             gameManagerToolStripMenuItem.Name = "gameManagerToolStripMenuItem";
-            gameManagerToolStripMenuItem.Size = new Size(180, 22);
+            gameManagerToolStripMenuItem.Size = new Size(169, 22);
             gameManagerToolStripMenuItem.Text = "GameManager";
             // 
             // gameEventToolStripMenuItem
             // 
             gameEventToolStripMenuItem.Name = "gameEventToolStripMenuItem";
-            gameEventToolStripMenuItem.Size = new Size(180, 22);
+            gameEventToolStripMenuItem.Size = new Size(169, 22);
             gameEventToolStripMenuItem.Text = "GameEvent";
             // 
             // databaseToolStripMenuItem
             // 
             databaseToolStripMenuItem.Name = "databaseToolStripMenuItem";
-            databaseToolStripMenuItem.Size = new Size(180, 22);
+            databaseToolStripMenuItem.Size = new Size(169, 22);
             databaseToolStripMenuItem.Text = "Database";
             // 
             // resourceToolStripMenuItem
             // 
             resourceToolStripMenuItem.Name = "resourceToolStripMenuItem";
-            resourceToolStripMenuItem.Size = new Size(180, 22);
+            resourceToolStripMenuItem.Size = new Size(169, 22);
             resourceToolStripMenuItem.Text = "Resource";
             // 
             // importAssetsToolStripMenuItem
             // 
             importAssetsToolStripMenuItem.Name = "importAssetsToolStripMenuItem";
-            importAssetsToolStripMenuItem.Size = new Size(180, 22);
+            importAssetsToolStripMenuItem.Size = new Size(176, 22);
             importAssetsToolStripMenuItem.Text = "Import Assets";
             // 
             // openMGCBToolStripMenuItem
             // 
             openMGCBToolStripMenuItem.Name = "openMGCBToolStripMenuItem";
-            openMGCBToolStripMenuItem.Size = new Size(180, 22);
+            openMGCBToolStripMenuItem.Size = new Size(176, 22);
             openMGCBToolStripMenuItem.Text = "Open MGCB";
             // 
             // reimportAllAssetsToolStripMenuItem
             // 
             reimportAllAssetsToolStripMenuItem.Name = "reimportAllAssetsToolStripMenuItem";
-            reimportAllAssetsToolStripMenuItem.Size = new Size(180, 22);
+            reimportAllAssetsToolStripMenuItem.Size = new Size(176, 22);
             reimportAllAssetsToolStripMenuItem.Text = "Reimport All Assets";
             // 
             // windowToolStripMenuItem
@@ -540,7 +540,7 @@
             // 
             // ConsoleTabPage
             // 
-            ConsoleTabPage.Controls.Add(textBox1);
+            ConsoleTabPage.Controls.Add(ConsoleTextBox);
             ConsoleTabPage.Location = new Point(4, 24);
             ConsoleTabPage.Name = "ConsoleTabPage";
             ConsoleTabPage.Padding = new Padding(3);
@@ -549,15 +549,16 @@
             ConsoleTabPage.Text = "Editor Console";
             ConsoleTabPage.UseVisualStyleBackColor = true;
             // 
-            // textBox1
+            // ConsoleTextBox
             // 
-            textBox1.Dock = DockStyle.Fill;
-            textBox1.Location = new Point(3, 3);
-            textBox1.Multiline = true;
-            textBox1.Name = "textBox1";
-            textBox1.ReadOnly = true;
-            textBox1.Size = new Size(879, 172);
-            textBox1.TabIndex = 0;
+            ConsoleTextBox.Dock = DockStyle.Fill;
+            ConsoleTextBox.Location = new Point(3, 3);
+            ConsoleTextBox.Multiline = true;
+            ConsoleTextBox.Name = "ConsoleTextBox";
+            ConsoleTextBox.ReadOnly = true;
+            ConsoleTextBox.ScrollBars = ScrollBars.Vertical;
+            ConsoleTextBox.Size = new Size(879, 172);
+            ConsoleTextBox.TabIndex = 0;
             // 
             // Form1
             // 
@@ -646,7 +647,7 @@
         private TabControl tabControl2;
         private TabPage ProjectFolderTabPage;
         private TabPage ConsoleTabPage;
-        private TextBox textBox1;
+        private TextBox ConsoleTextBox;
         private ToolStripMenuItem codeTemplatesToolStripMenuItem;
         private ToolStripMenuItem projectFolderToolStripMenuItem;
         private ToolStripMenuItem pauseToolStripMenuItem;

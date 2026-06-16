@@ -1,3 +1,7 @@
+using Engine.Core.ECS;
+using Engine.Core.Serialization;
+using Engine.Core.Utilities;
+
 namespace WinFormsApp1
 {
     public partial class Form1 : Form
@@ -5,6 +9,27 @@ namespace WinFormsApp1
         public Form1()
         {
             InitializeComponent();
+            
+            Log.OnLogMessage += AppendMessageToConsoleBox; // Subscribe to the global log event to receive messages in the console box.
+           Log.Print("Engine initialized successfully. Welcome to the Editor!");
+
+
+
+            GameObject entityParent = new GameObject { name = "TestingParent" };
+            entityParent.Transform.X = 50;
+
+            GameObject entityChild = new GameObject { name = "TestingChild" };
+            entityChild.Transform.Y = 25;
+
+            entityParent.AddChild(entityChild);
+
+            // 2. Save it straight to a real test file!
+            string testPath = "Content/Scenes/HierarchyTest.scene";
+            SceneSerializer.SaveSceneToFile(entityParent, testPath);
+
+            // 3. Re-read it back off your drive
+            GameObject? reconstructedRoot = SceneSerializer.LoadSceneFromFile(testPath);
+
         }
 
         private void menuToolStripMenuItem_Click(object sender, EventArgs e)
@@ -124,5 +149,22 @@ namespace WinFormsApp1
         {
 
         }
+
+        // This is the method that listens to the global Log event and appends messages to the console box in a thread-safe way.
+        private void AppendMessageToConsoleBox(LogSeverity severity, string formattedText)
+        {
+            if(ConsoleTextBox.InvokeRequired)
+            {
+                ConsoleTextBox.Invoke(new Action(() => AppendMessageToConsoleBox( severity, formattedText)));
+                return;
+            }
+
+            ConsoleTextBox.AppendText(formattedText + Environment.NewLine);
+            ConsoleTextBox.SelectionStart = ConsoleTextBox.TextLength;
+            ConsoleTextBox.ScrollToCaret();
+
+        }
+
+
     }
 }

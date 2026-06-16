@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net6.0-windows7.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -18,6 +18,10 @@
   </ItemGroup>
   
   <ItemGroup>
+    <ProjectReference Include="..\Engine\Engine.Core.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
@@ -30,6 +34,20 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="Content\Fallbacks\" />
+    <Folder Include="Content\Scenes\" />
+    <Folder Include="Content\Shaders\" />
+    <Folder Include="Content\System\" />
+    <Folder Include="Content\Templates\" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Update="Content\Textures\missing texture.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

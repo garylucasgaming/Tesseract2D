@@ -1,0 +1,35 @@
+{
+  "id": "fdc6fdfd-8c81-411c-bf4a-0b032a083009",
+  "name": "TestingParent",
+  "isActive": true,
+  "Components": [
+    {
+      "$type": "TransformComponent",
+      "X": 50,
+      "Y": 0,
+      "ScaleX": 1,
+      "ScaleY": 1,
+      "Rotation": 0
+    }
+  ],
+  "ContextScene": null,
+  "Children": [
+    {
+      "id": "e903603b-fa07-43de-9941-f76e38d4fa7e",
+      "name": "TestingChild",
+      "isActive": true,
+      "Components": [
+        {
+          "$type": "TransformComponent",
+          "X": 0,
+          "Y": 25,
+          "ScaleX": 1,
+          "ScaleY": 1,
+          "Rotation": 0
+        }
+      ],
+      "ContextScene": null,
+      "Children": []
+    }
+  ]
+}

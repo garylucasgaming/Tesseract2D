@@ -12,7 +12,7 @@ namespace Engine.Core.Runtime
         /// <summary>
         /// The single active scene currently being simulated and rendered.
         /// </summary>
-        public static Scene? ActiveScene
+        public static GameScene? ActiveScene
         {
             get; private set;
         }
@@ -20,7 +20,7 @@ namespace Engine.Core.Runtime
         /// <summary>
         /// Safely unloads the old scene state and activates a new level configuration.
         /// </summary>
-        public static void LoadScene(Scene newScene)
+        public static void LoadScene(GameScene newScene)
         {
             // 1. Perform cleanup on the outgoing scene to release resources
             if(ActiveScene != null)
@@ -28,6 +28,9 @@ namespace Engine.Core.Runtime
                 ActiveScene.GameObjects.Clear();
                 ActiveScene.Systems.Clear();
             }
+
+            //flush the old scene's event listeners to prevent cross-scene event pollution
+            GameEvent.ClearAllListeners();
 
             // 2. Assign the fresh scene sandbox
             ActiveScene = newScene;

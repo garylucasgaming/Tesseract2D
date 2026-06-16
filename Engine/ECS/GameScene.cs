@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Engine.Core.ECS
 {
-        public class Scene
+        public class GameScene
         {
             // Identification properties for the Editor UI to read
             public string SceneName { get; set; } = "Untitled Scene";
@@ -26,7 +26,7 @@ namespace Engine.Core.ECS
             private static Dictionary<Type, Type>? _componentToSystemCache;
             private static readonly object _cacheLock = new object();
 
-            public Scene()
+            public GameScene()
             {
             // Ensure the global system types are indexed once across the whole application lifecycle
             InitializeSystemCache();
