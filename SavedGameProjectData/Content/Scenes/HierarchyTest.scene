@@ -1,5 +1,5 @@
 {
-  "id": "fdc6fdfd-8c81-411c-bf4a-0b032a083009",
+  "id": "07da4397-84a1-4fb4-a47c-d92036e62d87",
   "name": "TestingParent",
   "isActive": true,
   "Components": [
@@ -15,7 +15,7 @@
   "ContextScene": null,
   "Children": [
     {
-      "id": "e903603b-fa07-43de-9941-f76e38d4fa7e",
+      "id": "7fc24aa8-6c70-4847-91e6-b8130710f396",
       "name": "TestingChild",
       "isActive": true,
       "Components": [

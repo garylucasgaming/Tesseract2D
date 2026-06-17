@@ -59,7 +59,7 @@ namespace Engine.Core.Serialization
                 // MAGIC LINE: Forces the file out of bin/Debug and into your permanent folder!
                 string absolutePath = AssetPathProvider.ResolveProjectPath(relativePath);
 
-                string jsonString = JsonSerializer.Serialize(rootObject, _options);
+                string jsonString = JsonSerializer.Serialize(rootObject, JsonConfiguration.Options);
 
                 string? directory = Path.GetDirectoryName(absolutePath);
                 if(!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
@@ -115,7 +115,7 @@ namespace Engine.Core.Serialization
         /// <summary>
         /// Deep-traverses the loaded tree to stitch Owner, Parent, and Transform links back together.
         /// </summary>
-        private static void FixHierarchyPointers(GameObject node)
+        public static void FixHierarchyPointers(GameObject node)
         {
             // 1. Re-link component owners
             foreach(var component in node.Components)

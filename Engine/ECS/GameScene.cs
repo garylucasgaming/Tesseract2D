@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Engine.Core.Runtime;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -11,7 +12,9 @@ namespace Engine.Core.ECS
         {
             // Identification properties for the Editor UI to read
             public string SceneName { get; set; } = "Untitled Scene";
-            public string ProjectPath { get; set; } = string.Empty;
+
+            public Guid Id { get; set; } = Guid.NewGuid();
+        public string ProjectPath { get; set; } = string.Empty;
 
             // Core Data Entities
             public List<GameObject> GameObjects { get; private set; } = new();
@@ -20,7 +23,7 @@ namespace Engine.Core.ECS
             public List<GameSystem> Systems { get; private set; } = new();
 
             // Local Scene Managers (e.g., VoxelWorldManager, SceneAudioManager)
-            private readonly Dictionary<Type, object> _sceneManagers = new();
+            private readonly List<GameManager> Managers = new();
 
             // High-speed cache lookup: Component Type -> System Type
             private static Dictionary<Type, Type>? _componentToSystemCache;
@@ -154,85 +157,98 @@ namespace Engine.Core.ECS
                 gameObject.Components.Clear();
             }
 
-            #endregion
+        #endregion
 
-            #region System Management
+        #region System Management
 
-            /// <summary>
-            /// Registers a GameSystem into the execution pipeline and automatically re-sorts the update stack.
-            /// </summary>
-            public void AddSystem(GameSystem system)
-            {
-                Systems.Add(system);
-                // Sort dynamically by execution hierarchy (e.g., lower priorities execute first)
-                Systems = Systems.OrderBy(s => s.UpdateOrder).ToList();
-            }
-
-        public void OnComponentAddedToScene(GameComponent component)
+        /// <summary>
+        /// Registers a GameSystem into the execution pipeline and automatically re-sorts the update stack.
+        /// </summary>
+        public void AddSystem(GameSystem system)
         {
-            Type compType = component.GetType();
+            if(system == null)
+                return;
 
-            // 1. Scan your project's available system classes (done once or cached)
-            // 2. If a system's RequiredComponentType matches compType, check if it's in the scene
-            if(!Systems.Any(s => s.RequiredComponentType == compType))
+            Type systemType = system.GetType();
+
+            // Prevent duplicate system types of the exact same subclass from piling up
+            if(Systems.Any(s => s.GetType() == systemType))
             {
-                // Find the system class type that matches and spin it up
-                Type? systemType = FindSystemTypeForComponent(compType);
-                if(systemType != null)
-                {
-                    var newSystem = (GameSystem) Activator.CreateInstance(systemType)!;
-                    AddSystem(newSystem);
-                }
+                return; // System is already tracking
             }
+
+            Systems.Add(system);
+
+            // Sort dynamically by execution hierarchy (e.g., lower priority indices execute first)
+            Systems = Systems.OrderBy(s => s.UpdateOrder).ToList();
+        }
+
+        /// <summary>
+        /// Retrieves a specific active system (like your MovementSystem) by its derived subclass type.
+        /// Useful for editor inspection or cross-system configuration.
+        /// </summary>
+        public T? GetSystem<T>() where T : GameSystem
+        {
+            return Systems.OfType<T>().FirstOrDefault();
         }
 
         /// <summary>
         /// Removes a system from the active processing pipeline.
         /// </summary>
         public void RemoveSystem(GameSystem system)
+        {
+            Systems.Remove(system);
+        }
+
+        #endregion
+
+        #region Local Scene Managers (Services)
+
+        /// <summary>
+        /// Registers a specialized data manager or service to this local scene workspace.
+        /// </summary>
+        public void AddManager(GameManager managerInstance)
+        {
+            if(managerInstance == null)
+                return;
+
+            Type managerType = managerInstance.GetType();
+
+            // Prevent duplicate manager types of the exact same derived subclass from piling up
+            if(Managers.Any(m => m.GetType() == managerType))
             {
-                Systems.Remove(system);
+                throw new ArgumentException($"A manager of type {managerType.Name} is already registered to this scene.");
             }
 
-            #endregion
+            Managers.Add(managerInstance);
+        }
 
-            #region Local Scene Managers (Services)
+        /// <summary>
+        /// Retrieves a specialized scene manager by its derived subclass type.
+        /// </summary>
+        public T? GetManager<T>() where T : GameManager
+        {
+            // Search the polymorphic list for any instance that matches or derives from T
+            return Managers.OfType<T>().FirstOrDefault();
+        }
 
-            /// <summary>
-            /// Registers a specialized data manager or manager utility to this local scene workspace.
-            /// </summary>
-            public void AddManager<T>(T managerInstance) where T : class
-            {
-                var type = typeof(T);
-                if(_sceneManagers.ContainsKey(type))
-                {
-                    throw new ArgumentException($"A manager of type {type.Name} is already registered to this scene.");
-                }
-                _sceneManagers[type] = managerInstance;
-            }
+        /// <summary>
+        /// Exposes the flat list of scene-bound managers 
+        /// </summary>
+        public IReadOnlyList<GameManager> GetRegisteredManagers()
+        {
+            return Managers;
+        }
 
-            /// <summary>
-            /// Retrieves a specialized scene manager (like your VoxelWorldManager) instantly.
-            /// </summary>
-            public T? GetManager<T>() where T : class
-            {
-                var type = typeof(T);
-                if(_sceneManagers.TryGetValue(type, out var manager))
-                {
-                    return (T) manager;
-                }
-                return null;
-            }
+        #endregion
 
-            #endregion
+        #region Main Loop Execution
 
-            #region Main Loop Execution
-
-            /// <summary>
-            /// The main execution heartbeat step called 60 times a second by MonoGame.
-            /// </summary>
-            /// <param name="deltaTime">The elapsed timestamp scale in seconds since the last frame draw.</param>
-            public void Update(float deltaTime)
+        /// <summary>
+        /// The main execution  step called 60 times a second by MonoGame.
+        /// </summary>
+        /// <param name="deltaTime">The elapsed timestamp scale in seconds since the last frame draw.</param>
+        public void Update(float deltaTime)
             {
                 // Execute each active system worker sequentially down the pipeline assembly line
                 for(int i = 0; i < Systems.Count; i++)

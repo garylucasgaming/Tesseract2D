@@ -11,7 +11,7 @@ namespace Engine.Core.Collections
     public class GameResource <T> where T: DataResource
     {
 
-        public Guid TargetId {get;  set;} // The unique identifier of the target GameResource. This is used to look up the actual resource instance from a central registry or manager.
+        public Guid Id {get;  set;} // The unique identifier of the target GameResource. This is used to look up the actual resource instance from a central registry or manager.
 
 
         private T? _cachedAsset; // A cached reference to the actual GameResource instance. This allows for quick access after the first lookup, improving performance by avoiding repeated searches.
@@ -22,11 +22,11 @@ namespace Engine.Core.Collections
             {
                 if(_cachedAsset == null)
                 {
-                    _cachedAsset = GameDatabaseDirector.FindResource<T>(TargetId);
+                    _cachedAsset = GameDatabaseDirector.FindResource<T>(Id);
                     if(_cachedAsset == null)
                     {
-                        Log.Error($"[GameResource Error] Failed to find resource of type {typeof(T).Name} with ID {TargetId}. Ensure the resource exists and is registered in the GameDatabaseSystem.");
-                        throw new Exception($"[GameResource Error] Failed to find resource of type {typeof(T).Name} with ID {TargetId}. Ensure the resource exists and is registered in the GameDatabaseSystem.");
+                        Log.Error($"[GameResource Error] Failed to find resource of type {typeof(T).Name} with ID {Id}. Ensure the resource exists and is registered in the GameDatabaseSystem.");
+                        throw new Exception($"[GameResource Error] Failed to find resource of type {typeof(T).Name} with ID {Id}. Ensure the resource exists and is registered in the GameDatabaseSystem.");
                     }
                 }
                 return _cachedAsset;
@@ -34,7 +34,7 @@ namespace Engine.Core.Collections
             set
             {
                 _cachedAsset = value;
-                TargetId = value?.Id ?? Guid.Empty; // Update the TargetId to match the new asset's ID, or set to Guid.Empty if the new asset is null.
+                Id = value?.Id ?? Guid.Empty; // Update the Id to match the new asset's ID, or set to Guid.Empty if the new asset is null.
             }
         }
 
