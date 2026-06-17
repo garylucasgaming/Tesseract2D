@@ -11,17 +11,13 @@ namespace Engine.Core.Collections
     {
 
         public Guid Id { get; private set; } = Guid.NewGuid(); // Unique identifier for this resource, generated automatically upon instantiation.
-
-
-        public string ResourceName { get; set; } = "New GameResource"; // Default name for new resources, should be overridden by specific implementations for clarity.
-
-        public string ResourcePath { get; set; } = ""; // The file path or URI where this resource can be loaded from. Should be set by specific implementations to point to the actual asset location.
-
+        
+        public string Name { get; set; } = "New Resource";
 
         public virtual bool validate()
         {
             
-            if(string.IsNullOrWhiteSpace(ResourceName))
+            if(string.IsNullOrWhiteSpace(Name))
             {
                 Log.Warning($"[GameResource Validation Failed] Resource with ID {Id} has an invalid name.");
                 return false;
