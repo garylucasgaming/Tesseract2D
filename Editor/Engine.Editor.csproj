@@ -12,15 +12,24 @@
   <ItemGroup>
     <Content Include="Logo.ico" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="MonoGame.Forms.DX" Version="3.2.1" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <ProjectReference Include="..\Engine\Engine.Core.csproj" />
   </ItemGroup>
-  
+
+  <ItemGroup>
+    <Compile Update="Form1.ProjectExplorer.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Update="Form1.SceneHierarchy.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Update="Properties\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
@@ -28,14 +37,14 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
   </ItemGroup>
-  
+
   <ItemGroup>
     <EmbeddedResource Update="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
-  
+
   <ItemGroup>
     <Folder Include="Content\Fallbacks\" />
     <Folder Include="Content\Scenes\" />
@@ -43,7 +52,7 @@
     <Folder Include="Content\System\" />
     <Folder Include="Content\Templates\" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <None Update="Content\Textures\missing texture.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

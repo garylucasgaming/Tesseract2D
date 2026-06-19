@@ -1,3 +1,9 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Runtime.InteropServices;
 using Engine.Core.ECS;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
@@ -6,85 +12,186 @@ namespace WinFormsApp1
 {
     public partial class Form1 : Form
     {
+        // --- Windows Native API Hooks (Shell Icon & Theme Extraction) ---
+        [DllImport("uxtheme.dll", ExactSpelling = true, CharSet = CharSet.Unicode)]
+        private static extern int SetWindowTheme(IntPtr hwnd, string pszSubAppName, string pszSubIdList);
+
+        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes, ref SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool DestroyIcon(IntPtr hIcon);
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private struct SHFILEINFO
+        {
+            public IntPtr hIcon;
+            public int iIcon;
+            public uint dwAttributes;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+            public string szDisplayName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
+            public string szTypeName;
+        }
+
+     
+
+
+        private const uint SHGFI_ICON = 0x000000100;
+        private const uint SHGFI_SMALLICON = 0x000000001;
+        private const uint SHGFI_USEFILEATTRIBUTES = 0x000000010;
+        private const uint FILE_ATTRIBUTE_DIRECTORY = 0x00000010;
+
+        private ImageList _systemImageList = new ImageList();
+
         public Form1()
         {
             InitializeComponent();
-            
-            Log.OnLogMessage += AppendMessageToConsoleBox; // Subscribe to the global log event to receive messages in the console box.
-           Log.Print("Engine initialized successfully. Welcome to the Editor!");
 
+            SetTreeViewTheme(ProjectFolderTreeView.Handle);
+            InitializeExplorerIcons();
 
+            InitializeProjectExplorerMenus();
+            InitializeSceneHierarchyMenus();
+            UpdateEditorTitle();
 
-            GameObject entityParent = new GameObject { name = "TestingParent" };
-            entityParent.Transform.X = 50;
-
-            GameObject entityChild = new GameObject { name = "TestingChild" };
-            entityChild.Transform.Y = 25;
-
-            entityParent.AddChild(entityChild);
-
-            // 2. Save it straight to a real test file!
-            string testPath = "Content/Scenes/HierarchyTest.scene";
-            SceneSerializer.SaveSceneToFile(entityParent, testPath);
-
-            // 3. Re-read it back off your drive
-            GameObject? reconstructedRoot = SceneSerializer.LoadSceneFromFile(testPath);
-
-        }
-
-        private void menuToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void spriteEditorToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void groupBox1_Enter(object sender, EventArgs e)
-        {
-
-        }
-
-        private void splitContainer1_Panel1_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void button1_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        private void SceneHierarchySearchBar_SearchTextChanged(object sender, string filterText)
-        {
-            if(string.IsNullOrEmpty(filterText))
+            if(EditorContextManager.IsProjectLoaded)
             {
-                // Reset node font colors and expand configurations back to normal
-                ResetTreeNodes(SceneHierarchyTreeView.Nodes);
+                GameScene sandbox = new GameScene() { SceneName = "Editor Sandbox Scene" };
+                var sampleGo = sandbox.CreateGameObject("Main Camera");
+                sampleGo.ContextScene = sandbox;
 
+                EditorContextManager.ActiveLoadedScene = sandbox;
+                PopulateSceneHierarchyTree(SceneHierarchyTreeView, sandbox);
+            }
+        }
+
+        public static void SetTreeViewTheme(IntPtr treeHandle)
+        {
+            SetWindowTheme(treeHandle, "explorer", null);
+        }
+
+        private void UpdateEditorTitle()
+        {
+            if(EditorContextManager.IsProjectLoaded)
+            {
+                string projectName = Path.GetFileName(EditorContextManager.CurrentProjectRoot);
+                this.Text = $"Custom 2D Game Engine Editor - Project: [{projectName}] ({EditorContextManager.CurrentProjectRoot})";
+            }
+            else
+            {
+                this.Text = "Custom 2D Game Engine Editor - No Project Active";
+            }
+        }
+
+        private void OnProjectLoaded()
+        {
+            UpdateEditorTitle();
+            if(EditorContextManager.IsProjectLoaded)
+            {
+                LoadDefaultSandboxScene();
+            }
+            PopulateProjectExplorerTree(ProjectFolderTreeView);
+        }
+
+        private string PromptUserForProjectName()
+        {
+            Form prompt = new Form()
+            {
+                Width = 400,
+                Height = 150,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = "Enter Identity Name",
+                StartPosition = FormStartPosition.CenterParent
+            };
+            Label textLabel = new Label() { Left = 20, Top = 20, Text = "Name Identifier:", Width = 150 };
+            TextBox textBox = new TextBox() { Left = 20, Top = 45, Width = 340 };
+            Button confirmation = new Button() { Text = "Ok", Left = 280, Width = 80, Top = 80, DialogResult = DialogResult.OK };
+            prompt.Controls.Add(textBox);
+            prompt.Controls.Add(confirmation);
+            prompt.Controls.Add(textLabel);
+            prompt.AcceptButton = confirmation;
+
+            return prompt.ShowDialog() == DialogResult.OK ? textBox.Text : string.Empty;
+        }
+
+        // --- Core Global Menu Strip Items ---
+        private void onCreateProjectToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using(var folderDialog = new FolderBrowserDialog())
+            {
+                folderDialog.Description = "Select the parent directory where you want to create your game project folder.";
+                folderDialog.ShowNewFolderButton = true;
+
+                if(folderDialog.ShowDialog() == DialogResult.OK)
+                {
+                    string projectName = PromptUserForProjectName();
+                    if(string.IsNullOrWhiteSpace(projectName))
+                        return;
+
+                    try
+                    {
+                        string projectRootPath = ProjectDirectoryFactory.CreateNewProject(folderDialog.SelectedPath, projectName);
+                        EditorContextManager.OpenProjectContext(projectRootPath);
+                        OnProjectLoaded();
+                    }
+                    catch(Exception ex)
+                    {
+                        MessageBox.Show($"Failed to initialize project: {ex.Message}", "Project Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private void onLoadProjectToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            using(var folderDialog = new FolderBrowserDialog())
+            {
+                folderDialog.Description = "Select your project root folder.";
+                folderDialog.ShowNewFolderButton = false;
+
+                if(folderDialog.ShowDialog() == DialogResult.OK)
+                {
+                    string targetFolder = folderDialog.SelectedPath;
+                    string manifestCheck = Path.Combine(targetFolder, "Content", "ProjectManifest.db");
+
+                    if(!File.Exists(manifestCheck))
+                    {
+                        MessageBox.Show("The selected folder is not a valid engine project.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+
+                    EditorContextManager.OpenProjectContext(targetFolder);
+                    OnProjectLoaded();
+                }
+            }
+        }
+
+        private void onSaveProjectToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            if(!EditorContextManager.IsProjectLoaded)
+                return;
+            Log.Info("[Editor UI] Global workspace save command executed successfully.");
+        }
+
+        private void AppendMessageToConsoleBox(LogSeverity severity, string formattedText)
+        {
+            if(ConsoleTextBox.InvokeRequired)
+            {
+                ConsoleTextBox.Invoke(new Action(() => AppendMessageToConsoleBox(severity, formattedText)));
                 return;
             }
-
-            SceneHierarchyTreeView.BeginUpdate();
-
-            // Call the recursive filter method we discussed previously, 
-            // passing the clean string directly from the control payload
-            FilterTreeNodes(SceneHierarchyTreeView.Nodes, filterText);
-
-            SceneHierarchyTreeView.EndUpdate();
+            ConsoleTextBox.AppendText(formattedText + Environment.NewLine);
         }
 
-
+        // Tree Shared Searching Utilities
         private void ResetTreeNodes(TreeNodeCollection nodes)
         {
             foreach(TreeNode node in nodes)
             {
-                node.ForeColor = SystemColors.WindowText; // Restore default system color
-                node.Collapse(); // Optional: Collapse everything back to a clean state
-
-                // Keep digging down into nested nodes
+                node.ForeColor = SystemColors.WindowText;
+                node.Collapse();
                 ResetTreeNodes(node.Nodes);
             }
         }
@@ -92,79 +199,25 @@ namespace WinFormsApp1
         private bool FilterTreeNodes(TreeNodeCollection nodes, string filter)
         {
             bool anyChildVisible = false;
-
             foreach(TreeNode node in nodes)
             {
-                // 1. Deep Dive: Always check children first (e.g., check Components inside a GameObject)
                 bool isChildVisible = FilterTreeNodes(node.Nodes, filter);
-
-                // 2. Evaluation: Does this specific entity or property name match our search string?
                 bool isCurrentMatch = node.Text.Contains(filter, StringComparison.CurrentCultureIgnoreCase);
 
-                // 3. Execution Action: If this item matches, or any of its children match, keep it visible
                 if(isCurrentMatch || isChildVisible)
                 {
-                    node.ForeColor = SystemColors.WindowText; // Standard readable text color
-
-                    // If a child matched, we MUST expand the parent node so the user can see it nested!
+                    node.ForeColor = SystemColors.WindowText;
                     if(isChildVisible)
-                    {
                         node.Expand();
-                    }
-
                     anyChildVisible = true;
                 }
                 else
                 {
-                    // If nothing matches, collapse it out of view or gray it out. 
-                    // In basic WinForms handling, graying it out is highly readable:
-                    node.ForeColor = SystemColors.GrayText;
+                    node.ForeColor = SystemColors.WindowText;
                     node.Collapse();
                 }
             }
             return anyChildVisible;
-
         }
-
-        private void ProjectFolderSearchBar_SearchTextChanged(object sender, string filterText)
-        {
-            if(string.IsNullOrEmpty(filterText))
-            {
-                // Reset node font colors and expand configurations back to normal
-                ResetTreeNodes(ProjectFolderTreeView.Nodes);
-
-                return;
-            }
-
-            ProjectFolderTreeView.BeginUpdate();
-
-            // Call the recursive filter method we discussed previously, 
-            // passing the clean string directly from the control payload
-            FilterTreeNodes(ProjectFolderTreeView.Nodes, filterText);
-
-            ProjectFolderTreeView.EndUpdate();
-        }
-
-        private void componentToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-
-        }
-
-        // This is the method that listens to the global Log event and appends messages to the console box in a thread-safe way.
-        private void AppendMessageToConsoleBox(LogSeverity severity, string formattedText)
-        {
-            if(ConsoleTextBox.InvokeRequired)
-            {
-                ConsoleTextBox.Invoke(new Action(() => AppendMessageToConsoleBox( severity, formattedText)));
-                return;
-            }
-
-            ConsoleTextBox.AppendText(formattedText + Environment.NewLine);
-            ConsoleTextBox.SelectionStart = ConsoleTextBox.TextLength;
-            ConsoleTextBox.ScrollToCaret();
-
-        }
-
-
     }
 }

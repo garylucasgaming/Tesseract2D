@@ -123,8 +123,8 @@ namespace Engine.Core.ECS
             {
                 var go = new GameObject
                 {
-                    id = Guid.NewGuid(),
-                    name = name
+                    Id = Guid.NewGuid(),
+                    Name = name
                 };
                 GameObjects.Add(go);
                 return go;

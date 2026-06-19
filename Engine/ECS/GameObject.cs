@@ -8,12 +8,12 @@ namespace Engine.Core.ECS
 {
     public class GameObject
     {
-        public Guid id { get; set; } = Guid.NewGuid();
-        public string name { get; set; } = "Game Object";
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; } = "Game Object";
         public bool isActive { get; set; } = true;
 
         public List<GameComponent> Components { get; set; } = new List<GameComponent>();
-        public GameScene ContextScene { get; internal set; } = null!;
+        public GameScene ContextScene { get; set; } = null!;
 
         // --- NEW: Hierarchy Tracking Properties ---
 
@@ -99,7 +99,7 @@ namespace Engine.Core.ECS
             // Guard safety loop: Prevent developers from accidentally deleting the baseline transform!
             if(component is TransformComponent)
             {
-                Utilities.Log.Warning($"[ECS Warning] Cannot remove TransformComponent from '{name}'. Every GameObject requires a spatial transform.");
+                Utilities.Log.Warning($"[ECS Warning] Cannot remove TransformComponent from '{Name}'. Every GameObject requires a spatial transform.");
                 return;
             }
 

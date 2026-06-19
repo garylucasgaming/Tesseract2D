@@ -36,6 +36,7 @@
             saveProjectToolStripMenuItem = new ToolStripMenuItem();
             saveProjectAsToolStripMenuItem = new ToolStripMenuItem();
             exitToolStripMenuItem = new ToolStripMenuItem();
+            fileToolStripMenuItem = new ToolStripMenuItem();
             editToolStripMenuItem = new ToolStripMenuItem();
             projectSettingsToolStripMenuItem = new ToolStripMenuItem();
             prjoectPreferencesToolStripMenuItem = new ToolStripMenuItem();
@@ -81,16 +82,14 @@
             documentationToolStripMenuItem = new ToolStripMenuItem();
             SceneHierarchy = new GroupBox();
             SceneHierarchyTreeView = new TreeView();
-            SceneHierarchySearchBar = new Editor.TextSearchBarControl();
             PropertiesWindow = new GroupBox();
             propertyGrid1 = new PropertyGrid();
             tabControl1 = new TabControl();
             SceneView = new TabPage();
-            mgWindowControl1 = new Editor.MGWindowControl();
+            mgWindowControl = new Editor.MGWindowControl();
             tabControl2 = new TabControl();
             ProjectFolderTabPage = new TabPage();
             ProjectFolderTreeView = new TreeView();
-            ProjectFolderSearchBar = new Editor.TextSearchBarControl();
             ConsoleTabPage = new TabPage();
             ConsoleTextBox = new TextBox();
             menuStrip1.SuspendLayout();
@@ -114,29 +113,31 @@
             // 
             // menuToolStripMenuItem
             // 
-            menuToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { newProjectToolStripMenuItem, loadProjectToolStripMenuItem, saveProjectToolStripMenuItem, saveProjectAsToolStripMenuItem, exitToolStripMenuItem });
+            menuToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { newProjectToolStripMenuItem, loadProjectToolStripMenuItem, saveProjectToolStripMenuItem, saveProjectAsToolStripMenuItem, exitToolStripMenuItem, fileToolStripMenuItem });
             menuToolStripMenuItem.Name = "menuToolStripMenuItem";
             menuToolStripMenuItem.Size = new Size(37, 20);
             menuToolStripMenuItem.Text = "File";
-            menuToolStripMenuItem.Click += menuToolStripMenuItem_Click;
             // 
             // newProjectToolStripMenuItem
             // 
             newProjectToolStripMenuItem.Name = "newProjectToolStripMenuItem";
             newProjectToolStripMenuItem.Size = new Size(154, 22);
             newProjectToolStripMenuItem.Text = "New Project";
+            newProjectToolStripMenuItem.Click += onCreateProjectToolStripMenuItem_Click;
             // 
             // loadProjectToolStripMenuItem
             // 
             loadProjectToolStripMenuItem.Name = "loadProjectToolStripMenuItem";
             loadProjectToolStripMenuItem.Size = new Size(154, 22);
             loadProjectToolStripMenuItem.Text = "Load Project";
+            loadProjectToolStripMenuItem.Click += onLoadProjectToolStripMenuItem_Click;
             // 
             // saveProjectToolStripMenuItem
             // 
             saveProjectToolStripMenuItem.Name = "saveProjectToolStripMenuItem";
             saveProjectToolStripMenuItem.Size = new Size(154, 22);
             saveProjectToolStripMenuItem.Text = "Save Project";
+            saveProjectToolStripMenuItem.Click += onSaveProjectToolStripMenuItem_Click;
             // 
             // saveProjectAsToolStripMenuItem
             // 
@@ -149,6 +150,12 @@
             exitToolStripMenuItem.Name = "exitToolStripMenuItem";
             exitToolStripMenuItem.Size = new Size(154, 22);
             exitToolStripMenuItem.Text = "Exit";
+            // 
+            // fileToolStripMenuItem
+            // 
+            fileToolStripMenuItem.Name = "fileToolStripMenuItem";
+            fileToolStripMenuItem.Size = new Size(154, 22);
+            fileToolStripMenuItem.Text = "File";
             // 
             // editToolStripMenuItem
             // 
@@ -248,7 +255,6 @@
             componentToolStripMenuItem.Name = "componentToolStripMenuItem";
             componentToolStripMenuItem.Size = new Size(169, 22);
             componentToolStripMenuItem.Text = "GameComponent";
-            componentToolStripMenuItem.Click += componentToolStripMenuItem_Click;
             // 
             // gameSystemToolStripMenuItem
             // 
@@ -310,7 +316,6 @@
             spriteEditorToolStripMenuItem.Name = "spriteEditorToolStripMenuItem";
             spriteEditorToolStripMenuItem.Size = new Size(159, 22);
             spriteEditorToolStripMenuItem.Text = "Scene View";
-            spriteEditorToolStripMenuItem.Click += spriteEditorToolStripMenuItem_Click;
             // 
             // sceneHierarchyToolStripMenuItem
             // 
@@ -420,7 +425,6 @@
             // SceneHierarchy
             // 
             SceneHierarchy.Controls.Add(SceneHierarchyTreeView);
-            SceneHierarchy.Controls.Add(SceneHierarchySearchBar);
             SceneHierarchy.Dock = DockStyle.Left;
             SceneHierarchy.Location = new Point(0, 24);
             SceneHierarchy.Name = "SceneHierarchy";
@@ -428,24 +432,19 @@
             SceneHierarchy.TabIndex = 1;
             SceneHierarchy.TabStop = false;
             SceneHierarchy.Text = "Scene Hierarchy";
-            SceneHierarchy.Enter += groupBox1_Enter;
             // 
             // SceneHierarchyTreeView
             // 
+            SceneHierarchyTreeView.AllowDrop = true;
             SceneHierarchyTreeView.Dock = DockStyle.Fill;
-            SceneHierarchyTreeView.Location = new Point(3, 44);
+            SceneHierarchyTreeView.LabelEdit = true;
+            SceneHierarchyTreeView.Location = new Point(3, 19);
             SceneHierarchyTreeView.Name = "SceneHierarchyTreeView";
-            SceneHierarchyTreeView.Size = new Size(165, 610);
+            SceneHierarchyTreeView.Size = new Size(165, 635);
             SceneHierarchyTreeView.TabIndex = 1;
-            // 
-            // SceneHierarchySearchBar
-            // 
-            SceneHierarchySearchBar.Dock = DockStyle.Top;
-            SceneHierarchySearchBar.Location = new Point(3, 19);
-            SceneHierarchySearchBar.Name = "SceneHierarchySearchBar";
-            SceneHierarchySearchBar.Size = new Size(165, 25);
-            SceneHierarchySearchBar.TabIndex = 0;
-            SceneHierarchySearchBar.SearchTextChanged += SceneHierarchySearchBar_SearchTextChanged;
+            SceneHierarchyTreeView.ItemDrag += SceneHierarchyTreeView_ItemDrag;
+            SceneHierarchyTreeView.DragDrop += SceneHierarchyTreeView_DragDrop;
+            SceneHierarchyTreeView.DragEnter += SceneHierarchyTreeView_DragEnter;
             // 
             // PropertiesWindow
             // 
@@ -479,7 +478,7 @@
             // 
             // SceneView
             // 
-            SceneView.Controls.Add(mgWindowControl1);
+            SceneView.Controls.Add(mgWindowControl);
             SceneView.Location = new Point(4, 24);
             SceneView.Name = "SceneView";
             SceneView.Padding = new Padding(3);
@@ -488,15 +487,15 @@
             SceneView.Text = "Scene View";
             SceneView.UseVisualStyleBackColor = true;
             // 
-            // mgWindowControl1
+            // mgWindowControl
             // 
-            mgWindowControl1.Dock = DockStyle.Fill;
-            mgWindowControl1.Location = new Point(3, 3);
-            mgWindowControl1.MouseHoverUpdatesOnly = false;
-            mgWindowControl1.Name = "mgWindowControl1";
-            mgWindowControl1.Size = new Size(879, 415);
-            mgWindowControl1.TabIndex = 0;
-            mgWindowControl1.Text = "mgWindowControl1";
+            mgWindowControl.Dock = DockStyle.Fill;
+            mgWindowControl.Location = new Point(3, 3);
+            mgWindowControl.MouseHoverUpdatesOnly = false;
+            mgWindowControl.Name = "mgWindowControl";
+            mgWindowControl.Size = new Size(879, 415);
+            mgWindowControl.TabIndex = 0;
+            mgWindowControl.Text = "mgWindowControl2";
             // 
             // tabControl2
             // 
@@ -512,7 +511,6 @@
             // ProjectFolderTabPage
             // 
             ProjectFolderTabPage.Controls.Add(ProjectFolderTreeView);
-            ProjectFolderTabPage.Controls.Add(ProjectFolderSearchBar);
             ProjectFolderTabPage.Location = new Point(4, 24);
             ProjectFolderTabPage.Name = "ProjectFolderTabPage";
             ProjectFolderTabPage.Padding = new Padding(3);
@@ -524,19 +522,11 @@
             // ProjectFolderTreeView
             // 
             ProjectFolderTreeView.Dock = DockStyle.Fill;
-            ProjectFolderTreeView.Location = new Point(3, 28);
+            ProjectFolderTreeView.HotTracking = true;
+            ProjectFolderTreeView.Location = new Point(3, 3);
             ProjectFolderTreeView.Name = "ProjectFolderTreeView";
-            ProjectFolderTreeView.Size = new Size(879, 147);
+            ProjectFolderTreeView.Size = new Size(879, 172);
             ProjectFolderTreeView.TabIndex = 1;
-            // 
-            // ProjectFolderSearchBar
-            // 
-            ProjectFolderSearchBar.Dock = DockStyle.Top;
-            ProjectFolderSearchBar.Location = new Point(3, 3);
-            ProjectFolderSearchBar.Name = "ProjectFolderSearchBar";
-            ProjectFolderSearchBar.Size = new Size(879, 25);
-            ProjectFolderSearchBar.TabIndex = 0;
-            ProjectFolderSearchBar.SearchTextChanged += ProjectFolderSearchBar_SearchTextChanged;
             // 
             // ConsoleTabPage
             // 
@@ -656,5 +646,7 @@
         private Editor.TextSearchBarControl SceneHierarchySearchBar;
         private TreeView ProjectFolderTreeView;
         private Editor.TextSearchBarControl ProjectFolderSearchBar;
+        private ToolStripMenuItem fileToolStripMenuItem;
+        private Editor.MGWindowControl mgWindowControl;
     }
 }
