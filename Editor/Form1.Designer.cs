@@ -83,7 +83,6 @@
             SceneHierarchy = new GroupBox();
             SceneHierarchyTreeView = new TreeView();
             PropertiesWindow = new GroupBox();
-            propertyGrid1 = new PropertyGrid();
             tabControl1 = new TabControl();
             SceneView = new TabPage();
             mgWindowControl = new Editor.MGWindowControl();
@@ -92,6 +91,7 @@
             ProjectFolderTreeView = new TreeView();
             ConsoleTabPage = new TabPage();
             ConsoleTextBox = new TextBox();
+            InspectorFlowPanel = new FlowLayoutPanel();
             menuStrip1.SuspendLayout();
             SceneHierarchy.SuspendLayout();
             PropertiesWindow.SuspendLayout();
@@ -448,7 +448,7 @@
             // 
             // PropertiesWindow
             // 
-            PropertiesWindow.Controls.Add(propertyGrid1);
+            PropertiesWindow.Controls.Add(InspectorFlowPanel);
             PropertiesWindow.Dock = DockStyle.Right;
             PropertiesWindow.FlatStyle = FlatStyle.Flat;
             PropertiesWindow.Location = new Point(1064, 24);
@@ -457,14 +457,6 @@
             PropertiesWindow.TabIndex = 2;
             PropertiesWindow.TabStop = false;
             PropertiesWindow.Text = "Properties";
-            // 
-            // propertyGrid1
-            // 
-            propertyGrid1.Dock = DockStyle.Fill;
-            propertyGrid1.Location = new Point(3, 19);
-            propertyGrid1.Name = "propertyGrid1";
-            propertyGrid1.Size = new Size(194, 635);
-            propertyGrid1.TabIndex = 0;
             // 
             // tabControl1
             // 
@@ -550,6 +542,17 @@
             ConsoleTextBox.Size = new Size(879, 172);
             ConsoleTextBox.TabIndex = 0;
             // 
+            // InspectorFlowPanel
+            // 
+            InspectorFlowPanel.AutoScroll = true;
+            InspectorFlowPanel.Dock = DockStyle.Fill;
+            InspectorFlowPanel.FlowDirection = FlowDirection.TopDown;
+            InspectorFlowPanel.Location = new Point(3, 19);
+            InspectorFlowPanel.Name = "InspectorFlowPanel";
+            InspectorFlowPanel.Size = new Size(194, 635);
+            InspectorFlowPanel.TabIndex = 0;
+            InspectorFlowPanel.WrapContents = false;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -633,7 +636,6 @@
         private ToolStripMenuItem gameToolStripMenuItem;
         private ToolStripMenuItem runToolStripMenuItem;
         private ToolStripMenuItem stopToolStripMenuItem;
-        private PropertyGrid propertyGrid1;
         private TabControl tabControl2;
         private TabPage ProjectFolderTabPage;
         private TabPage ConsoleTabPage;
@@ -648,5 +650,6 @@
         private Editor.TextSearchBarControl ProjectFolderSearchBar;
         private ToolStripMenuItem fileToolStripMenuItem;
         private Editor.MGWindowControl mgWindowControl;
+        private FlowLayoutPanel InspectorFlowPanel;
     }
 }

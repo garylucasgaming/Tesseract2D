@@ -5,13 +5,14 @@ using System.Collections.Generic;
 using Engine.Core.ECS;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
+using Engine.Editor.WinFormsApp1;
 
 namespace WinFormsApp1
 {
     public partial class Form1
     {
         private ContextMenuStrip _hierarchyContextMenu = new ContextMenuStrip();
-         
+
 
         private void InitializeSceneHierarchyMenus()
         {
@@ -38,6 +39,9 @@ namespace WinFormsApp1
             SceneHierarchyTreeView.DragDrop += SceneHierarchyTreeView_DragDrop;
             SceneHierarchyTreeView.MouseUp += SceneHierarchyTreeView_MouseUp;
             SceneHierarchyTreeView.AfterLabelEdit += SceneHierarchyTreeView_AfterLabelEdit;
+
+            // 👇 NEW: Hook up the selection interceptor for the Inspector Properties View
+            SceneHierarchyTreeView.AfterSelect += SceneHierarchyTreeView_AfterSelect;
         }
 
         public void PopulateSceneHierarchyTree(TreeView hierarchyTreeView, GameScene activeScene)
@@ -311,6 +315,45 @@ namespace WinFormsApp1
             SceneHierarchyTreeView.BeginUpdate();
             FilterTreeNodes(SceneHierarchyTreeView.Nodes, filterText);
             SceneHierarchyTreeView.EndUpdate();
+        }
+
+        // 👇 NEW: The dynamic selection handler method
+        private void SceneHierarchyTreeView_AfterSelect(object sender, TreeViewEventArgs e)
+        {
+            // Clear the inspector sheet immediately on focus shift
+            InspectorFlowPanel.Controls.Clear();
+
+            if(e.Node == null || e.Node.Tag is not GameObject targetGo)
+                return;
+
+            // Lock layout math updates to prevent scrolling/flicker artifacts during generation
+            InspectorFlowPanel.SuspendLayout();
+
+            int targetWidth = InspectorFlowPanel.Width;
+
+            // Card 1: Core metadata profile panel (Editable Name field)
+            Panel baseCard = ComponentCardFactory.CreateCard("GameObject Settings", targetGo, targetWidth);
+            InspectorFlowPanel.Controls.Add(baseCard);
+
+            // Card 2: Transform manipulation module
+            if(targetGo.Transform != null)
+            {
+                Panel transformCard = ComponentCardFactory.CreateCard("Transform Component", targetGo.Transform, targetWidth);
+                InspectorFlowPanel.Controls.Add(transformCard);
+            }
+
+            // Card 3+: Generic ECS array processor
+            /*
+            foreach (var component in targetGo.Components)
+            {
+                string name = component.GetType().Name;
+                Panel componentCard = ComponentCardFactory.CreateCard(name, component, targetWidth);
+                InspectorFlowPanel.Controls.Add(componentCard);
+            }
+            */
+
+            // Release the rendering thread engine smoothly
+            InspectorFlowPanel.ResumeLayout();
         }
     }
 }
