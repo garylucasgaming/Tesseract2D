@@ -7,15 +7,45 @@ using Engine.Core.Utilities;
 
 namespace Engine.Core.Collections
 {
-    /// <summary>
-    /// A centralized, typed registry responsible for managing, loading, and querying 
-    /// static GameResource asset templates.
-    /// </summary>
-    /// <typeparam name="T">The specific type of GameResource this database manages.</typeparam>
-    public class GameDatabase<T> where T : class
+    
+    public class GameDatabase
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public string DatabaseType { get; set; } = typeof(T).AssemblyQualifiedName!;
-        public List<T> Resources { get; set; } = new();
+        public static GameDatabase Current { get; set; } = null!;
+
+        private readonly Dictionary<string, List<GameResource>> _tables = new();
+
+        /// <summary>
+        /// Finds a loaded asset definition by its category table name and unique Guid.
+        /// </summary>
+        public GameResource? GetResource(string category, Guid id)
+        {
+            if(_tables.TryGetValue(category, out var list))
+            {
+                return list.Find(r => r.Id == id);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Direct access to a full data table, perfect for populating the Editor spreadsheet UI rows.
+        /// </summary>
+        public List<GameResource> GetTable(string category)
+        {
+            return _tables.TryGetValue(category, out var table) ? table : new List<GameResource>();
+        }
+
+        /// <summary>
+        /// Adds a newly created resource from the editor into its designated data category table.
+        /// </summary>
+        public void AddResource(string category, GameResource resource)
+        {
+            resource.ResourceType = category;
+            if(!_tables.ContainsKey(category))
+            {
+                _tables[category] = new List<GameResource>();
+            }
+            _tables[category].Add(resource);
+        }
     }
 }
+

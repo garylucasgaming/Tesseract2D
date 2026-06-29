@@ -42,7 +42,7 @@ namespace Engine.Core.ECS
             Systems.Add(system);
 
             // Sort dynamically by execution hierarchy (e.g., lower priority indices execute first)
-            Systems = Systems.OrderBy(s => s.UpdateOrder).ToList();
+            Systems = Systems.OrderBy(s => s.UpdatePolicy).ToList();
         }
 
         // Retrieves a specific active system (like your MovementSystem) by its derived subclass type.
@@ -64,17 +64,6 @@ namespace Engine.Core.ECS
             return Systems;
         }
 
-
-
-        // Looks up the cached system class type associated with a specific component type.
-        private Type? FindSystemTypeForComponent(Type componentType)
-        {
-            if(_componentToSystemCache != null && _componentToSystemCache.TryGetValue(componentType, out var systemType))
-            {
-                return systemType;
-            }
-            return null;
-        }
 
        
         // Scans all loaded assemblies via reflection once to map components to their systems.
@@ -107,6 +96,7 @@ namespace Engine.Core.ECS
 
                         foreach(var type in types)
                         {
+                            //TODO: give it a specific folder to look at. perhaps even a json file. 
                             // skip any types in the Engine.Core.Runtime namespace to avoid accidentally linking internal utilities as systems
                             if(type.Namespace != null && type.Namespace.StartsWith("Engine.Core.Runtime"))
                             {

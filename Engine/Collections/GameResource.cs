@@ -7,36 +7,94 @@ using System.Threading.Tasks;
 
 namespace Engine.Core.Collections
 {
-    //a smart pointer wrapper that makes referencing game resources easier and more efficient. It holds a reference to a GameResource and provides implicit conversion to the underlying resource type, allowing for seamless access while maintaining reference integrity.
-    public class GameResource <T> where T: DataResource
+    public abstract class GameResource
     {
 
-        public Guid Id {get;  set;} // The unique identifier of the target GameResource. This is used to look up the actual resource instance from a central registry or manager.
+        public Guid Id { get; set; } = Guid.NewGuid();
+        public string Name { get; set; } = "New Resource";
+        public string ResourceType { get; set; } = "Default";
 
+        // Store the smart values directly inside the bag
+        public Dictionary<string, ResourcePropertyValue> Properties { get; set; } = new();
 
-        private T? _cachedAsset; // A cached reference to the actual GameResource instance. This allows for quick access after the first lookup, improving performance by avoiding repeated searches.
-
-        public T Asset
+        /// <summary>
+        /// Universal gateway to access any dynamic property type safely.
+        /// </summary>
+        public ResourcePropertyValue Property(string propertyName)
         {
-            get
+            if(Properties.TryGetValue(propertyName, out var val))
             {
-                if(_cachedAsset == null)
-                {
-                    _cachedAsset = GameDatabaseDirector.FindResource<T>(Id);
-                    if(_cachedAsset == null)
-                    {
-                        Log.Error($"[GameResource Error] Failed to find resource of type {typeof(T).Name} with ID {Id}. Ensure the resource exists and is registered in the GameDatabaseSystem.");
-                        throw new Exception($"[GameResource Error] Failed to find resource of type {typeof(T).Name} with ID {Id}. Ensure the resource exists and is registered in the GameDatabaseSystem.");
-                    }
-                }
-                return _cachedAsset;
+                return val;
             }
-            set
-            {
-                _cachedAsset = value;
-                Id = value?.Id ?? Guid.Empty; // Update the Id to match the new asset's ID, or set to Guid.Empty if the new asset is null.
-            }
+
+            // Return a safe fallback fallback value instead of throwing a null exception
+            return new ResourcePropertyValue(string.Empty, PropertyDataType.String);
+        }
+    }
+
+    public enum PropertyDataType
+    {
+        Integer,
+        Float,
+        String,
+        Boolean,
+        Enum,
+        ResourceLink // Crucial! This lets a property point to the Guid of another Resource
+    }
+
+
+    public class ResourcePropertyValue
+    {
+        public string RawValue { get; set; } = string.Empty;
+        public PropertyDataType DataType
+        {
+            get; set;
         }
 
+        public ResourcePropertyValue(string rawValue, PropertyDataType dataType)
+        {
+            RawValue = rawValue;
+            DataType = dataType;
+        }
+
+        // --- THE MAGIC: IMPLICIT CASTING OPERATORS ---
+
+        // Automatically converts to int when assigned to an int variable
+        public static implicit operator int(ResourcePropertyValue value)
+        {
+            if(value == null)
+                return 0;
+            return int.TryParse(value.RawValue, out var result) ? result : 0;
+        }
+
+        // Automatically converts to float when assigned to a float variable
+        public static implicit operator float(ResourcePropertyValue value)
+        {
+            if(value == null)
+                return 0f;
+            return float.TryParse(value.RawValue, out var result) ? result : 0f;
+        }
+
+        // Automatically converts to bool when assigned to a bool variable
+        public static implicit operator bool(ResourcePropertyValue value)
+        {
+            if(value == null)
+                return false;
+            return bool.TryParse(value.RawValue, out var result) && result;
+        }
+
+        // Automatically converts to string when assigned to a string variable
+        public static implicit operator string(ResourcePropertyValue value)
+        {
+            return value?.RawValue ?? string.Empty;
+        }
+
+        // Automatically converts to Guid when assigned to a Guid variable
+        public static implicit operator Guid(ResourcePropertyValue value)
+        {
+            if(value == null)
+                return Guid.Empty;
+            return Guid.TryParse(value.RawValue, out var result) ? result : Guid.Empty;
+        }
     }
 }
