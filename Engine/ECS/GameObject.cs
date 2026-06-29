@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization; // Essential for protecting our hierarchy from JSON loops!
 using Engine.Core.ECS.Components;
+using Engine.Core.Utilities;
 
 namespace Engine.Core.ECS
 {
@@ -12,8 +13,15 @@ namespace Engine.Core.ECS
         public string Name { get; set; } = "Game Object";
         public bool isActive { get; set; } = true;
 
+        public List<String> tags { get; set; } = new List<String>();
+
         public List<GameComponent> Components { get; set; } = new List<GameComponent>();
         public GameScene ContextScene { get; set; } = null!;
+
+        public event Action<GameObject, GameComponent>? OnComponentAdded;
+        public event Action<GameObject, GameComponent>? OnComponentRemoved;
+
+
 
         // --- NEW: Hierarchy Tracking Properties ---
 
@@ -40,7 +48,8 @@ namespace Engine.Core.ECS
         {
             // Frontload the transform component automatically
             Transform = new TransformComponent();
-            AddComponent(Transform);
+            Transform.Owner = this;
+            Components.Add(Transform);
         }
 
         // --- NEW: Hierarchy Management Methods ---
@@ -76,12 +85,44 @@ namespace Engine.Core.ECS
             }
         }
 
-        // --- Existing Component Logic (Kept exactly as you wrote it) ---
 
-        public void AddComponent<T>(T component) where T : GameComponent
+        /// <summary>
+        /// Instantiates and attaches a component of type T to this GameObject.
+        /// </summary>
+        public T AddComponent<T>() where T : GameComponent, new()
         {
+            if(HasComponent<T>())
+            {
+                Log.Warning($"[ECS Warning] Component of type '{typeof(T).Name}' is already attached to '{Name}'.");
+                return GetComponent<T>()!;
+            }
+
+            T newComponent = new T { Owner = this };
+            Components.Add(newComponent);
+            OnComponentAdded?.Invoke(this, newComponent);
+
+            return newComponent;
+        }
+
+        public void AddComponent(GameComponent component)
+        {
+            if(component == null)
+                return;
+
+            Type componentType = component.GetType();
+
+            // Use your non-generic component list to check for duplicates safely at runtime
+            if(Components.Any(c => c.GetType() == componentType))
+            {
+                Log.Warning($"[ECS Warning] Component of type '{componentType.Name}' is already attached to '{Name}'.");
+                return;
+            }
+
             component.Owner = this;
             Components.Add(component);
+
+            // This instantly updates the EntityManager's buckets in real-time!
+            OnComponentAdded?.Invoke(this, component);
         }
 
         public T? GetComponent<T>() where T : GameComponent
@@ -94,20 +135,50 @@ namespace Engine.Core.ECS
             return Components.OfType<T>().Any();
         }
 
-        public void RemoveComponent(GameComponent component)
+        public bool HasComponents(params Type[] componentTypes)
         {
-            // Guard safety loop: Prevent developers from accidentally deleting the baseline transform!
-            if(component is TransformComponent)
+            // If no components are requested, technically it has all of them
+            if(componentTypes == null || componentTypes.Length == 0)
+                return true;
+
+            // Verify that every requested type matches at least one component in our list
+            foreach(var requiredType in componentTypes)
             {
-                Utilities.Log.Warning($"[ECS Warning] Cannot remove TransformComponent from '{Name}'. Every GameObject requires a spatial transform.");
-                return;
+                bool hasThisComponent = false;
+
+                for(int i = 0; i < Components.Count; i++)
+                {
+                    // IsAssignableFrom handles inheritance safely (e.g., if a system asks for Collider, BoxCollider matches)
+                    if(requiredType.IsAssignableFrom(Components[i].GetType()))
+                    {
+                        hasThisComponent = true;
+                        break; // Found it, move to the next required type
+                    }
+                }
+
+                // If even one required component type is missing, the entity fails the check
+                if(!hasThisComponent)
+                    return false;
             }
 
-            if(Components.Contains(component))
-            {
-                component.Owner = null;
-                Components.Remove(component);
-            }
+            return true;
+        }
+
+        /// <summary>
+        /// Removes the first component matching type T from this object.
+        /// </summary>
+        public void RemoveComponent<T>() where T : GameComponent
+        {
+            if(typeof(T) == typeof(TransformComponent))
+                return;
+
+            var componentToRemove = GetComponent<T>();
+            if(componentToRemove == null)
+                return;
+
+            componentToRemove.Owner = null;
+            Components.Remove(componentToRemove);
+            OnComponentRemoved?.Invoke(this, componentToRemove);
         }
     }
 }

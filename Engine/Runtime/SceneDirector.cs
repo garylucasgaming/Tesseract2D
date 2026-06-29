@@ -17,28 +17,25 @@ namespace Engine.Core.Runtime
             get; private set;
         }
 
-        /// <summary>
-        /// Safely unloads the old scene state and activates a new level configuration.
-        /// </summary>
         public static void LoadScene(GameScene newScene)
         {
-            // 1. Perform cleanup on the outgoing scene to release resources
             if(ActiveScene != null)
             {
-                ActiveScene.GameObjects.Clear();
+                // Clear the systems layout
                 ActiveScene.Systems.Clear();
+
+                // Clear out the store completely by looping through its serialized references
+                var activeEntities = ActiveScene.Entities.GetSerializableEntities();
+                for(int i = activeEntities.Count - 1; i >= 0; i--)
+                {
+                    ActiveScene.DestroyGameObject(activeEntities[i]);
+                }
             }
 
-            //flush the old scene's event listeners to prevent cross-scene event pollution
             GameEvent.ClearAllListeners();
-
-            // 2. Assign the fresh scene sandbox
             ActiveScene = newScene;
         }
 
-        /// <summary>
-        /// Global heartbeat tick that drives the active scene's system execution pipeline.
-        /// </summary>
         public static void Update(float deltaTime)
         {
             ActiveScene?.Update(deltaTime);
