@@ -97,10 +97,10 @@ namespace Engine.Core.Serialization
                     Name = "Global Systems Anchor"
                 };
 
-                defaultScene.GameObjects.Add(globalSystemsGo);
+                //defaultScene.GameObjects.Add(globalSystemsGo);
 
-                string sceneJson = JsonSerializer.Serialize(defaultScene, JsonConfiguration.Options);
-                File.WriteAllText(targetFilePath, sceneJson);
+                //string sceneJson = JsonSerializer.Serialize(defaultScene, JsonConfiguration.Options);
+                //File.WriteAllText(targetFilePath, sceneJson);
 
                 Log.Info($"[Project Factory] Successfully baked template file asset: {targetFilePath}");
             }

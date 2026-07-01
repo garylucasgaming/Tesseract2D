@@ -16,5 +16,25 @@ namespace Engine.Core.ECS
         {
             get; internal set;
         }
+
+        [JsonIgnore]
+        public GameObject? Parent
+        {
+            get
+            {
+                if(Owner != null)
+                {
+                    return Owner?.Parent;
+                }
+                else
+                {
+                    return null;
+                }
+
+            }
+            set
+            {
+            }
+        }
     }
 }

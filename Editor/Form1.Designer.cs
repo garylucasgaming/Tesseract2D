@@ -83,6 +83,7 @@
             SceneHierarchy = new GroupBox();
             SceneHierarchyTreeView = new TreeView();
             PropertiesWindow = new GroupBox();
+            InspectorFlowPanel = new FlowLayoutPanel();
             tabControl1 = new TabControl();
             SceneView = new TabPage();
             mgWindowControl = new Editor.MGWindowControl();
@@ -91,7 +92,6 @@
             ProjectFolderTreeView = new TreeView();
             ConsoleTabPage = new TabPage();
             ConsoleTextBox = new TextBox();
-            InspectorFlowPanel = new FlowLayoutPanel();
             menuStrip1.SuspendLayout();
             SceneHierarchy.SuspendLayout();
             PropertiesWindow.SuspendLayout();
@@ -428,7 +428,7 @@
             SceneHierarchy.Dock = DockStyle.Left;
             SceneHierarchy.Location = new Point(0, 24);
             SceneHierarchy.Name = "SceneHierarchy";
-            SceneHierarchy.Size = new Size(171, 657);
+            SceneHierarchy.Size = new Size(262, 657);
             SceneHierarchy.TabIndex = 1;
             SceneHierarchy.TabStop = false;
             SceneHierarchy.Text = "Scene Hierarchy";
@@ -440,7 +440,7 @@
             SceneHierarchyTreeView.LabelEdit = true;
             SceneHierarchyTreeView.Location = new Point(3, 19);
             SceneHierarchyTreeView.Name = "SceneHierarchyTreeView";
-            SceneHierarchyTreeView.Size = new Size(165, 635);
+            SceneHierarchyTreeView.Size = new Size(256, 635);
             SceneHierarchyTreeView.TabIndex = 1;
             SceneHierarchyTreeView.ItemDrag += SceneHierarchyTreeView_ItemDrag;
             SceneHierarchyTreeView.DragDrop += SceneHierarchyTreeView_DragDrop;
@@ -451,21 +451,32 @@
             PropertiesWindow.Controls.Add(InspectorFlowPanel);
             PropertiesWindow.Dock = DockStyle.Right;
             PropertiesWindow.FlatStyle = FlatStyle.Flat;
-            PropertiesWindow.Location = new Point(1064, 24);
+            PropertiesWindow.Location = new Point(962, 24);
             PropertiesWindow.Name = "PropertiesWindow";
-            PropertiesWindow.Size = new Size(200, 657);
+            PropertiesWindow.Size = new Size(302, 657);
             PropertiesWindow.TabIndex = 2;
             PropertiesWindow.TabStop = false;
             PropertiesWindow.Text = "Properties";
+            // 
+            // InspectorFlowPanel
+            // 
+            InspectorFlowPanel.AutoScroll = true;
+            InspectorFlowPanel.Dock = DockStyle.Fill;
+            InspectorFlowPanel.FlowDirection = FlowDirection.TopDown;
+            InspectorFlowPanel.Location = new Point(3, 19);
+            InspectorFlowPanel.Name = "InspectorFlowPanel";
+            InspectorFlowPanel.Size = new Size(296, 635);
+            InspectorFlowPanel.TabIndex = 0;
+            InspectorFlowPanel.WrapContents = false;
             // 
             // tabControl1
             // 
             tabControl1.Controls.Add(SceneView);
             tabControl1.Dock = DockStyle.Top;
-            tabControl1.Location = new Point(171, 24);
+            tabControl1.Location = new Point(262, 24);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(893, 449);
+            tabControl1.Size = new Size(700, 449);
             tabControl1.TabIndex = 3;
             // 
             // SceneView
@@ -474,7 +485,7 @@
             SceneView.Location = new Point(4, 24);
             SceneView.Name = "SceneView";
             SceneView.Padding = new Padding(3);
-            SceneView.Size = new Size(885, 421);
+            SceneView.Size = new Size(692, 421);
             SceneView.TabIndex = 0;
             SceneView.Text = "Scene View";
             SceneView.UseVisualStyleBackColor = true;
@@ -485,7 +496,7 @@
             mgWindowControl.Location = new Point(3, 3);
             mgWindowControl.MouseHoverUpdatesOnly = false;
             mgWindowControl.Name = "mgWindowControl";
-            mgWindowControl.Size = new Size(879, 415);
+            mgWindowControl.Size = new Size(686, 415);
             mgWindowControl.TabIndex = 0;
             mgWindowControl.Text = "mgWindowControl2";
             // 
@@ -494,10 +505,10 @@
             tabControl2.Controls.Add(ProjectFolderTabPage);
             tabControl2.Controls.Add(ConsoleTabPage);
             tabControl2.Dock = DockStyle.Bottom;
-            tabControl2.Location = new Point(171, 475);
+            tabControl2.Location = new Point(262, 475);
             tabControl2.Name = "tabControl2";
             tabControl2.SelectedIndex = 0;
-            tabControl2.Size = new Size(893, 206);
+            tabControl2.Size = new Size(700, 206);
             tabControl2.TabIndex = 1;
             // 
             // ProjectFolderTabPage
@@ -506,7 +517,7 @@
             ProjectFolderTabPage.Location = new Point(4, 24);
             ProjectFolderTabPage.Name = "ProjectFolderTabPage";
             ProjectFolderTabPage.Padding = new Padding(3);
-            ProjectFolderTabPage.Size = new Size(885, 178);
+            ProjectFolderTabPage.Size = new Size(692, 178);
             ProjectFolderTabPage.TabIndex = 0;
             ProjectFolderTabPage.Text = "Project Folder";
             ProjectFolderTabPage.UseVisualStyleBackColor = true;
@@ -517,7 +528,7 @@
             ProjectFolderTreeView.HotTracking = true;
             ProjectFolderTreeView.Location = new Point(3, 3);
             ProjectFolderTreeView.Name = "ProjectFolderTreeView";
-            ProjectFolderTreeView.Size = new Size(879, 172);
+            ProjectFolderTreeView.Size = new Size(686, 172);
             ProjectFolderTreeView.TabIndex = 1;
             // 
             // ConsoleTabPage
@@ -541,17 +552,6 @@
             ConsoleTextBox.ScrollBars = ScrollBars.Vertical;
             ConsoleTextBox.Size = new Size(879, 172);
             ConsoleTextBox.TabIndex = 0;
-            // 
-            // InspectorFlowPanel
-            // 
-            InspectorFlowPanel.AutoScroll = true;
-            InspectorFlowPanel.Dock = DockStyle.Fill;
-            InspectorFlowPanel.FlowDirection = FlowDirection.TopDown;
-            InspectorFlowPanel.Location = new Point(3, 19);
-            InspectorFlowPanel.Name = "InspectorFlowPanel";
-            InspectorFlowPanel.Size = new Size(194, 635);
-            InspectorFlowPanel.TabIndex = 0;
-            InspectorFlowPanel.WrapContents = false;
             // 
             // Form1
             // 
@@ -644,7 +644,7 @@
         private ToolStripMenuItem projectFolderToolStripMenuItem;
         private ToolStripMenuItem pauseToolStripMenuItem;
         private ToolStripMenuItem stepForwardToolStripMenuItem;
-        private TreeView SceneHierarchyTreeView;
+        public TreeView SceneHierarchyTreeView;
         private Editor.TextSearchBarControl SceneHierarchySearchBar;
         private TreeView ProjectFolderTreeView;
         private Editor.TextSearchBarControl ProjectFolderSearchBar;

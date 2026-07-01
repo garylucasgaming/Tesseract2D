@@ -34,12 +34,19 @@ namespace Engine.Core.ECS
 
         public void InitializeManagers() 
         {
-            Systems = new SystemsManager();
-            Systems.ContextScene = this;
-            Managers = new ManagersManager();
-            Managers.ContextScene = this;
-            Entities = new EntityManager();
-            Entities.ContextScene = this;
+            Systems = new SystemsManager() { ContextScene = this};
+            Managers = new ManagersManager() { ContextScene = this };
+            Entities = new EntityManager() { ContextScene = this };
+            InitializeManagerEvents();
+
+        }
+
+        public void InitializeManagerEvents()
+        {
+            Entities.OnEntityCreated += entity => Systems.OnEntityChanged(entity);
+            Entities.OnComponentAdded += (entity, comp) => Systems.OnEntityChanged(entity);
+            Entities.OnComponentRemoved += (entity, comp) => Systems.OnEntityChanged(entity);
+            Entities.OnEntityRemoved += entity => Systems.OnEntityDestroyed(entity);
         }
 
         
@@ -65,12 +72,13 @@ namespace Engine.Core.ECS
                 ContextScene = this
                 
             };
-            
-            Entities.AddEntity(entity);
+
             foreach(var component in components)
             {
                 entity.AddComponent(component);
             }
+            Entities.AddEntity(entity);
+            
             return entity;
         }
 
@@ -84,26 +92,12 @@ namespace Engine.Core.ECS
         /// <param name="deltaTime">The elapsed timestamp scale in seconds since the last frame draw.</param>
         public void Update(float deltaTime)
         {
-            // Execute each active system worker sequentially down the pipeline assembly line
-            for(int i = 0; i < Systems.Systems.Count; i++)
-            {
-                if(Systems.Systems[i].IsEnabled)
-                {
-                    Type? targetComponent = Systems.Systems[i].RequiredComponentType;
+           Systems.Update(deltaTime);
+        }
 
-                    if(targetComponent != null)
-                    {
-                        // OPTIMIZATION: System only processes entities that actually care about it!
-                        var filteredEntities = Entities.GetEntitiesWithComponent(targetComponent);
-                        Systems.Systems[i].Update(filteredEntities, deltaTime);
-                    }
-                    else
-                    {
-                        // Fallback for global background systems that don't need components
-                        Systems.Systems[i].Update(Entities.GetSerializableEntities(), deltaTime);
-                    }
-                }
-            }
+        public void TickUpdate(float fixeddeltaTime)
+        {
+            Systems.TickUpdate(fixeddeltaTime);
         }
 
             #endregion

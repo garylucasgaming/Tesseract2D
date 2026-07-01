@@ -1,152 +1,149 @@
-﻿using Engine.Core.ECS;
-using Engine.Core.ECS.Components;
-using Engine.Core.Utilities;
-using System;
+﻿using System;
 using System.IO;
+using System.Numerics;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.Json.Serialization.Metadata;
+using Engine.Core.ECS;
+using Engine.Core.Utilities;
 
 namespace Engine.Core.Serialization
 {
-    /// <summary>
-    /// Handles polymorphic JSON serialization and file I/O for the engine's entity hierarchies.
-    /// </summary>
     public static class SceneSerializer
     {
-        private static readonly JsonSerializerOptions _options;
-
-        static SceneSerializer()
+        // Setup central JSON rules with our custom polymorphic converter injected
+        private static readonly JsonSerializerOptions _jsonOptions = new()
         {
-            _options = new JsonSerializerOptions
-            {
-                WriteIndented = true, // Keeps files clean, human-readable, and moddable
-                TypeInfoResolver = new DefaultJsonTypeInfoResolver
-                {
-                    Modifiers = { PolymorphicModifier }
-                }
-            };
-        }
+            WriteIndented = true,
+            Converters = {
+        new GameComponentConverter(),
+        new TypeDictionaryKeyConverter() // 👈 ADD THIS LINE HERE
+    },
+            PropertyNameCaseInsensitive = true
+        };
+
+
 
         /// <summary>
-        /// Intercepts component serialization to handle abstract GameComponent derivatives cleanly.
+        /// Serializes a live runtime GameScene out to a clean, flat data layout on disk.
         /// </summary>
-        private static void PolymorphicModifier(JsonTypeInfo typeInfo)
+        public static void SaveScene(GameScene scene, string absoluteFilePath)
         {
-            if(typeInfo.Type == typeof(GameComponent))
+            try
             {
-                typeInfo.PolymorphismOptions = new JsonPolymorphismOptions
+                var contract = new SceneFileContract
                 {
-                    TypeDiscriminatorPropertyName = "$type",
-                    UnknownDerivedTypeHandling = JsonUnknownDerivedTypeHandling.FallBackToBaseType
+                    SceneName = scene.SceneName,
+                    Id = scene.Id,
+                    Entities = scene.Entities.GetSerializableEntities()
                 };
 
-                // Register our mandatory transform component
-                typeInfo.PolymorphismOptions.DerivedTypes.Add(
-                    new JsonDerivedType(typeof(TransformComponent), "TransformComponent"));
+                string jsonStr = JsonSerializer.Serialize(contract, _jsonOptions);
+                File.WriteAllText(absoluteFilePath, jsonStr);
 
-                // NOTE: As you add new gameplay components later, you'll register them right here!
-            }
-        }
-
-        /// <summary>
-        /// Serializes a GameObject tree and writes it to a physical file on disk.
-        /// </summary>
-        public static void SaveSceneToFile(GameObject rootObject, string relativePath)
-        {
-            try
-            {
-                // MAGIC LINE: Forces the file out of bin/Debug and into your permanent folder!
-                string absolutePath = AssetPathProvider.ResolveProjectPath(relativePath);
-
-                string jsonString = JsonSerializer.Serialize(rootObject, JsonConfiguration.Options);
-
-                string? directory = Path.GetDirectoryName(absolutePath);
-                if(!string.IsNullOrWhiteSpace(directory) && !Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-
-                File.WriteAllText(absolutePath, jsonString);
-                Log.Info($"[Serializer] Physically saved scene asset to permanent drive location: {absolutePath}");
+                Log.Info($"[Scene Serializer] Successfully baked scene '{scene.SceneName}' to disk at: {absoluteFilePath}");
             }
             catch(Exception ex)
             {
-                Log.Error($"[Serializer Error] Failed to save scene file. Reason: {ex.Message}");
+                Log.Error($"[Scene Serializer Error] Failed to serialize scene data! Reason: {ex.Message}");
+                throw;
             }
         }
 
+
+
         /// <summary>
-        /// Reads a physical file from disk and parses it back into a fully operational GameObject tree.
+        /// Reads a flat JSON file contract and converts it into a live, fully linked ECS runtime scene.
         /// </summary>
-        public static GameObject? LoadSceneFromFile(string relativePath)
+        public static GameScene LoadScene(string absoluteFilePath)
         {
+            if(!File.Exists(absoluteFilePath))
+            {
+                throw new FileNotFoundException($"[Scene Serializer Error] Target scene file not found at: {absoluteFilePath}");
+            }
+
             try
             {
-                // MAGIC LINE: Resolves the path to your permanent 'SavedGameProjectData' folder!
-                string absolutePath = AssetPathProvider.ResolveProjectPath(relativePath);
 
-                if(!File.Exists(absolutePath))
+                string jsonStr = File.ReadAllText(absoluteFilePath);
+                var contract = JsonSerializer.Deserialize<SceneFileContract>(jsonStr, _jsonOptions);
+
+                // 1. Build a brand-new live operational context container instance
+                GameScene newScene = new GameScene
                 {
-                    Log.Error($"[Serializer Error] Scene file does not exist at absolute path: {absolutePath}");
-                    return null;
+                    SceneName = contract.SceneName,
+                    Id = contract.Id
+                };
+
+                if(contract == null)
+                {
+                    throw new JsonException($"[Scene Serializer Error] Deserialization returned a null contract for: {absoluteFilePath}");
                 }
 
-                // Read out the text file from your permanent drive location
-                string jsonString = File.ReadAllText(absolutePath);
-                GameObject? root = JsonSerializer.Deserialize<GameObject>(jsonString, _options);
+                
 
-                if(root != null)
+                // 2. Initialize the operational managers (Systems, Entities, Events)
+                newScene.InitializeManagers();
+                // 3. PASS 1: Seed all raw flat GameObjects back into the EntityManager database.
+                foreach(var rawEntity in contract.Entities)
                 {
-                    // Run the crucial post-load pass to rebuild pointers ignored by JSON
-                    FixHierarchyPointers(root);
-                    Log.Info($"[Serializer] Successfully loaded scene asset from: {relativePath}");
+                    // Register it to the system
+                    newScene.Entities.AddEntity(rawEntity);
+
+                    // 👇 FIX: Fetch the actual operational instance back out of the live database registry!
+                    var liveEntity = newScene.Entities.Find(rawEntity.Id);
+
+                    if(liveEntity != null && liveEntity.Transform != null)
+                    {
+                        // Bind the live component horizontally to the live engine entity
+                        liveEntity.Transform.Owner = liveEntity;
+                    }
+
+                    }
+
+                // 4. PASS 2: Repair the live object graph relationships. 
+                foreach(var rawEntity in contract.Entities)
+                {
+                    // 👇 FIX: Use the live database entity here too!
+                    var liveEntity = newScene.Entities.Find(rawEntity.Id);
+
+                    var transform = liveEntity?.Transform;
+                    var oldPosition = transform?.WorldPosition;
+                    var oldOffset = new Vector2(transform?.XOffset ?? 0, transform?.YOffset ?? 0);
+
+
+                    if(liveEntity == null)
+                        continue;
+
+                    if(rawEntity.ParentId.HasValue)
+                    {
+                        var parentObject = newScene.Entities.Find(rawEntity.ParentId.Value);
+                        if(parentObject != null)
+                        {
+                            liveEntity.SetParent(parentObject);
+                            var child = parentObject.Children.Find(c => c.Id == liveEntity.Id);
+                            }
+                        else
+                        {
+                             }
+                    }
+                    foreach(var component in liveEntity.Components.Values)
+                    {
+                        component.Owner = liveEntity; // Rebind the component to the live entity
+                    }
+
+                    transform.X = oldPosition.Value.X;
+                    transform.XOffset = 0;
+                    transform.XOffset = oldOffset.X;
+                    transform.Y = oldPosition.Value.Y;
+                    transform.YOffset = 0;
+                    transform.YOffset = oldOffset.Y;
                 }
 
-                return root;
+                 return newScene;
             }
             catch(Exception ex)
             {
-                Log.Error($"[Serializer Error] Failed to read scene file at '{relativePath}'. Reason: {ex.Message}");
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// Deep-traverses the loaded tree to stitch Owner, Parent, and Transform links back together.
-        /// </summary>
-        public static void FixHierarchyPointers(GameObject node)
-        {
-            // 1. Re-link component owners
-            foreach(var component in node.Components)
-            {
-                component.Owner = node;
-            }
-
-            // 2. Re-link the fast-access Transform property shortcut
-            var transform = node.GetComponent<TransformComponent>();
-            if(transform != null)
-            {
-                var prop = typeof(GameObject).GetProperty(nameof(GameObject.Transform));
-                prop?.SetValue(node, transform);
-            }
-
-            // 3. Drill down into children recursively
-            foreach(var child in node.Children)
-            {
-                // Re-bind the auto-implemented backing field for the Parent property safely via reflection
-                var parentField = typeof(GameObject).GetField("<Parent>k__BackingField",
-                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                parentField?.SetValue(child, node);
-
-                // Build spatial tree linkage
-                if(child.Transform != null && node.Transform != null)
-                {
-                    child.Transform.ParentTransform = node.Transform;
-                }
-
-                // Continue recursion
-                FixHierarchyPointers(child);
+                Log.Error($"[Scene Serializer Error] Failed to read or parse target scene data! Reason: {ex.Message}");
+                throw;
             }
         }
     }

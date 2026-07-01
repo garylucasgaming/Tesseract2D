@@ -13,7 +13,6 @@ namespace WinFormsApp1
     {
         private ContextMenuStrip _hierarchyContextMenu = new ContextMenuStrip();
 
-
         private void InitializeSceneHierarchyMenus()
         {
             SceneHierarchyTreeView.LabelEdit = true;
@@ -39,8 +38,6 @@ namespace WinFormsApp1
             SceneHierarchyTreeView.DragDrop += SceneHierarchyTreeView_DragDrop;
             SceneHierarchyTreeView.MouseUp += SceneHierarchyTreeView_MouseUp;
             SceneHierarchyTreeView.AfterLabelEdit += SceneHierarchyTreeView_AfterLabelEdit;
-
-            // 👇 NEW: Hook up the selection interceptor for the Inspector Properties View
             SceneHierarchyTreeView.AfterSelect += SceneHierarchyTreeView_AfterSelect;
         }
 
@@ -62,7 +59,8 @@ namespace WinFormsApp1
                 return;
             }
 
-            var rootEntities = activeScene.GameObjects.Where(go => go.Parent == null);
+            // FIX: Pull flat entities directly from our core EntityManager contract
+            var rootEntities = activeScene.Entities.GetSerializableEntities().Where(go => go.Parent == null);
             foreach(GameObject rootGo in rootEntities)
             {
                 TreeNode visualNode = new TreeNode(rootGo.Name)
@@ -110,16 +108,14 @@ namespace WinFormsApp1
                 return;
 
             TreeNode selectedVisualNode = SceneHierarchyTreeView.SelectedNode;
-            GameObject newEntity = new GameObject() { Name = "New GameObject", ContextScene = activeScene };
+
+            // FIX: Use native high-performance Scene spawning API
+            GameObject newEntity = activeScene.Spawn("New GameObject");
 
             if(selectedVisualNode != null && selectedVisualNode.Tag is GameObject parentEntity)
             {
-                parentEntity.AddChild(newEntity);
-                activeScene.RegisterGameObject(newEntity);
-            }
-            else
-            {
-                activeScene.RegisterGameObject(newEntity);
+                // FIX: Use your structural SetParent assignment pattern
+                newEntity.SetParent(parentEntity);
             }
 
             PopulateSceneHierarchyTree(SceneHierarchyTreeView, activeScene);
@@ -167,12 +163,16 @@ namespace WinFormsApp1
             if(activeScene == null)
                 return;
 
+            // Clean up live hierarchy links first
             if(targetEntity.Parent != null)
-                targetEntity.Parent.RemoveChild(targetEntity);
-            else
-                DestroyHierarchyRecursively(targetEntity, activeScene);
+                targetEntity.SetParent(null);
 
-            activeScene.DestroyGameObject(targetEntity);
+            // Cascade destruction across all underlying children recursive nodes
+            DestroyHierarchyRecursively(targetEntity, activeScene);
+
+            // FIX: Use the native operational manager to safely de-allocate instance arrays
+            activeScene.Entities.RemoveEntity(targetEntity);
+
             PopulateSceneHierarchyTree(SceneHierarchyTreeView, activeScene);
         }
 
@@ -182,7 +182,9 @@ namespace WinFormsApp1
             {
                 GameObject child = target.Children[i];
                 DestroyHierarchyRecursively(child, scene);
-                scene.DestroyGameObject(child);
+
+                // FIX: Map database cleanup to EntityManager directly
+                scene.Entities.RemoveEntity(child);
             }
         }
 
@@ -217,7 +219,9 @@ namespace WinFormsApp1
             {
                 if(draggedGo.Parent == null)
                     return;
-                draggedGo.Parent.RemoveChild(draggedGo);
+
+                // FIX: Detach hierarchy safely using centralized graph modifier 
+                draggedGo.SetParent(null);
                 PopulateSceneHierarchyTree(SceneHierarchyTreeView, activeScene);
                 return;
             }
@@ -227,7 +231,8 @@ namespace WinFormsApp1
             if(draggedNode == targetNode || IsNodeDescendant(draggedNode, targetNode))
                 return;
 
-            targetGo.AddChild(draggedGo);
+            // FIX: Remap via symmetric graph method
+            draggedGo.SetParent(targetGo);
             PopulateSceneHierarchyTree(SceneHierarchyTreeView, activeScene);
 
             TreeNode updatedTargetNode = FindNodeByGameObjectId(SceneHierarchyTreeView.Nodes, targetGo.Id);
@@ -245,18 +250,17 @@ namespace WinFormsApp1
 
         private void LoadDefaultSandboxScene()
         {
+            // FIX: Rebuilt initialization steps to use the exact structural factory API layout
             GameScene sandbox = new GameScene() { SceneName = "Default Sandbox" };
-            var mainCam = sandbox.CreateGameObject("Main Camera");
-            mainCam.ContextScene = sandbox;
-            var playerNode = sandbox.CreateGameObject("Player Entity");
-            playerNode.ContextScene = sandbox;
+            sandbox.InitializeManagers();
 
-            var childWeapon = new GameObject() { Name = "Equipped Weapon Staff", ContextScene = sandbox };
-            playerNode.AddChild(childWeapon);
-            sandbox.RegisterGameObject(childWeapon);
+            sandbox.Spawn("Main Camera");
+            var playerNode = sandbox.Spawn("Player Entity");
 
-            var staticFloor = sandbox.CreateGameObject("Static Level Floor");
-            staticFloor.ContextScene = sandbox;
+            var childWeapon = sandbox.Spawn("Equipped Weapon Staff");
+            childWeapon.SetParent(playerNode);
+
+            sandbox.Spawn("Static Level Floor");
 
             EditorContextManager.ActiveLoadedScene = sandbox;
             PopulateSceneHierarchyTree(SceneHierarchyTreeView, sandbox);
@@ -305,54 +309,31 @@ namespace WinFormsApp1
             return IsNodeDescendant(parent, child.Parent);
         }
 
-        private void SceneHierarchySearchBar_SearchTextChanged(object sender, string filterText)
-        {
-            if(string.IsNullOrEmpty(filterText))
-            {
-                ResetTreeNodes(SceneHierarchyTreeView.Nodes);
-                return;
-            }
-            SceneHierarchyTreeView.BeginUpdate();
-            FilterTreeNodes(SceneHierarchyTreeView.Nodes, filterText);
-            SceneHierarchyTreeView.EndUpdate();
-        }
-
-        // 👇 NEW: The dynamic selection handler method
         private void SceneHierarchyTreeView_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            // Clear the inspector sheet immediately on focus shift
             InspectorFlowPanel.Controls.Clear();
-
             if(e.Node == null || e.Node.Tag is not GameObject targetGo)
                 return;
 
-            // Lock layout math updates to prevent scrolling/flicker artifacts during generation
             InspectorFlowPanel.SuspendLayout();
-
             int targetWidth = InspectorFlowPanel.Width;
 
-            // Card 1: Core metadata profile panel (Editable Name field)
-            Panel baseCard = ComponentCardFactory.CreateCard("GameObject Settings", targetGo, targetWidth);
+            // Card 1: Core GameObject Properties (Id, Name, IsActive)
+            Panel baseCard = ComponentCardFactory.CreateCard(targetGo.Name, targetGo, targetWidth);
             InspectorFlowPanel.Controls.Add(baseCard);
 
-            // Card 2: Transform manipulation module
-            if(targetGo.Transform != null)
+            // Card 2+: Extract the direct, live memory instances stored inside the entity
+            // FIX: Add '.Values' if Components is a Dictionary, or ensure it pulls the raw GameComponent references
+            foreach(var component in targetGo.Components.Values)
             {
-                Panel transformCard = ComponentCardFactory.CreateCard("Transform Component", targetGo.Transform, targetWidth);
-                InspectorFlowPanel.Controls.Add(transformCard);
-            }
+                // 1. Get the clean runtime name of the active instance (e.g., "TransformComponent")
+                string componentName = component.GetType().Name;
 
-            // Card 3+: Generic ECS array processor
-            /*
-            foreach (var component in targetGo.Components)
-            {
-                string name = component.GetType().Name;
-                Panel componentCard = ComponentCardFactory.CreateCard(name, component, targetWidth);
+                // 2. Pass the direct live reference straight into your wrapped factory card panel
+                Panel componentCard = ComponentCardFactory.CreateCard(componentName, component, targetWidth);
                 InspectorFlowPanel.Controls.Add(componentCard);
             }
-            */
 
-            // Release the rendering thread engine smoothly
             InspectorFlowPanel.ResumeLayout();
         }
     }

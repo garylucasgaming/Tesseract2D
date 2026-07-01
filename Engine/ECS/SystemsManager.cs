@@ -1,136 +1,177 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Engine.Core.ECS
 {
     public class SystemsManager
     {
-        //local list of all registered systems in the scene
-        public List<GameSystem> Systems { get; private set; } = new();
+        // 1. Category Buckets: Policy Type -> List of matching systems
+        private readonly Dictionary<SystemUpdatePolicy, List<GameSystem>> _policyBuckets = new();
 
-        public GameScene ContextScene { get;  set; } = null!;
+        // 2. The Golden Nugget: A warm entity bucket mapped explicitly to each active system
+        private readonly Dictionary<GameSystem, HashSet<GameObject>> _systemEntityCache = new();
+
+        public GameScene ContextScene { get; set; } = null!;
 
         public SystemsManager()
         {
-            InitializeSystemCache();
+            // Automatically initialize a bucket list for every single policy enum type
+            foreach(SystemUpdatePolicy policy in Enum.GetValues(typeof(SystemUpdatePolicy)))
+            {
+                _policyBuckets[policy] = new List<GameSystem>();
+            }
         }
 
-       
-
-        // High-speed cache lookup: Component Type -> System Type
-        private static Dictionary<Type, Type>? _componentToSystemCache;
-        private static readonly object _cacheLock = new object();
-
-        // Registers a GameSystem into the execution pipeline and automatically re-sorts the update stack.
+        
+        /// Registers a system, assigns it to its timing bucket, and builds its initial matching cache.
+        
         public void AddSystem(GameSystem system)
         {
             if(system == null)
                 return;
 
+            // Prevent duplicate system types from running in the same scene context
             Type systemType = system.GetType();
+            if(_systemEntityCache.Keys.Any(s => s.GetType() == systemType))
+                return;
 
-            // Prevent duplicate system types of the exact same subclass from piling up
-            if(Systems.Any(s => s.GetType() == systemType))
+            system.ContextScene = ContextScene;
+
+            // Route directly into its corresponding enum dictionary bucket
+            _policyBuckets[system.UpdatePolicy].Add(system);
+
+            // Allocate the dedicated warm cache pool for this system
+            var matchingSet = new HashSet<GameObject>();
+            _systemEntityCache[system] = matchingSet;
+
+            // Ingest any pre-existing entities in the scene that match this query immediately
+            if(ContextScene?.Entities != null)
             {
-                return; // System is already tracking
-            }
-
-            Systems.Add(system);
-
-            // Sort dynamically by execution hierarchy (e.g., lower priority indices execute first)
-            Systems = Systems.OrderBy(s => s.UpdatePolicy).ToList();
-        }
-
-        // Retrieves a specific active system (like your MovementSystem) by its derived subclass type.
-        // Useful for editor inspection or cross-system configuration.
-        public T? GetSystem<T>() where T : GameSystem
-        {
-            return Systems.OfType<T>().FirstOrDefault();
-        }
-
-        // Removes a system from the active processing pipeline.
-        public void RemoveSystem(GameSystem system)
-        {
-            Systems.Remove(system);
-        }
-
-        //returns a read-only list of all registered systems in the scene
-        public IReadOnlyList<GameSystem> GetRegisteredSystems()
-        {
-            return Systems;
-        }
-
-
-       
-        // Scans all loaded assemblies via reflection once to map components to their systems.
-        private static void InitializeSystemCache()
-        {
-            // Lock ensures thread safety if multiple threads initialize scenes simultaneously
-            lock(_cacheLock)
-            {
-                if(_componentToSystemCache != null)
-                    return; // Already initialized!
-
-                _componentToSystemCache = new Dictionary<Type, Type>();
-
-                // Get all code assemblies loaded in the current game application instance
-                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-
-                foreach(var assembly in assemblies)
+                var matchedList = ContextScene.Entities.GetQuery(system.RequiredComponents);
+                foreach(var entity in matchedList)
                 {
-                    // Skip Microsoft/System assemblies to save processing time
-                    string? assemblyName = assembly.FullName;
-                    if(assemblyName != null && (assemblyName.StartsWith("System") || assemblyName.StartsWith("Microsoft")))
-                    {
-                        continue;
-                    }
-
-
-                    try
-                    {
-                        var types = assembly.GetTypes();
-
-                        foreach(var type in types)
-                        {
-                            //TODO: give it a specific folder to look at. perhaps even a json file. 
-                            // skip any types in the Engine.Core.Runtime namespace to avoid accidentally linking internal utilities as systems
-                            if(type.Namespace != null && type.Namespace.StartsWith("Engine.Core.Runtime"))
-                            {
-                                continue; // Skip infrastructure utilities, they don't contain GameSystems with components!
-                            }
-
-                            // We are looking for concrete classes that inherit from our base GameSystem
-                            if(type.IsClass && !type.IsAbstract && type.IsSubclassOf(typeof(GameSystem)))
-                            {
-                                // Create a temporary "blueprint" instance to read its default virtual properties
-                                // (This lets us read RequiredComponentType without executing the system)
-                                var instance = Activator.CreateInstance(type) as GameSystem;
-
-                                if(instance?.RequiredComponentType != null)
-                                {
-                                    Type componentRequirement = instance.RequiredComponentType;
-
-                                    // Map the component type directly to this system type
-                                    if(!_componentToSystemCache.ContainsKey(componentRequirement))
-                                    {
-                                        _componentToSystemCache[componentRequirement] = type;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    catch(ReflectionTypeLoadException)
-                    {
-                        // Safely ignore assemblies that cannot be fully scanned in the current context
-                        continue;
-                    }
+                    matchingSet.Add(entity);
                 }
             }
         }
 
+        
+        /// Global execution ticks called by your core engine loop.
+        /// Handles FrameUpdate and processes individual FixedUpdate custom interval clocks.
+        
+        public void Update(float deltaTime)
+        {
+            // FrameUpdate: Variable frame rate execution
+            ExecuteSystemBucket(SystemUpdatePolicy.FrameUpdate, deltaTime);
+
+            // FixedUpdate: Custom intervals (clocks ticked behind the scenes)
+            var customIntervalSystems = _policyBuckets[SystemUpdatePolicy.FixedUpdate];
+            for(int i = 0; i < customIntervalSystems.Count; i++)
+            {
+                var system = customIntervalSystems[i];
+                if(!system.IsEnabled)
+                    continue;
+
+                system.timer += deltaTime;
+                if(system.timer >= system.UpdateInterval)
+                {
+                    system.timer = 0.0f; // Reset the clock
+                    system.Update(_systemEntityCache[system], deltaTime);
+                }
+            }
+        }
+
+        
+        /// Runs TickUpdate systems on your locked, rigid simulation step ticker.
+        public void TickUpdate(float fixedDeltaTime)
+        {
+            ExecuteSystemBucket(SystemUpdatePolicy.TickUpdate, fixedDeltaTime);
+        }
+
+        
+        /// Drives Manual systems. Call this explicitly to trigger a manual system by type.
+        //probably not needed as can just use events instead. 
+        public void TriggerManualSystem<T>(float deltaTime) where T : GameSystem
+        {
+            var system = GetSystem<T>();
+            if(system == null || !system.IsEnabled || system.UpdatePolicy != SystemUpdatePolicy.Manual)
+                return;
+
+            system.Update(_systemEntityCache[system], deltaTime);
+        }
+
+        
+        /// Helper to sweep through standard execution pipelines cleanly.
+        
+        private void ExecuteSystemBucket(SystemUpdatePolicy policy, float deltaTime)
+        {
+            var systems = _policyBuckets[policy];
+            for(int i = 0; i < systems.Count; i++)
+            {
+                var system = systems[i];
+                if(!system.IsEnabled || !system.shouldUpdate)
+                    continue;
+
+                system.Update(_systemEntityCache[system], deltaTime);
+            }
+        }
+
+        // --- Reactive Engine Listeners: Hooked to your scene spawn/component change events ---
+
+        
+        /// Call this whenever an entity spawns, gets activated, or gains a new component.
+        
+        public void OnEntityChanged(GameObject entity, float deltaTime = 0.0f)
+        {
+            foreach(var kvp in _systemEntityCache)
+            {
+                var system = kvp.Key;
+                var cache = kvp.Value;
+
+                bool currentlyMatches = entity.isActive && system.RequiredComponents.IsMatched(entity);
+                bool wasInCache = cache.Contains(entity);
+
+                if(currentlyMatches)
+                {
+                    cache.Add(entity);
+
+                    // EntityUpdate Policy: If an entity mutates and matches, tick this system instantly!
+                    if(system.UpdatePolicy == SystemUpdatePolicy.EntityUpdate && system.IsEnabled && !wasInCache)
+                    {
+                        var singleEntityBatch = new HashSet<GameObject> { entity };
+                        system.Update(singleEntityBatch, deltaTime);
+                    }
+                }
+                else
+                {
+                    cache.Remove(entity);
+                }
+            }
+        }
+
+        
+        /// Call this whenever an entity is explicitly destroyed or removed from the active scene tree.
+        
+        public void OnEntityDestroyed(GameObject entity)
+        {
+            foreach(var cache in _systemEntityCache.Values)
+            {
+                cache.Remove(entity);
+            }
+        }
+
+        // --- Utilities ---
+
+        public T? GetSystem<T>() where T : GameSystem
+        {
+            return _systemEntityCache.Keys.OfType<T>().FirstOrDefault();
+        }
+
+        public void RemoveSystem(GameSystem system)
+        {
+            _policyBuckets[system.UpdatePolicy].Remove(system);
+            _systemEntityCache.Remove(system);
+        }
     }
 }

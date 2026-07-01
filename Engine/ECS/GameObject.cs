@@ -15,7 +15,9 @@ namespace Engine.Core.ECS
 
         public List<String> tags { get; set; } = new List<String>();
 
-        public List<GameComponent> Components { get; set; } = new List<GameComponent>();
+        public Dictionary<Type, GameComponent> Components { get; set; } = new Dictionary<Type, GameComponent>();
+        //public List<GameComponent> Components { get; set; } = new List<GameComponent>();
+       [JsonIgnore]
         public GameScene ContextScene { get; set; } = null!;
 
         public event Action<GameObject, GameComponent>? OnComponentAdded;
@@ -31,6 +33,9 @@ namespace Engine.Core.ECS
             get; private set;
         }
 
+        public Guid? ParentId { get; set; } = null;
+
+        [JsonIgnore]
         public List<GameObject> Children { get; set; } = new List<GameObject>();
 
         // --- NEW: Frontloaded Core Components ---
@@ -47,9 +52,8 @@ namespace Engine.Core.ECS
         public GameObject()
         {
             // Frontload the transform component automatically
-            Transform = new TransformComponent();
-            Transform.Owner = this;
-            Components.Add(Transform);
+            Transform = new TransformComponent() { Owner = this };
+            AddComponent(Transform);
         }
 
         // --- NEW: Hierarchy Management Methods ---
@@ -57,6 +61,40 @@ namespace Engine.Core.ECS
         /// <summary>
         /// Attaches a child GameObject to this object, automatically handling transform inheritance.
         /// </summary>
+        /// 
+        public void SetParent(GameObject? newParent)
+        {
+            if(Parent != null)
+            {
+                Parent.Children.Remove(this);
+            }
+
+            Parent = newParent;
+
+            if(newParent != null)
+            {
+                ParentId = newParent.Id;
+                if(!newParent.Children.Contains(this))
+                {
+                    newParent.Children.Add(this);
+                }
+
+                // 👇FIX: Synchronize the offsets using the absolute coordinates loaded from JSON!
+                var myTransform = GetComponent<TransformComponent>();
+                var parentTransform = newParent.GetComponent<TransformComponent>();
+
+                if(myTransform != null && parentTransform != null)
+                {
+                    // Calculate where I am in world space relative to my new parent's world space
+                    myTransform.XOffset = myTransform.X - parentTransform.X;
+                    myTransform.YOffset = myTransform.Y - parentTransform.Y;
+                }
+            }
+            else
+            {
+                ParentId = null;
+            }
+        }
         public void AddChild(GameObject child)
         {
             if(child == null || child == this)
@@ -68,8 +106,7 @@ namespace Engine.Core.ECS
             child.Parent = this;
             Children.Add(child);
 
-            // Tell the child's transform that it now answers to our transform matrix
-            child.Transform.ParentTransform = this.Transform;
+            
         }
 
         /// <summary>
@@ -80,7 +117,6 @@ namespace Engine.Core.ECS
             if(Children.Contains(child))
             {
                 child.Parent = null;
-                child.Transform.ParentTransform = null;
                 Children.Remove(child);
             }
         }
@@ -98,7 +134,8 @@ namespace Engine.Core.ECS
             }
 
             T newComponent = new T { Owner = this };
-            Components.Add(newComponent);
+
+            Components[typeof(T)] = newComponent;
             OnComponentAdded?.Invoke(this, newComponent);
 
             return newComponent;
@@ -109,17 +146,19 @@ namespace Engine.Core.ECS
             if(component == null)
                 return;
 
+             component.Owner = this;
+
             Type componentType = component.GetType();
 
             // Use your non-generic component list to check for duplicates safely at runtime
-            if(Components.Any(c => c.GetType() == componentType))
+            if(Components.ContainsKey(componentType))
             {
                 Log.Warning($"[ECS Warning] Component of type '{componentType.Name}' is already attached to '{Name}'.");
                 return;
             }
 
-            component.Owner = this;
-            Components.Add(component);
+           
+            Components[componentType] = component;
 
             // This instantly updates the EntityManager's buckets in real-time!
             OnComponentAdded?.Invoke(this, component);
@@ -127,12 +166,18 @@ namespace Engine.Core.ECS
 
         public T? GetComponent<T>() where T : GameComponent
         {
-            return Components.OfType<T>().FirstOrDefault();
+            // return Components.OfType<T>().FirstOrDefault();
+           if(Components.TryGetValue(typeof(T), out var component))
+            {
+                return (T) component;
+                
+            }
+            return null;
         }
 
         public bool HasComponent<T>() where T : GameComponent
         {
-            return Components.OfType<T>().Any();
+            return Components.ContainsKey(typeof(T));
         }
 
         public bool HasComponents(params Type[] componentTypes)
@@ -141,24 +186,14 @@ namespace Engine.Core.ECS
             if(componentTypes == null || componentTypes.Length == 0)
                 return true;
 
-            // Verify that every requested type matches at least one component in our list
+            // Verify that every single requested type exists exactly as a key in our dictionary
             foreach(var requiredType in componentTypes)
             {
-                bool hasThisComponent = false;
-
-                for(int i = 0; i < Components.Count; i++)
+                // O(1) direct hash check instead of looping and checking IsAssignableFrom!
+                if(!Components.ContainsKey(requiredType))
                 {
-                    // IsAssignableFrom handles inheritance safely (e.g., if a system asks for Collider, BoxCollider matches)
-                    if(requiredType.IsAssignableFrom(Components[i].GetType()))
-                    {
-                        hasThisComponent = true;
-                        break; // Found it, move to the next required type
-                    }
+                    return false; // If even one exact type is missing, it fails immediately
                 }
-
-                // If even one required component type is missing, the entity fails the check
-                if(!hasThisComponent)
-                    return false;
             }
 
             return true;
@@ -177,7 +212,7 @@ namespace Engine.Core.ECS
                 return;
 
             componentToRemove.Owner = null;
-            Components.Remove(componentToRemove);
+            Components.Remove(typeof(T));
             OnComponentRemoved?.Invoke(this, componentToRemove);
         }
     }

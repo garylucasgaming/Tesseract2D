@@ -7,15 +7,6 @@ using System.Threading.Tasks;
 
 namespace Engine.Core.ECS
 {
-    public abstract class GameSystem<T> : GameSystem where T : GameComponent
-    {
-        
-        public override Type RequiredComponentType => typeof(T);
-
-
-        // The user only has to implement this simple, clean method
-        protected abstract void UpdateEntity(GameObject entity, T component, float deltaTime);
-    }
 
     // The non-generic baseline for global/infrastructure systems
     public abstract class GameSystem
@@ -26,19 +17,19 @@ namespace Engine.Core.ECS
 
         public float UpdateInterval = 0.0f; // For FixedUpdate and EntityUpdate policies
 
-        internal float timer
+       public float timer
         {
             get; set;
         } // Internal timer for FixedUpdate and EntityUpdate policies
 
-        internal bool shouldUpdate { get; set; } = true; // Internal flag to determine if the system should update this frame
+       public bool shouldUpdate { get; set; } = true; // Internal flag to determine if the system should update this frame
 
         public virtual GameScene? ContextScene { get; set; } = null;
 
         // Default to null for global systems that don't belong to a specific component
-        public virtual Type? RequiredComponentType => null;
+        public abstract IComponentQuery RequiredComponents{ get; set; }
 
-        public abstract void UpdateEntity(IReadOnlyList<GameObject> gameObjects, float deltaTime);
+        public abstract void Update(HashSet<GameObject> gameObjects, float deltaTime);
     }
 }
 

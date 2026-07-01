@@ -23,6 +23,15 @@ namespace WinFormsApp1
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool DestroyIcon(IntPtr hIcon);
 
+        public static TreeView ActiveHierarchyTreeView {
+            get; private set;
+        }
+
+        public static GroupBox ActiveInspectorPanel
+        {
+            get; private set;
+        }
+
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         private struct SHFILEINFO
         {
@@ -47,24 +56,23 @@ namespace WinFormsApp1
 
         public Form1()
         {
-            InitializeComponent();
 
+            Log.OnLogMessage += (severity, message) =>
+            {
+                AppendMessageToConsoleBox(severity, message);
+            };
+            InitializeComponent();
+            Log.Info("[Editor UI] Initializing editor main form...");
             SetTreeViewTheme(ProjectFolderTreeView.Handle);
             InitializeExplorerIcons();
 
             InitializeProjectExplorerMenus();
             InitializeSceneHierarchyMenus();
+            ActiveHierarchyTreeView = this.SceneHierarchyTreeView;
+            ActiveInspectorPanel = this.PropertiesWindow;
             UpdateEditorTitle();
 
-            if(EditorContextManager.IsProjectLoaded)
-            {
-                GameScene sandbox = new GameScene() { SceneName = "Editor Sandbox Scene" };
-                var sampleGo = sandbox.CreateGameObject("Main Camera");
-                sampleGo.ContextScene = sandbox;
 
-                EditorContextManager.ActiveLoadedScene = sandbox;
-                PopulateSceneHierarchyTree(SceneHierarchyTreeView, sandbox);
-            }
         }
 
         public static void SetTreeViewTheme(IntPtr treeHandle)
@@ -90,11 +98,69 @@ namespace WinFormsApp1
             UpdateEditorTitle();
             if(EditorContextManager.IsProjectLoaded)
             {
-                LoadDefaultSandboxScene();
+                // 1. Build the path where your default scene's json file should live
+                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", "Default Sandbox.json");
+
+                // 2. CHECK: If the file exists, load it! Otherwise, fall back to generating a clean slate template.
+                if(File.Exists(targetScenePath))
+                {
+                    try
+                    {
+                        Log.Info($"[Editor UI] Found existing workspace state file. Deserializing active layout tree...");
+
+                        // Read the file structure straight back into memory
+                        GameScene loadedScene = SceneSerializer.LoadScene(targetScenePath);
+
+                        // Set the context and populate your UI nodes with the genuine saved data
+                        EditorContextManager.ActiveLoadedScene = loadedScene;
+                        PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
+                    }
+                    catch(Exception ex)
+                    {
+                        Log.Error($"[Editor UI Error] Scene file was found but failed to deserialize. Falling back to default layout. Reason: {ex.Message}");
+                        LoadDefaultSandboxScene();
+                    }
+                }
+                else
+                {
+                    Log.Info("[Editor UI] No existing workspace scene file detected. Generating baseline sandbox template...");
+                    LoadDefaultSandboxScene();
+                }
             }
             PopulateProjectExplorerTree(ProjectFolderTreeView);
         }
 
+        public static void RefreshComponentInspector(object targetComponent)
+        {
+            if(targetComponent == null || ActiveInspectorPanel == null)
+                return;
+
+            // Call a recursive worker to handle any nested container depths safely
+            FindAndRefreshGrid(ActiveInspectorPanel, targetComponent);
+        }
+
+        private static bool FindAndRefreshGrid(Control parent, object targetComponent)
+        {
+            foreach(Control child in parent.Controls)
+            {
+                // 1. Check if this control is a PropertyGrid and matches our instance
+                if(child is PropertyGrid grid && grid.Tag == targetComponent)
+                {
+                    grid.Refresh();
+                    return true; // Match found and repainted, bubble out!
+                }
+
+                // 2. If it's a container holding controls, drill down into it
+                if(child.HasChildren)
+                {
+                    if(FindAndRefreshGrid(child, targetComponent))
+                    {
+                        return true; // Propagation short-circuit
+                    }
+                }
+            }
+            return false;
+        }
         private string PromptUserForProjectName()
         {
             Form prompt = new Form()
@@ -102,10 +168,10 @@ namespace WinFormsApp1
                 Width = 400,
                 Height = 150,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
-                Text = "Enter Identity Name",
+                Text = "Enter Project Name",
                 StartPosition = FormStartPosition.CenterParent
             };
-            Label textLabel = new Label() { Left = 20, Top = 20, Text = "Name Identifier:", Width = 150 };
+            Label textLabel = new Label() { Left = 20, Top = 20, Text = "Folder Name:", Width = 150 };
             TextBox textBox = new TextBox() { Left = 20, Top = 45, Width = 340 };
             Button confirmation = new Button() { Text = "Ok", Left = 280, Width = 80, Top = 80, DialogResult = DialogResult.OK };
             prompt.Controls.Add(textBox);
@@ -171,10 +237,44 @@ namespace WinFormsApp1
         private void onSaveProjectToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if(!EditorContextManager.IsProjectLoaded)
+            {
+                MessageBox.Show("No active project workspace is currently open.", "Save Blocked", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
-            Log.Info("[Editor UI] Global workspace save command executed successfully.");
-        }
+            }
 
+            if(EditorContextManager.ActiveLoadedScene == null)
+            {
+                Log.Warning("[Editor UI] Save aborted: There is no active scene context loaded to persist.");
+                return;
+            }
+
+            try
+            {
+                Log.Info("[Editor UI] Initiating scene hierarchy persistence pipeline...");
+
+                // 1. Build the path matching your project context rules
+                string sceneFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.json";
+                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", sceneFileName);
+
+                // 2. Ensure directories exist safely on disk
+                string directoryCheck = Path.GetDirectoryName(targetScenePath);
+                if(!string.IsNullOrEmpty(directoryCheck) && !Directory.Exists(directoryCheck))
+                {
+                    Directory.CreateDirectory(directoryCheck);
+                }
+
+                // 3.  EXECUTE YOUR EXACT NATIVE ENGINE SERIALIZER 
+                // We pass the live scene layout and target destination directly
+                SceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, targetScenePath);
+
+                MessageBox.Show($"Project workspace and active scene layout saved successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch(Exception ex)
+            {
+                // Failures during save are already logged by SceneSerializer, but this provides a UI safety fallback
+                MessageBox.Show($"Failed to save project layout safely to disk:\n{ex.Message}", "IO Save Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
         private void AppendMessageToConsoleBox(LogSeverity severity, string formattedText)
         {
             if(ConsoleTextBox.InvokeRequired)
