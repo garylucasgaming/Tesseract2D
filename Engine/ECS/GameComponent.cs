@@ -12,9 +12,9 @@ namespace Engine.Core.ECS
     {
 
         [JsonIgnore]
-        public GameObject? Owner
+        public GameObject? gameObject
         {
-            get; internal set;
+            get;  set;
         }
 
         [JsonIgnore]
@@ -22,9 +22,9 @@ namespace Engine.Core.ECS
         {
             get
             {
-                if(Owner != null)
+                if(gameObject != null)
                 {
-                    return Owner?.Parent;
+                    return gameObject?.Parent;
                 }
                 else
                 {

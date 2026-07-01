@@ -52,7 +52,7 @@ namespace Engine.Core.ECS
         public GameObject()
         {
             // Frontload the transform component automatically
-            Transform = new TransformComponent() { Owner = this };
+            Transform = new TransformComponent() { gameObject = this };
             AddComponent(Transform);
         }
 
@@ -133,7 +133,7 @@ namespace Engine.Core.ECS
                 return GetComponent<T>()!;
             }
 
-            T newComponent = new T { Owner = this };
+            T newComponent = new T { gameObject = this };
 
             Components[typeof(T)] = newComponent;
             OnComponentAdded?.Invoke(this, newComponent);
@@ -146,7 +146,7 @@ namespace Engine.Core.ECS
             if(component == null)
                 return;
 
-             component.Owner = this;
+             component.gameObject = this;
 
             Type componentType = component.GetType();
 
@@ -211,7 +211,7 @@ namespace Engine.Core.ECS
             if(componentToRemove == null)
                 return;
 
-            componentToRemove.Owner = null;
+            componentToRemove.gameObject = null;
             Components.Remove(typeof(T));
             OnComponentRemoved?.Invoke(this, componentToRemove);
         }

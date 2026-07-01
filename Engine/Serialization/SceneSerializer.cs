@@ -94,7 +94,7 @@ namespace Engine.Core.Serialization
                     if(liveEntity != null && liveEntity.Transform != null)
                     {
                         // Bind the live component horizontally to the live engine entity
-                        liveEntity.Transform.Owner = liveEntity;
+                        liveEntity.Transform.gameObject = liveEntity;
                     }
 
                     }
@@ -127,7 +127,7 @@ namespace Engine.Core.Serialization
                     }
                     foreach(var component in liveEntity.Components.Values)
                     {
-                        component.Owner = liveEntity; // Rebind the component to the live entity
+                        component.gameObject = liveEntity; // Rebind the component to the live entity
                     }
 
                     transform.X = oldPosition.Value.X;

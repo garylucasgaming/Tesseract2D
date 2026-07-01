@@ -13,17 +13,25 @@ namespace Engine.Core.ECS.Components
 {
     public class TransformComponent : GameComponent
     {
-
         
+        public enum TransformOrigin
+        {
+            TopLeft, Top, TopRight, MiddleLeft, Center, MiddleRight, BottomLeft, Bottom, BottomRight
+        }
         private float _x = 0.0f;
         private float _y = 0.0f;
         private float _xOFF = 0.0f;
         private float _yOFF = 0.0f;
-        private float _sizeX = 0.0f;
-        private float _sizeY = 0.0f;
-        private float _scaleX = 1f;
-        private float _scaleY = 1f;
-   
+        private float _sizeX = 16f;
+        private float _sizeY = 16f;
+        private float _scaleX = 4f;
+        private float _scaleY = 4f;
+        public TransformOrigin Origin
+        {
+            get;
+            set;
+        } = TransformOrigin.TopLeft;
+
 
         // 1. Raw layout fields that serialize perfectly as primitive floats
         [Browsable(true)]
@@ -39,12 +47,10 @@ namespace Engine.Core.ECS.Components
                     var parentTransform = Parent.GetComponent<TransformComponent>();
                     if(parentTransform != null)
                     {
-                        // If moved directly in world space, recalculate local offset from parent
+                        // Calculate offset relative to parent's true structural bounds corner
                         _xOFF = _x - parentTransform.X;
                     }
                 }
-
-                // Push recursively down to sub-children
                 UpdateChildrenPositions();
             }
         }
@@ -196,34 +202,99 @@ namespace Engine.Core.ECS.Components
             }
         }
 
+        /// <summary>
+        /// Calculates the pixel pivot offset vector relative to the Top-Left (0,0) corner.
+        /// </summary>
+        public Vector2 GetOriginOffset()
+        {
+            float x = 0f;
+            float y = 0f;
+
+            switch(Origin)
+            {
+                case TransformOrigin.TopLeft:
+                    x = 0f;
+                    y = 0f;
+                    break;
+                case TransformOrigin.Top:
+                    x = _sizeX * 0.5f;
+                    y = 0f;
+                    break;
+                case TransformOrigin.TopRight:
+                    x = _sizeX;
+                    y = 0f;
+                    break;
+
+                case TransformOrigin.MiddleLeft:
+                    x = 0f;
+                    y = _sizeY * 0.5f;
+                    break;
+                case TransformOrigin.Center:
+                    x = _sizeX * 0.5f;
+                    y = _sizeY * 0.5f;
+                    break;
+                case TransformOrigin.MiddleRight:
+                    x = _sizeX;
+                    y = _sizeY * 0.5f;
+                    break;
+
+                case TransformOrigin.BottomLeft:
+                    x = 0f;
+                    y = _sizeY;
+                    break;
+                case TransformOrigin.Bottom:
+                    x = _sizeX * 0.5f;
+                    y = _sizeY;
+                    break;
+                case TransformOrigin.BottomRight:
+                    x = _sizeX;
+                    y = _sizeY;
+                    break;
+            }
+
+            return new Vector2(x, y);
+        }
+
 
         private void UpdateChildrenPositions()
         {
-             if(Owner == null || Owner.Children == null)
+            if(gameObject == null || gameObject.Children == null)
                 return;
 
-            foreach(var child in Owner.Children)
+            foreach(var child in gameObject.Children)
             {
                 var childTransform = child.GetComponent<TransformComponent>();
                 if(childTransform == null)
                     continue;
-                // Calculate the child's new absolute world position using its offset
-                childTransform.SetWorldPositionFromParent(WorldPosition);
 
+                childTransform.SetWorldPositionFromParent(this);
             }
         }
 
-        private void SetWorldPositionFromParent(Vector2 parentPosition)
+        private void SetWorldPositionFromParent(TransformComponent parentTransform)
         {
-            X = parentPosition.X + XOffset;
-            Y = parentPosition.Y + YOffset;
+            // Children are safely pinned to the parent's stable WorldPosition pivot!
+            _x = parentTransform.X + _xOFF;
+            _y = parentTransform.Y + _yOFF;
 
-            
+            UpdateChildrenPositions();
         }
 
-      
 
-       
+
+        /// <summary>
+        /// Calculates the absolute world space coordinate of the Top-Left boundary corner, 
+        /// accounting for the local origin adjustment.
+        /// </summary>
+        [Browsable(false)]
+        public Vector2 RenderTopLeft
+        {
+            get
+            {
+                Vector2 originOffset = GetOriginOffset() * Scale;
+                return WorldPosition - originOffset;
+            }
+        }
 
 
 

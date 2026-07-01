@@ -32,7 +32,8 @@ namespace Engine.Editor.WinFormsApp1
                 if(!prop.IsBrowsable)
                     continue;
 
-                if(prop.PropertyType.IsClass && prop.PropertyType != typeof(string))
+                // If it's a class type, make sure it isn't a string AND isn't an Enum type!
+                if(prop.PropertyType.IsClass && prop.PropertyType != typeof(string) && !prop.PropertyType.IsEnum)
                     continue;
 
                 // Wrap the original property in our custom router descriptor
