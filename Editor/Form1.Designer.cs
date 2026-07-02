@@ -92,6 +92,18 @@
             ProjectFolderTreeView = new TreeView();
             ConsoleTabPage = new TabPage();
             ConsoleTextBox = new TextBox();
+            panel1 = new Panel();
+            toolStrip1 = new ToolStrip();
+            toolStripButton1 = new ToolStripButton();
+            toolStripButton2 = new ToolStripButton();
+            toolStripButton3 = new ToolStripButton();
+            toolStrip2 = new ToolStrip();
+            toolStripButton4 = new ToolStripButton();
+            toolStripButton5 = new ToolStripButton();
+            toolStrip3 = new ToolStrip();
+            toolStripButton6 = new ToolStripButton();
+            toolStripButton7 = new ToolStripButton();
+            toolStripButton8 = new ToolStripButton();
             menuStrip1.SuspendLayout();
             SceneHierarchy.SuspendLayout();
             PropertiesWindow.SuspendLayout();
@@ -100,6 +112,10 @@
             tabControl2.SuspendLayout();
             ProjectFolderTabPage.SuspendLayout();
             ConsoleTabPage.SuspendLayout();
+            panel1.SuspendLayout();
+            toolStrip1.SuspendLayout();
+            toolStrip2.SuspendLayout();
+            toolStrip3.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -424,6 +440,7 @@
             // 
             // SceneHierarchy
             // 
+            SceneHierarchy.Controls.Add(toolStrip2);
             SceneHierarchy.Controls.Add(SceneHierarchyTreeView);
             SceneHierarchy.Dock = DockStyle.Left;
             SceneHierarchy.Location = new Point(0, 24);
@@ -436,11 +453,11 @@
             // SceneHierarchyTreeView
             // 
             SceneHierarchyTreeView.AllowDrop = true;
-            SceneHierarchyTreeView.Dock = DockStyle.Fill;
+            SceneHierarchyTreeView.Dock = DockStyle.Bottom;
             SceneHierarchyTreeView.LabelEdit = true;
-            SceneHierarchyTreeView.Location = new Point(3, 19);
+            SceneHierarchyTreeView.Location = new Point(3, 52);
             SceneHierarchyTreeView.Name = "SceneHierarchyTreeView";
-            SceneHierarchyTreeView.Size = new Size(256, 635);
+            SceneHierarchyTreeView.Size = new Size(256, 602);
             SceneHierarchyTreeView.TabIndex = 1;
             SceneHierarchyTreeView.ItemDrag += SceneHierarchyTreeView_ItemDrag;
             SceneHierarchyTreeView.DragDrop += SceneHierarchyTreeView_DragDrop;
@@ -448,6 +465,7 @@
             // 
             // PropertiesWindow
             // 
+            PropertiesWindow.Controls.Add(toolStrip3);
             PropertiesWindow.Controls.Add(InspectorFlowPanel);
             PropertiesWindow.Dock = DockStyle.Right;
             PropertiesWindow.FlatStyle = FlatStyle.Flat;
@@ -461,22 +479,22 @@
             // InspectorFlowPanel
             // 
             InspectorFlowPanel.AutoScroll = true;
-            InspectorFlowPanel.Dock = DockStyle.Fill;
+            InspectorFlowPanel.Dock = DockStyle.Bottom;
             InspectorFlowPanel.FlowDirection = FlowDirection.TopDown;
-            InspectorFlowPanel.Location = new Point(3, 19);
+            InspectorFlowPanel.Location = new Point(3, 52);
             InspectorFlowPanel.Name = "InspectorFlowPanel";
-            InspectorFlowPanel.Size = new Size(296, 635);
+            InspectorFlowPanel.Size = new Size(296, 602);
             InspectorFlowPanel.TabIndex = 0;
             InspectorFlowPanel.WrapContents = false;
             // 
             // tabControl1
             // 
             tabControl1.Controls.Add(SceneView);
-            tabControl1.Dock = DockStyle.Top;
-            tabControl1.Location = new Point(262, 24);
+            tabControl1.Dock = DockStyle.Fill;
+            tabControl1.Location = new Point(0, 25);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(700, 449);
+            tabControl1.Size = new Size(700, 426);
             tabControl1.TabIndex = 3;
             // 
             // SceneView
@@ -485,7 +503,7 @@
             SceneView.Location = new Point(4, 24);
             SceneView.Name = "SceneView";
             SceneView.Padding = new Padding(3);
-            SceneView.Size = new Size(692, 421);
+            SceneView.Size = new Size(692, 398);
             SceneView.TabIndex = 0;
             SceneView.Text = "Scene View";
             SceneView.UseVisualStyleBackColor = true;
@@ -496,7 +514,7 @@
             mgWindowControl.Location = new Point(3, 3);
             mgWindowControl.MouseHoverUpdatesOnly = false;
             mgWindowControl.Name = "mgWindowControl";
-            mgWindowControl.Size = new Size(686, 415);
+            mgWindowControl.Size = new Size(686, 392);
             mgWindowControl.TabIndex = 0;
             mgWindowControl.Text = "mgWindowControl2";
             // 
@@ -505,7 +523,7 @@
             tabControl2.Controls.Add(ProjectFolderTabPage);
             tabControl2.Controls.Add(ConsoleTabPage);
             tabControl2.Dock = DockStyle.Bottom;
-            tabControl2.Location = new Point(262, 475);
+            tabControl2.Location = new Point(0, 451);
             tabControl2.Name = "tabControl2";
             tabControl2.SelectedIndex = 0;
             tabControl2.Size = new Size(700, 206);
@@ -537,7 +555,7 @@
             ConsoleTabPage.Location = new Point(4, 24);
             ConsoleTabPage.Name = "ConsoleTabPage";
             ConsoleTabPage.Padding = new Padding(3);
-            ConsoleTabPage.Size = new Size(885, 178);
+            ConsoleTabPage.Size = new Size(692, 178);
             ConsoleTabPage.TabIndex = 1;
             ConsoleTabPage.Text = "Editor Console";
             ConsoleTabPage.UseVisualStyleBackColor = true;
@@ -550,16 +568,126 @@
             ConsoleTextBox.Name = "ConsoleTextBox";
             ConsoleTextBox.ReadOnly = true;
             ConsoleTextBox.ScrollBars = ScrollBars.Vertical;
-            ConsoleTextBox.Size = new Size(879, 172);
+            ConsoleTextBox.Size = new Size(686, 172);
             ConsoleTextBox.TabIndex = 0;
+            // 
+            // panel1
+            // 
+            panel1.Controls.Add(tabControl1);
+            panel1.Controls.Add(tabControl2);
+            panel1.Controls.Add(toolStrip1);
+            panel1.Dock = DockStyle.Fill;
+            panel1.Location = new Point(262, 24);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(700, 657);
+            panel1.TabIndex = 4;
+            // 
+            // toolStrip1
+            // 
+            toolStrip1.Items.AddRange(new ToolStripItem[] { toolStripButton1, toolStripButton2, toolStripButton3 });
+            toolStrip1.Location = new Point(0, 0);
+            toolStrip1.Name = "toolStrip1";
+            toolStrip1.Size = new Size(700, 25);
+            toolStrip1.TabIndex = 4;
+            toolStrip1.Text = "toolStrip1";
+            // 
+            // toolStripButton1
+            // 
+            toolStripButton1.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            toolStripButton1.Image = (Image) resources.GetObject("toolStripButton1.Image");
+            toolStripButton1.ImageTransparentColor = Color.Magenta;
+            toolStripButton1.Name = "toolStripButton1";
+            toolStripButton1.Size = new Size(23, 22);
+            toolStripButton1.Text = "toolStripButton1";
+            // 
+            // toolStripButton2
+            // 
+            toolStripButton2.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            toolStripButton2.Image = (Image) resources.GetObject("toolStripButton2.Image");
+            toolStripButton2.ImageTransparentColor = Color.Magenta;
+            toolStripButton2.Name = "toolStripButton2";
+            toolStripButton2.Size = new Size(23, 22);
+            toolStripButton2.Text = "toolStripButton2";
+            // 
+            // toolStripButton3
+            // 
+            toolStripButton3.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            toolStripButton3.Image = (Image) resources.GetObject("toolStripButton3.Image");
+            toolStripButton3.ImageTransparentColor = Color.Magenta;
+            toolStripButton3.Name = "toolStripButton3";
+            toolStripButton3.Size = new Size(23, 22);
+            toolStripButton3.Text = "toolStripButton3";
+            // 
+            // toolStrip2
+            // 
+            toolStrip2.Items.AddRange(new ToolStripItem[] { toolStripButton4, toolStripButton5, toolStripButton8 });
+            toolStrip2.Location = new Point(3, 19);
+            toolStrip2.Name = "toolStrip2";
+            toolStrip2.Size = new Size(256, 25);
+            toolStrip2.TabIndex = 2;
+            toolStrip2.Text = "toolStrip2";
+            // 
+            // toolStripButton4
+            // 
+            toolStripButton4.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            toolStripButton4.Image = (Image) resources.GetObject("toolStripButton4.Image");
+            toolStripButton4.ImageTransparentColor = Color.Magenta;
+            toolStripButton4.Name = "toolStripButton4";
+            toolStripButton4.Size = new Size(23, 22);
+            toolStripButton4.Text = "toolStripButton4";
+            // 
+            // toolStripButton5
+            // 
+            toolStripButton5.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            toolStripButton5.Image = (Image) resources.GetObject("toolStripButton5.Image");
+            toolStripButton5.ImageTransparentColor = Color.Magenta;
+            toolStripButton5.Name = "toolStripButton5";
+            toolStripButton5.Size = new Size(23, 22);
+            toolStripButton5.Text = "toolStripButton5";
+            // 
+            // toolStrip3
+            // 
+            toolStrip3.Items.AddRange(new ToolStripItem[] { toolStripButton6, toolStripButton7 });
+            toolStrip3.Location = new Point(3, 19);
+            toolStrip3.Name = "toolStrip3";
+            toolStrip3.Size = new Size(296, 25);
+            toolStrip3.TabIndex = 1;
+            toolStrip3.Text = "toolStrip3";
+            // 
+            // toolStripButton6
+            // 
+            toolStripButton6.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            toolStripButton6.Image = (Image) resources.GetObject("toolStripButton6.Image");
+            toolStripButton6.ImageTransparentColor = Color.Magenta;
+            toolStripButton6.Name = "toolStripButton6";
+            toolStripButton6.Size = new Size(23, 22);
+            toolStripButton6.Text = "toolStripButton6";
+            // 
+            // toolStripButton7
+            // 
+            toolStripButton7.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            toolStripButton7.Image = (Image) resources.GetObject("toolStripButton7.Image");
+            toolStripButton7.ImageTransparentColor = Color.Magenta;
+            toolStripButton7.Name = "toolStripButton7";
+            toolStripButton7.Size = new Size(23, 22);
+            toolStripButton7.Text = "toolStripButton7";
+            // 
+            // toolStripButton8
+            // 
+            toolStripButton8.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            toolStripButton8.Image = (Image) resources.GetObject("toolStripButton8.Image");
+            toolStripButton8.ImageTransparentColor = Color.Magenta;
+            toolStripButton8.Name = "toolStripButton8";
+            toolStripButton8.Size = new Size(23, 22);
+            toolStripButton8.Text = "toolStripButton8";
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
+            BackColor = SystemColors.Control;
             ClientSize = new Size(1264, 681);
-            Controls.Add(tabControl2);
-            Controls.Add(tabControl1);
+            Controls.Add(panel1);
             Controls.Add(PropertiesWindow);
             Controls.Add(SceneHierarchy);
             Controls.Add(menuStrip1);
@@ -572,13 +700,23 @@
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             SceneHierarchy.ResumeLayout(false);
+            SceneHierarchy.PerformLayout();
             PropertiesWindow.ResumeLayout(false);
+            PropertiesWindow.PerformLayout();
             tabControl1.ResumeLayout(false);
             SceneView.ResumeLayout(false);
             tabControl2.ResumeLayout(false);
             ProjectFolderTabPage.ResumeLayout(false);
             ConsoleTabPage.ResumeLayout(false);
             ConsoleTabPage.PerformLayout();
+            panel1.ResumeLayout(false);
+            panel1.PerformLayout();
+            toolStrip1.ResumeLayout(false);
+            toolStrip1.PerformLayout();
+            toolStrip2.ResumeLayout(false);
+            toolStrip2.PerformLayout();
+            toolStrip3.ResumeLayout(false);
+            toolStrip3.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -651,5 +789,17 @@
         private ToolStripMenuItem fileToolStripMenuItem;
         private Editor.MGWindowControl mgWindowControl;
         private FlowLayoutPanel InspectorFlowPanel;
+        private Panel panel1;
+        private ToolStrip toolStrip1;
+        private ToolStripButton toolStripButton1;
+        private ToolStripButton toolStripButton2;
+        private ToolStripButton toolStripButton3;
+        private ToolStrip toolStrip2;
+        private ToolStripButton toolStripButton4;
+        private ToolStripButton toolStripButton5;
+        private ToolStripButton toolStripButton8;
+        private ToolStrip toolStrip3;
+        private ToolStripButton toolStripButton6;
+        private ToolStripButton toolStripButton7;
     }
 }

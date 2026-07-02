@@ -23,7 +23,8 @@ namespace WinFormsApp1
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool DestroyIcon(IntPtr hIcon);
 
-        public static TreeView ActiveHierarchyTreeView {
+        public static TreeView ActiveHierarchyTreeView
+        {
             get; private set;
         }
 
@@ -44,7 +45,7 @@ namespace WinFormsApp1
             public string szTypeName;
         }
 
-     
+
 
 
         private const uint SHGFI_ICON = 0x000000100;
@@ -318,6 +319,16 @@ namespace WinFormsApp1
                 }
             }
             return anyChildVisible;
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void toolStripComboBox1_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
