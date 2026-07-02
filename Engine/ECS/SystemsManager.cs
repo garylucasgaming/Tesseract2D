@@ -1,9 +1,8 @@
-﻿
-using Engine.Core.ECS.Systems;
+﻿using Engine.Core.ECS.Systems;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 
 namespace Engine.Core.ECS
 {
@@ -13,31 +12,34 @@ namespace Engine.Core.ECS
         private readonly Dictionary<SystemUpdatePolicy, List<GameSystem>> _policyBuckets = new();
 
         // 2. The Golden Nugget: A warm entity bucket mapped explicitly to each active system
-        private readonly Dictionary<GameSystem, HashSet<GameObject>> _systemEntityCache = new();
+        public readonly Dictionary<GameSystem, HashSet<GameObject>> _systemEntityCache = new();
 
         public GameScene ContextScene { get; set; } = null!;
 
         public static TransformSystem transformSystem { get; private set; } = null!;
+        public static SpriteRenderSystem spriteRenderSystem { get; private set; } = null!;
 
         public SystemsManager()
         {
-
-
             // Automatically initialize a bucket list for every single policy enum type
             foreach(SystemUpdatePolicy policy in Enum.GetValues(typeof(SystemUpdatePolicy)))
             {
                 _policyBuckets[policy] = new List<GameSystem>();
             }
 
-            if(transformSystem == null) {
+            if(transformSystem == null)
+            {
                 transformSystem = new TransformSystem();
                 AddSystem(transformSystem);
             }
+            if(spriteRenderSystem == null)
+            {
+                spriteRenderSystem = new SpriteRenderSystem();
+                AddSystem(spriteRenderSystem);
+            }
         }
 
-
         /// Registers a system, assigns it to its timing bucket, and builds its initial matching cache.
-
         public void AddSystem(GameSystem system)
         {
             if(system == null)
@@ -68,14 +70,12 @@ namespace Engine.Core.ECS
             }
         }
 
-
         /// Global execution ticks called by your core engine loop.
         /// Handles FrameUpdate and processes individual FixedUpdate custom interval clocks.
-
-        public void Update(float deltaTime)
+        public void Update(float deltaTime, bool playModeActive)
         {
             // FrameUpdate: Variable frame rate execution
-            ExecuteSystemBucket(SystemUpdatePolicy.FrameUpdate, deltaTime);
+            ExecuteSystemBucket(SystemUpdatePolicy.FrameUpdate, deltaTime, playModeActive);
 
             // FixedUpdate: Custom intervals (clocks ticked behind the scenes)
             var customIntervalSystems = _policyBuckets[SystemUpdatePolicy.FixedUpdate];
@@ -83,6 +83,10 @@ namespace Engine.Core.ECS
             {
                 var system = customIntervalSystems[i];
                 if(!system.IsEnabled)
+                    continue;
+
+                // 💡 FIX: Filter FixedUpdate execution based on playMode status vs Editor rules
+                if(!playModeActive && !system.UsedInEditor)
                     continue;
 
                 system.timer += deltaTime;
@@ -94,16 +98,32 @@ namespace Engine.Core.ECS
             }
         }
 
-
-        /// Runs TickUpdate systems on your locked, rigid simulation step ticker.
-        public void TickUpdate(float fixedDeltaTime)
+        /// <summary>
+        /// Sweeps through all enabled systems and gives them an opportunity to draw via SpriteBatch.
+        /// </summary>
+        public void Render(SpriteBatch spriteBatch)
         {
-            ExecuteSystemBucket(SystemUpdatePolicy.TickUpdate, fixedDeltaTime);
+            // Directly iterate through your pre-existing warm cache dictionary!
+            foreach(var kvp in _systemEntityCache)
+            {
+                GameSystem system = kvp.Key;
+                HashSet<GameObject> cachedEntities = kvp.Value;
+
+                if(!system.IsEnabled || !system.shouldUpdate)
+                    continue;
+
+                // Call the generic render pass safely (Render always runs so editor previews display)
+                system.Render(cachedEntities, spriteBatch);
+            }
         }
 
+        /// Runs TickUpdate systems on your locked, rigid simulation step ticker.
+        public void TickUpdate(float fixedDeltaTime, bool playModeActive)
+        {
+            ExecuteSystemBucket(SystemUpdatePolicy.TickUpdate, fixedDeltaTime, playModeActive);
+        }
 
         /// Drives Manual systems. Call this explicitly to trigger a manual system by type.
-        //probably not needed as can just use events instead. 
         public void TriggerManualSystem<T>(float deltaTime) where T : GameSystem
         {
             var system = GetSystem<T>();
@@ -113,10 +133,8 @@ namespace Engine.Core.ECS
             system.Update(_systemEntityCache[system], deltaTime);
         }
 
-
         /// Helper to sweep through standard execution pipelines cleanly.
-
-        private void ExecuteSystemBucket(SystemUpdatePolicy policy, float deltaTime)
+        private void ExecuteSystemBucket(SystemUpdatePolicy policy, float deltaTime, bool playModeActive)
         {
             var systems = _policyBuckets[policy];
             for(int i = 0; i < systems.Count; i++)
@@ -125,26 +143,25 @@ namespace Engine.Core.ECS
                 if(!system.IsEnabled || !system.shouldUpdate)
                     continue;
 
+                // 💡 FIX: Drop out early if simulation is paused/stopped and the system isn't allowed in the editor
+                if(!playModeActive && !system.UsedInEditor)
+                    continue;
+
                 system.Update(_systemEntityCache[system], deltaTime);
             }
         }
 
         // --- Reactive Engine Listeners: Hooked to your scene spawn/component change events ---
 
-
         /// Call this whenever an entity spawns, gets activated, or gains a new component.
-
-        public void OnEntityChanged(GameObject entity, float deltaTime = 0.0f)
+        public void OnEntityChanged(GameObject entity, float deltaTime = 0.0f, bool playModeActive = true)
         {
             foreach(var kvp in _systemEntityCache)
             {
                 var system = kvp.Key;
                 var cache = kvp.Value;
 
-
                 bool wasInCache = cache.Contains(entity);
-
-
 
                 // Ingest any pre-existing entities in the scene that match this query immediately
                 if(ContextScene?.Entities != null)
@@ -161,21 +178,21 @@ namespace Engine.Core.ECS
                         }
                     }
 
-
                     // EntityUpdate Policy: If an entity mutates and matches, tick this system instantly!
                     if(system.UpdatePolicy == SystemUpdatePolicy.EntityUpdate && system.IsEnabled && !wasInCache)
                     {
+                        // 💡 FIX: Respect playModeActive context state during inline mutations
+                        if(!playModeActive && !system.UsedInEditor)
+                            continue;
+
                         var singleEntityBatch = new HashSet<GameObject> { entity };
                         system.Update(singleEntityBatch, deltaTime);
                     }
                 }
-
             }
         }
 
-
         /// Call this whenever an entity is explicitly destroyed or removed from the active scene tree.
-
         public void OnEntityDestroyed(GameObject entity)
         {
             foreach(var cache in _systemEntityCache.Values)

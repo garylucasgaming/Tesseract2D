@@ -23,6 +23,9 @@ namespace Editor
         private float deltaTime;
         private GameScene _activeScene;
 
+        public bool SimulationRunning { get; set; } = false;
+        public bool SimulationPaused { get; set; } = false;
+
         protected override void Initialize()
         {
             // Set up our centralized native asset matrices
@@ -56,18 +59,13 @@ namespace Editor
         {
             //base deltatime
             deltaTime = (float) gameTime.ElapsedGameTime.Ticks / TimeSpan.TicksPerSecond;
-
-            
-
+           
             // 1. Tick the hardware state sensors to fire input events!
             _inputManager.Update();
-
             _activeScene = EditorContextManager.ActiveLoadedScene;
-           
             if(_activeScene != null)
             {
-           
-                
+                bool playModeActive = SimulationRunning && !SimulationPaused;
                 _activeScene.Update(deltaTime);
                 GameObject selectedGo = GetSelectedGameObject();
 
@@ -75,13 +73,6 @@ namespace Editor
                 // This replaces ProcessInputs() completely since events handle the heavy lifting now.
                 _inputService.SetContext(_activeScene, selectedGo);
             }
-               
-
-
-
-            
-
-            
         }
 
         protected override void Draw()
@@ -98,9 +89,57 @@ namespace Editor
 
             // Delegate completely to your dedicated rendering service module
             _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo);
-
+            _activeScene.Systems.Render(Editor.spriteBatch);
             Editor.spriteBatch.End();
         }
+
+
+        public void StartSimulation()
+        {
+            if(SimulationRunning && SimulationPaused)
+            {
+                SimulationPaused = false;
+                Log.Info("[Simulation] Simulation unpaused.");
+            } else if(!SimulationRunning)
+            {
+               
+                SimulationRunning = true;
+                SimulationPaused = false;
+                Log.Info("[Simulation] Simulation started.");
+            }
+        }
+
+        public void pauseSimulation()
+        {
+            if(SimulationRunning && !SimulationPaused)
+            {
+                SimulationPaused = true;
+                Log.Info("[Simulation] Simulation paused.");
+            }
+        }
+
+        public void StopSimulation()
+        {
+            if(SimulationRunning)
+            {
+                SimulationRunning = false;
+                SimulationPaused = false;
+                Log.Info("[Simulation] Simulation stopped.");
+                
+            }
+        }
+        
+
+        public void UpdateSimulationSystems(float deltaTime)
+        {
+            // Determine if we are running standard gameplay loop systems right now
+            bool playModeActive = SimulationRunning && !SimulationPaused;
+
+          
+        }
+
+
+
 
         private GameObject GetSelectedGameObject()
         {

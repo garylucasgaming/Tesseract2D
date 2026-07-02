@@ -81,8 +81,14 @@
             helpToolStripMenuItem = new ToolStripMenuItem();
             documentationToolStripMenuItem = new ToolStripMenuItem();
             SceneHierarchy = new GroupBox();
+            HierarchyToolStrip = new ToolStrip();
+            SaveSceneButton = new ToolStripButton();
+            LoadSceneButton = new ToolStripButton();
             SceneHierarchyTreeView = new TreeView();
             PropertiesWindow = new GroupBox();
+            propertiesToolStrip = new ToolStrip();
+            AddComponentButton = new ToolStripDropDownButton();
+            RemoveComponentButton = new ToolStripButton();
             InspectorFlowPanel = new FlowLayoutPanel();
             tabControl1 = new TabControl();
             SceneView = new TabPage();
@@ -93,29 +99,22 @@
             ConsoleTabPage = new TabPage();
             ConsoleTextBox = new TextBox();
             panel1 = new Panel();
-            toolStrip1 = new ToolStrip();
-            toolStripButton1 = new ToolStripButton();
-            toolStripButton2 = new ToolStripButton();
-            toolStripButton3 = new ToolStripButton();
-            toolStrip2 = new ToolStrip();
-            toolStripButton4 = new ToolStripButton();
-            toolStripButton5 = new ToolStripButton();
-            toolStrip3 = new ToolStrip();
-            toolStripButton6 = new ToolStripButton();
-            toolStripButton7 = new ToolStripButton();
-            toolStripButton8 = new ToolStripButton();
+            SceneToolStrip = new ToolStrip();
+            StartSimulationButton = new ToolStripButton();
+            PauseSimulationButton = new ToolStripButton();
+            StopSimulationButton = new ToolStripButton();
             menuStrip1.SuspendLayout();
             SceneHierarchy.SuspendLayout();
+            HierarchyToolStrip.SuspendLayout();
             PropertiesWindow.SuspendLayout();
+            propertiesToolStrip.SuspendLayout();
             tabControl1.SuspendLayout();
             SceneView.SuspendLayout();
             tabControl2.SuspendLayout();
             ProjectFolderTabPage.SuspendLayout();
             ConsoleTabPage.SuspendLayout();
             panel1.SuspendLayout();
-            toolStrip1.SuspendLayout();
-            toolStrip2.SuspendLayout();
-            toolStrip3.SuspendLayout();
+            SceneToolStrip.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -440,7 +439,7 @@
             // 
             // SceneHierarchy
             // 
-            SceneHierarchy.Controls.Add(toolStrip2);
+            SceneHierarchy.Controls.Add(HierarchyToolStrip);
             SceneHierarchy.Controls.Add(SceneHierarchyTreeView);
             SceneHierarchy.Dock = DockStyle.Left;
             SceneHierarchy.Location = new Point(0, 24);
@@ -449,6 +448,35 @@
             SceneHierarchy.TabIndex = 1;
             SceneHierarchy.TabStop = false;
             SceneHierarchy.Text = "Scene Hierarchy";
+            // 
+            // HierarchyToolStrip
+            // 
+            HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton });
+            HierarchyToolStrip.Location = new Point(3, 19);
+            HierarchyToolStrip.Name = "HierarchyToolStrip";
+            HierarchyToolStrip.Size = new Size(256, 25);
+            HierarchyToolStrip.TabIndex = 2;
+            HierarchyToolStrip.Text = "toolStrip2";
+            // 
+            // SaveSceneButton
+            // 
+            SaveSceneButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            SaveSceneButton.Image = (Image) resources.GetObject("SaveSceneButton.Image");
+            SaveSceneButton.ImageTransparentColor = Color.Magenta;
+            SaveSceneButton.Name = "SaveSceneButton";
+            SaveSceneButton.Size = new Size(23, 22);
+            SaveSceneButton.Text = "SaveScene";
+            SaveSceneButton.Click += onSaveProjectToolStripMenuItem_Click;
+            // 
+            // LoadSceneButton
+            // 
+            LoadSceneButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            LoadSceneButton.Image = (Image) resources.GetObject("LoadSceneButton.Image");
+            LoadSceneButton.ImageTransparentColor = Color.Magenta;
+            LoadSceneButton.Name = "LoadSceneButton";
+            LoadSceneButton.Size = new Size(23, 22);
+            LoadSceneButton.Text = "LoadScene";
+            LoadSceneButton.Click += onLoadProjectToolStripMenuItem_Click;
             // 
             // SceneHierarchyTreeView
             // 
@@ -465,7 +493,7 @@
             // 
             // PropertiesWindow
             // 
-            PropertiesWindow.Controls.Add(toolStrip3);
+            PropertiesWindow.Controls.Add(propertiesToolStrip);
             PropertiesWindow.Controls.Add(InspectorFlowPanel);
             PropertiesWindow.Dock = DockStyle.Right;
             PropertiesWindow.FlatStyle = FlatStyle.Flat;
@@ -475,6 +503,33 @@
             PropertiesWindow.TabIndex = 2;
             PropertiesWindow.TabStop = false;
             PropertiesWindow.Text = "Properties";
+            // 
+            // propertiesToolStrip
+            // 
+            propertiesToolStrip.Items.AddRange(new ToolStripItem[] { AddComponentButton, RemoveComponentButton });
+            propertiesToolStrip.Location = new Point(3, 19);
+            propertiesToolStrip.Name = "propertiesToolStrip";
+            propertiesToolStrip.Size = new Size(296, 25);
+            propertiesToolStrip.TabIndex = 1;
+            propertiesToolStrip.Text = "toolStrip3";
+            // 
+            // AddComponentButton
+            // 
+            AddComponentButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            AddComponentButton.Image = (Image) resources.GetObject("AddComponentButton.Image");
+            AddComponentButton.ImageTransparentColor = Color.Magenta;
+            AddComponentButton.Name = "AddComponentButton";
+            AddComponentButton.Size = new Size(29, 22);
+            AddComponentButton.Text = "AddComponent";
+            // 
+            // RemoveComponentButton
+            // 
+            RemoveComponentButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            RemoveComponentButton.Image = (Image) resources.GetObject("RemoveComponentButton.Image");
+            RemoveComponentButton.ImageTransparentColor = Color.Magenta;
+            RemoveComponentButton.Name = "RemoveComponentButton";
+            RemoveComponentButton.Size = new Size(23, 22);
+            RemoveComponentButton.Text = "RemoveComponent";
             // 
             // InspectorFlowPanel
             // 
@@ -514,6 +569,8 @@
             mgWindowControl.Location = new Point(3, 3);
             mgWindowControl.MouseHoverUpdatesOnly = false;
             mgWindowControl.Name = "mgWindowControl";
+            mgWindowControl.SimulationPaused = false;
+            mgWindowControl.SimulationRunning = false;
             mgWindowControl.Size = new Size(686, 392);
             mgWindowControl.TabIndex = 0;
             mgWindowControl.Text = "mgWindowControl2";
@@ -575,111 +632,51 @@
             // 
             panel1.Controls.Add(tabControl1);
             panel1.Controls.Add(tabControl2);
-            panel1.Controls.Add(toolStrip1);
+            panel1.Controls.Add(SceneToolStrip);
             panel1.Dock = DockStyle.Fill;
             panel1.Location = new Point(262, 24);
             panel1.Name = "panel1";
             panel1.Size = new Size(700, 657);
             panel1.TabIndex = 4;
             // 
-            // toolStrip1
+            // SceneToolStrip
             // 
-            toolStrip1.Items.AddRange(new ToolStripItem[] { toolStripButton1, toolStripButton2, toolStripButton3 });
-            toolStrip1.Location = new Point(0, 0);
-            toolStrip1.Name = "toolStrip1";
-            toolStrip1.Size = new Size(700, 25);
-            toolStrip1.TabIndex = 4;
-            toolStrip1.Text = "toolStrip1";
+            SceneToolStrip.Items.AddRange(new ToolStripItem[] { StartSimulationButton, PauseSimulationButton, StopSimulationButton });
+            SceneToolStrip.Location = new Point(0, 0);
+            SceneToolStrip.Name = "SceneToolStrip";
+            SceneToolStrip.Size = new Size(700, 25);
+            SceneToolStrip.TabIndex = 4;
+            SceneToolStrip.Text = "toolStrip1";
             // 
-            // toolStripButton1
+            // StartSimulationButton
             // 
-            toolStripButton1.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton1.Image = (Image) resources.GetObject("toolStripButton1.Image");
-            toolStripButton1.ImageTransparentColor = Color.Magenta;
-            toolStripButton1.Name = "toolStripButton1";
-            toolStripButton1.Size = new Size(23, 22);
-            toolStripButton1.Text = "toolStripButton1";
+            StartSimulationButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            StartSimulationButton.Image = (Image) resources.GetObject("StartSimulationButton.Image");
+            StartSimulationButton.ImageTransparentColor = Color.Magenta;
+            StartSimulationButton.Name = "StartSimulationButton";
+            StartSimulationButton.Size = new Size(23, 22);
+            StartSimulationButton.Text = "StartSimulation";
+            StartSimulationButton.Click += StartSimulationButton_Click;
             // 
-            // toolStripButton2
+            // PauseSimulationButton
             // 
-            toolStripButton2.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton2.Image = (Image) resources.GetObject("toolStripButton2.Image");
-            toolStripButton2.ImageTransparentColor = Color.Magenta;
-            toolStripButton2.Name = "toolStripButton2";
-            toolStripButton2.Size = new Size(23, 22);
-            toolStripButton2.Text = "toolStripButton2";
+            PauseSimulationButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            PauseSimulationButton.Image = (Image) resources.GetObject("PauseSimulationButton.Image");
+            PauseSimulationButton.ImageTransparentColor = Color.Magenta;
+            PauseSimulationButton.Name = "PauseSimulationButton";
+            PauseSimulationButton.Size = new Size(23, 22);
+            PauseSimulationButton.Text = "PauseSimulation";
+            PauseSimulationButton.Click += PauseSimulationButton_Click;
             // 
-            // toolStripButton3
+            // StopSimulationButton
             // 
-            toolStripButton3.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton3.Image = (Image) resources.GetObject("toolStripButton3.Image");
-            toolStripButton3.ImageTransparentColor = Color.Magenta;
-            toolStripButton3.Name = "toolStripButton3";
-            toolStripButton3.Size = new Size(23, 22);
-            toolStripButton3.Text = "toolStripButton3";
-            // 
-            // toolStrip2
-            // 
-            toolStrip2.Items.AddRange(new ToolStripItem[] { toolStripButton4, toolStripButton5, toolStripButton8 });
-            toolStrip2.Location = new Point(3, 19);
-            toolStrip2.Name = "toolStrip2";
-            toolStrip2.Size = new Size(256, 25);
-            toolStrip2.TabIndex = 2;
-            toolStrip2.Text = "toolStrip2";
-            // 
-            // toolStripButton4
-            // 
-            toolStripButton4.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton4.Image = (Image) resources.GetObject("toolStripButton4.Image");
-            toolStripButton4.ImageTransparentColor = Color.Magenta;
-            toolStripButton4.Name = "toolStripButton4";
-            toolStripButton4.Size = new Size(23, 22);
-            toolStripButton4.Text = "toolStripButton4";
-            // 
-            // toolStripButton5
-            // 
-            toolStripButton5.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton5.Image = (Image) resources.GetObject("toolStripButton5.Image");
-            toolStripButton5.ImageTransparentColor = Color.Magenta;
-            toolStripButton5.Name = "toolStripButton5";
-            toolStripButton5.Size = new Size(23, 22);
-            toolStripButton5.Text = "toolStripButton5";
-            // 
-            // toolStrip3
-            // 
-            toolStrip3.Items.AddRange(new ToolStripItem[] { toolStripButton6, toolStripButton7 });
-            toolStrip3.Location = new Point(3, 19);
-            toolStrip3.Name = "toolStrip3";
-            toolStrip3.Size = new Size(296, 25);
-            toolStrip3.TabIndex = 1;
-            toolStrip3.Text = "toolStrip3";
-            // 
-            // toolStripButton6
-            // 
-            toolStripButton6.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton6.Image = (Image) resources.GetObject("toolStripButton6.Image");
-            toolStripButton6.ImageTransparentColor = Color.Magenta;
-            toolStripButton6.Name = "toolStripButton6";
-            toolStripButton6.Size = new Size(23, 22);
-            toolStripButton6.Text = "toolStripButton6";
-            // 
-            // toolStripButton7
-            // 
-            toolStripButton7.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton7.Image = (Image) resources.GetObject("toolStripButton7.Image");
-            toolStripButton7.ImageTransparentColor = Color.Magenta;
-            toolStripButton7.Name = "toolStripButton7";
-            toolStripButton7.Size = new Size(23, 22);
-            toolStripButton7.Text = "toolStripButton7";
-            // 
-            // toolStripButton8
-            // 
-            toolStripButton8.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            toolStripButton8.Image = (Image) resources.GetObject("toolStripButton8.Image");
-            toolStripButton8.ImageTransparentColor = Color.Magenta;
-            toolStripButton8.Name = "toolStripButton8";
-            toolStripButton8.Size = new Size(23, 22);
-            toolStripButton8.Text = "toolStripButton8";
+            StopSimulationButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            StopSimulationButton.Image = (Image) resources.GetObject("StopSimulationButton.Image");
+            StopSimulationButton.ImageTransparentColor = Color.Magenta;
+            StopSimulationButton.Name = "StopSimulationButton";
+            StopSimulationButton.Size = new Size(23, 22);
+            StopSimulationButton.Text = "StopSimulation";
+            StopSimulationButton.Click += StopSimulationButton_Click;
             // 
             // Form1
             // 
@@ -701,8 +698,12 @@
             menuStrip1.PerformLayout();
             SceneHierarchy.ResumeLayout(false);
             SceneHierarchy.PerformLayout();
+            HierarchyToolStrip.ResumeLayout(false);
+            HierarchyToolStrip.PerformLayout();
             PropertiesWindow.ResumeLayout(false);
             PropertiesWindow.PerformLayout();
+            propertiesToolStrip.ResumeLayout(false);
+            propertiesToolStrip.PerformLayout();
             tabControl1.ResumeLayout(false);
             SceneView.ResumeLayout(false);
             tabControl2.ResumeLayout(false);
@@ -711,12 +712,8 @@
             ConsoleTabPage.PerformLayout();
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
-            toolStrip1.ResumeLayout(false);
-            toolStrip1.PerformLayout();
-            toolStrip2.ResumeLayout(false);
-            toolStrip2.PerformLayout();
-            toolStrip3.ResumeLayout(false);
-            toolStrip3.PerformLayout();
+            SceneToolStrip.ResumeLayout(false);
+            SceneToolStrip.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -790,16 +787,15 @@
         private Editor.MGWindowControl mgWindowControl;
         private FlowLayoutPanel InspectorFlowPanel;
         private Panel panel1;
-        private ToolStrip toolStrip1;
-        private ToolStripButton toolStripButton1;
-        private ToolStripButton toolStripButton2;
-        private ToolStripButton toolStripButton3;
-        private ToolStrip toolStrip2;
-        private ToolStripButton toolStripButton4;
-        private ToolStripButton toolStripButton5;
-        private ToolStripButton toolStripButton8;
-        private ToolStrip toolStrip3;
-        private ToolStripButton toolStripButton6;
-        private ToolStripButton toolStripButton7;
+        private ToolStrip SceneToolStrip;
+        private ToolStripButton StartSimulationButton;
+        private ToolStripButton PauseSimulationButton;
+        private ToolStripButton StopSimulationButton;
+        private ToolStrip HierarchyToolStrip;
+        private ToolStripButton SaveSceneButton;
+        private ToolStrip propertiesToolStrip;
+        private ToolStripButton RemoveComponentButton;
+        private ToolStripButton LoadSceneButton;
+        private ToolStripDropDownButton AddComponentButton;
     }
 }

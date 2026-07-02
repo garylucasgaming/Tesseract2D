@@ -83,7 +83,7 @@ namespace Engine.Core.ECS
             return entity;
         }
 
-       
+
 
         #region Main Loop Execution
 
@@ -91,15 +91,15 @@ namespace Engine.Core.ECS
         /// The main execution  step called 60 times a second by MonoGame.
         /// </summary>
         /// <param name="deltaTime">The elapsed timestamp scale in seconds since the last frame draw.</param>
-        public void Update(float deltaTime)
+        public void Update(float deltaTime, bool playModeActive = false)
         {
             
-            Systems.Update(deltaTime);
+            Systems.Update(deltaTime, playModeActive);
         }
 
         public void TickUpdate(float fixeddeltaTime)
         {
-            Systems.TickUpdate(fixeddeltaTime);
+           // Systems.TickUpdate(fixeddeltaTime);
         }
 
             #endregion

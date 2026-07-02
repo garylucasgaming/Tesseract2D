@@ -201,5 +201,18 @@ namespace Engine.Core.ECS
             Components.Remove(typeof(T));
             OnComponentRemoved?.Invoke(this, componentToRemove);
         }
+
+        public void RemoveComponent(GameComponent component)
+        {
+            if(component.GetType() == typeof(TransformComponent))
+                return;
+
+            if(Components.ContainsKey(component.GetType()))
+            {
+                component.gameObject = null;
+                Components.Remove(component.GetType());
+                OnComponentRemoved?.Invoke(this, component);
+            }
+        }
     }
 }

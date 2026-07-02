@@ -11,9 +11,13 @@ namespace Engine.Core.ECS.Systems
         {
             get; set;
         }
+
+        
+        
         public override SystemUpdatePolicy UpdatePolicy => SystemUpdatePolicy.FrameUpdate;
 
-        private readonly HashSet<TransformComponent> _hookedComponents = new();
+        private readonly HashSet<TransformComponent> _hookedComponents = new HashSet<TransformComponent>();
+
 
         // 👇 FIX: Reentrancy guard to prevent recursive event loops
         private bool _isInternalSyncRunning = false;
@@ -21,6 +25,9 @@ namespace Engine.Core.ECS.Systems
         public TransformSystem()
         {
             RequiredComponents = Query.Has<TransformComponent>();
+            UsedInEditor = true;
+
+            
         }
 
         public override void Update(HashSet<GameObject> gameObjects, float deltaTime)
@@ -40,7 +47,7 @@ namespace Engine.Core.ECS.Systems
 
                 if(entity.Parent == null)
                 {
-                    // 👇 Raise the shield before updating the hierarchy
+                    
                     _isInternalSyncRunning = true;
                     try
                     {
@@ -79,7 +86,7 @@ namespace Engine.Core.ECS.Systems
 
         private void HandleTransformModified(TransformComponent modifiedTransform)
         {
-            // 👇 FIX: If the system is currently calculating changes, ignore the reactive ripple
+            // 1. Check the guard immediately to reject recursive cascading events
             if(_isInternalSyncRunning)
                 return;
 
@@ -87,24 +94,30 @@ namespace Engine.Core.ECS.Systems
             if(entity == null)
                 return;
 
-            if(entity.Parent != null)
-            {
-                var parentTransform = entity.Parent.GetComponent<TransformComponent>();
-                if(parentTransform != null)
-                {
-                    modifiedTransform.XOffset = modifiedTransform.X - parentTransform.X;
-                    modifiedTransform.YOffset = modifiedTransform.Y - parentTransform.Y;
-                }
-            }
-
-            // Raise the shield while propagating manual adjustments from editor grids downwards
+            // 2. Raise the shield BEFORE modifying any properties (offsets) on this component
             _isInternalSyncRunning = true;
+
             try
             {
+                // If this entity has a parent, adjust its local offsets based on its new world position
+                if(entity.Parent != null)
+                {
+                    var parentTransform = entity.Parent.GetComponent<TransformComponent>();
+                    if(parentTransform != null)
+                    {
+                        // 👇 Modifying these now safely triggers NotifyChange(), 
+                        // but the guard at Step 1 will instantly block the recursive echo!
+                        modifiedTransform.XOffset = modifiedTransform.X - parentTransform.X;
+                        modifiedTransform.YOffset = modifiedTransform.Y - parentTransform.Y;
+                    }
+                }
+
+                // 3. Immediately propagate these changes top-down to any grandchildren
                 SyncTransformHierarchy(entity, modifiedTransform);
             }
             finally
             {
+                // 4. Safely drop the shield when this specific interaction wave is finished
                 _isInternalSyncRunning = false;
             }
         }

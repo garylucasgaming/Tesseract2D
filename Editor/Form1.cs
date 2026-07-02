@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using Engine.Core.ECS;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
+using SharpDX.WIC;
 
 namespace WinFormsApp1
 {
@@ -72,6 +73,7 @@ namespace WinFormsApp1
             ActiveHierarchyTreeView = this.SceneHierarchyTreeView;
             ActiveInspectorPanel = this.PropertiesWindow;
             UpdateEditorTitle();
+            InitializePropertiesToolstripEvents();
 
 
         }
@@ -235,7 +237,53 @@ namespace WinFormsApp1
             }
         }
 
-        private void onSaveProjectToolStripMenuItem_Click(object sender, EventArgs e)
+        public static void SaveScene()
+        {
+            if(!EditorContextManager.IsProjectLoaded)
+            {
+                Log.Warning("No active project workspace is currently open.");
+                return;
+            }
+
+            if(EditorContextManager.ActiveLoadedScene == null)
+            {
+                Log.Warning("[Editor UI] Save aborted: There is no active scene context loaded to persist.");
+                return;
+            }
+
+            try
+            {
+                Log.Info("[Editor UI] Initiating scene hierarchy persistence pipeline...");
+
+                // 1. Build the path matching your project context rules
+                string sceneFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.toml";
+                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", sceneFileName);
+
+                // 2. Ensure directories exist safely on disk
+                string directoryCheck = Path.GetDirectoryName(targetScenePath);
+                if(!string.IsNullOrEmpty(directoryCheck) && !Directory.Exists(directoryCheck))
+                {
+                    Directory.CreateDirectory(directoryCheck);
+                }
+
+                // 3.  EXECUTE YOUR EXACT NATIVE ENGINE SERIALIZER 
+                // We pass the live scene layout and target destination directly
+                SceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, targetScenePath);
+
+               Log.Info($"Project workspace and active scene layout saved successfully.");
+            }
+            catch(Exception ex)
+            {
+                // Failures during save are already logged by SceneSerializer, but this provides a UI safety fallback
+               Log.Warning($"Failed to save project layout safely to disk:\n{ex.Message}");
+            }
+        }
+
+
+       
+
+
+        public void onSaveProjectToolStripMenuItem_Click(object sender, EventArgs e)
         {
             if(!EditorContextManager.IsProjectLoaded)
             {
@@ -268,7 +316,7 @@ namespace WinFormsApp1
                 // We pass the live scene layout and target destination directly
                 SceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, targetScenePath);
 
-                MessageBox.Show($"Project workspace and active scene layout saved successfully.", "Success", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                Log.Info($"Project workspace and active scene layout saved successfully.");
             }
             catch(Exception ex)
             {
@@ -294,6 +342,230 @@ namespace WinFormsApp1
                 node.ForeColor = SystemColors.WindowText;
                 node.Collapse();
                 ResetTreeNodes(node.Nodes);
+            }
+        }
+        public static void RebuildInspectorPanel(GameObject targetGo)
+        {
+            if(ActiveInspectorPanel == null)
+                return;
+
+            ActiveInspectorPanel.SuspendLayout();
+
+            FlowLayoutPanel? flowLayout = ActiveInspectorPanel.Controls.OfType<FlowLayoutPanel>().FirstOrDefault();
+            if(flowLayout == null)
+            {
+                flowLayout = new FlowLayoutPanel
+                {
+                    Dock = DockStyle.Fill,
+                    FlowDirection = FlowDirection.TopDown,
+                    WrapContents = false,
+                    AutoScroll = true
+                };
+                ActiveInspectorPanel.Controls.Add(flowLayout);
+            }
+
+            flowLayout.SuspendLayout();
+            flowLayout.Controls.Clear();
+            Engine.Editor.WinFormsApp1.ComponentCardFactory.ClearSelection();
+
+            if(targetGo != null)
+            {
+                // 💡 FIX: Draw the root GameObject's card at the very top first!
+                Panel goCard = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard("GameObject Properties", targetGo, flowLayout.Width);
+                flowLayout.Controls.Add(goCard);
+
+                // Then loop through the ECS dictionary and build the rest of the component cards down the column
+                foreach(var kvp in targetGo.Components)
+                {
+                    string name = kvp.Key.Name;
+                    object instance = kvp.Value;
+
+                    Panel card = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard(name, instance, flowLayout.Width);
+                    flowLayout.Controls.Add(card);
+                }
+            }
+
+            flowLayout.ResumeLayout(true);
+            ActiveInspectorPanel.ResumeLayout(true);
+        }
+
+        // Simple context helper mapping your Hierarchy tree to live memory references
+        private GameObject? GetSelectedGameObjectFromHierarchy()
+        {
+            if(SceneHierarchyTreeView.SelectedNode == null)
+                return null;
+
+            // Presuming you stored your GameObject reference inside the TreeNode's Tag property
+            return SceneHierarchyTreeView.SelectedNode.Tag as GameObject;
+        }
+
+
+        private void InitializePropertiesToolstripEvents()
+        {
+            // Create the master context menu container once
+            AddComponentButton.DropDown = new ContextMenuStrip();
+
+            // 💡 Run this logic every single time the user clicks to open the dropdown menu
+            AddComponentButton.DropDownOpening += (s, e) =>
+            {
+                AddComponentButton.DropDownItems.Clear();
+                GameObject? selectedGo = GetSelectedGameObjectFromHierarchy();
+
+                // 1. Gather all valid component types in the project via Reflection
+                var componentTypes = AppDomain.CurrentDomain.GetAssemblies()
+                    .SelectMany(a => a.GetTypes())
+                    .Where(t => t.IsSubclassOf(typeof(GameComponent)) && !t.IsAbstract);
+
+                foreach(var type in componentTypes)
+                {
+                    // Don't show the core Transform component since objects can't have duplicates or live without it
+                    if(type == typeof(Engine.Core.ECS.Components.TransformComponent))
+                        continue;
+
+                    ToolStripMenuItem item = new ToolStripMenuItem(type.Name.Replace("Component", ""));
+                    Type targetType = type; // Lock the closure context safely
+
+                    // 💡 SMART FILTER: If a GameObject is selected, check if it already owns this component type
+                    if(selectedGo != null && selectedGo.Components.ContainsKey(targetType))
+                    {
+                        item.Enabled = false; // Gray it out!
+                        item.Text += " (Already Attached)";
+                    }
+
+                    // The click execution pipeline
+                    item.Click += (subSender, subArgs) =>
+                    {
+                        if(selectedGo == null)
+                        {
+                            MessageBox.Show("Please select a GameObject in the hierarchy tree first.", "No Target Active");
+                            return;
+                        }
+
+                        if(Activator.CreateInstance(targetType) is GameComponent newComp)
+                        {
+                            selectedGo.AddComponent(newComp);
+                            Log.Info($"[Editor UI] Attached component '{targetType.Name}' to '{selectedGo.Name}'");
+
+                            // Rebuild and refresh the card view layout panel
+                            RebuildInspectorPanel(selectedGo);
+                        }
+                    };
+
+                    AddComponentButton.DropDownItems.Add(item);
+                }
+            };
+
+            // --- ➖ REMOVE COMPONENT BUTTON ---
+            RemoveComponentButton.Click += (s, e) =>
+            {
+                GameObject? selectedGo = GetSelectedGameObjectFromHierarchy();
+                object? activeComponent = Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance;
+
+                if(selectedGo == null || activeComponent == null)
+                {
+                    MessageBox.Show("Please select both a GameObject and a specific component card to remove.", "Selection Missing");
+                    return;
+                }
+
+                if(activeComponent is GameComponent componentInstance)
+                {
+                    if(componentInstance.GetType() == typeof(Engine.Core.ECS.Components.TransformComponent))
+                    {
+                        MessageBox.Show("The TransformComponent cannot be removed from a GameObject.", "Action Blocked", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                        return;
+                    }
+
+                    selectedGo.RemoveComponent(componentInstance);
+                    Log.Info($"[Editor UI] Removed component '{componentInstance.GetType().Name}' from '{selectedGo.Name}'");
+
+                    Engine.Editor.WinFormsApp1.ComponentCardFactory.ClearSelection();
+                    RebuildInspectorPanel(selectedGo);
+                }
+            };
+        }
+
+        public void StartSimulationButton_Click(object sender, EventArgs e)
+        {
+            if(!EditorContextManager.IsProjectLoaded || EditorContextManager.ActiveLoadedScene == null)
+            {
+                Log.Warning("[Simulation Error] Cannot start simulation: No active project or scene is loaded.");
+                return;
+            }
+            // 1. Save the current scene state before starting simulation
+            SaveScene();
+            // 3. Start the simulation in the MonoGame control
+            mgWindowControl.StartSimulation();
+        }
+
+        public void PauseSimulationButton_Click(object sender, EventArgs e)
+        {
+            if(mgWindowControl.SimulationRunning)
+            {
+                mgWindowControl.pauseSimulation();
+                
+            }
+            else
+            {
+                Log.Warning("[Simulation Error] Cannot pause/resume: Simulation is not currently running.");
+            }
+        }
+
+        public void StopSimulationButton_Click(object sender, EventArgs e)
+        {
+            if(mgWindowControl.SimulationRunning)
+            {
+                mgWindowControl.StopSimulation();
+
+                // Optionally reload the clean scene to reset the state
+                LoadCleanScene();
+            }
+            else
+            {
+                Log.Warning("[Simulation Error] Cannot stop: Simulation is not currently running.");
+            }
+        }
+
+        public void LoadCleanScene()
+        {
+            if(EditorContextManager.IsProjectLoaded && EditorContextManager.ActiveLoadedScene != null)
+            {
+                try
+                {
+                    string targetScenePath = Path.Combine(
+                        EditorContextManager.CurrentProjectRoot,
+                        "Content",
+                        "Scenes",
+                        $"{EditorContextManager.ActiveLoadedScene.SceneName}.toml"
+                    );
+
+                    if(File.Exists(targetScenePath))
+                    {
+                        // Silently load without prompts
+                        GameScene revertedScene = SceneSerializer.LoadScene(targetScenePath);
+                        EditorContextManager.ActiveLoadedScene = revertedScene;
+
+                        // Repopulate the main tree view panel UI
+                        if(Form1.ActiveHierarchyTreeView != null)
+                        {
+                            Form1.ActiveHierarchyTreeView.BeginInvoke(new Action(() => {
+                                // 💡 FIX: Find the live instance of Form1 that owns this TreeView control
+                                if(Form1.ActiveHierarchyTreeView.FindForm() is Form1 mainForm)
+                                {
+                                    mainForm.PopulateSceneHierarchyTree(Form1.ActiveHierarchyTreeView, revertedScene);
+                                }
+                                else
+                                {
+                                    Log.Error("[Simulation Error] Could not locate the running Form1 instance to update the UI.");
+                                }
+                            }));
+                        }
+                        Log.Info("[Simulation] Workspace state successfully restored.");
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Log.Error($"[Simulation Error] Failed to auto-reload pre-simulation snapshot context: {ex.Message}");
+                }
             }
         }
 

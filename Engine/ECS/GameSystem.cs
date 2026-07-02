@@ -1,4 +1,6 @@
 ﻿using Engine.Core.ECS;
+using Engine.Core.ECS.Components;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +15,10 @@ namespace Engine.Core.ECS
     {
         public bool IsEnabled { get; set; } = true;
 
+        public bool UsedInEditor { get; set; } = false;
+
         public virtual SystemUpdatePolicy UpdatePolicy => SystemUpdatePolicy.FrameUpdate;
+
 
         public float UpdateInterval = 0.0f; // For FixedUpdate and EntityUpdate policies
 
@@ -30,6 +35,11 @@ namespace Engine.Core.ECS
         public abstract IComponentQuery RequiredComponents{ get; set; }
 
         public abstract void Update(HashSet<GameObject> gameObjects, float deltaTime);
+
+        public virtual void Render(HashSet<GameObject> gameObjects, SpriteBatch spriteBatch)
+        {
+            // Default: Do nothing. Only visual systems override this.
+        }
     }
 }
 

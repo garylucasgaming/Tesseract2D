@@ -21,6 +21,7 @@ namespace Engine.Core.ECS.Components
         private float _scaleY = 4f;
         private float _rotation = 0.0f;
         private TransformOrigin _origin = TransformOrigin.TopLeft;
+        private Vector2 _originVector = Vector2.Zero;
 
         // Event for the TransformSystem to hook into when edited via UI/code
         public event Action<TransformComponent>? OnTransformChanged;
@@ -173,6 +174,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
+        [Browsable(false)]
         public Vector2 GetOriginOffset()
         {
             float x = 0f;
@@ -209,6 +211,13 @@ namespace Engine.Core.ECS.Components
                     break;
             }
             return new Vector2(x, y);
+        }
+
+        [Browsable(false)]
+        public Vector2 OriginVector
+        {
+            get => GetOriginOffset();
+            
         }
 
         [Browsable(false)]
