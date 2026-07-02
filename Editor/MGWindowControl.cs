@@ -1,12 +1,17 @@
-﻿using Microsoft.Xna.Framework;
+﻿
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Forms.NET.Controls;
-using Engine.Core.ECS; // Adjust namespace to match your GameScene path
+using Engine.Core.ECS;
 using WinFormsApp1;
 using Engine.Core.Serialization;
 using Color = Microsoft.Xna.Framework.Color;
 using Engine.Editor.Utilities;
 using Engine.Editor.MGWindow.Services;
+using Engine.Core.Runtime;
+using Engine.Core.Utilities;
+using Engine.Core.ECS.Components;
+using Engine.Core.ECS.Systems;
 
 namespace Editor
 {
@@ -14,6 +19,9 @@ namespace Editor
     {
         private EditorInputService _inputService;
         private EditorRenderService _renderService;
+        private InputManager _inputManager;
+        private float deltaTime;
+        private GameScene _activeScene;
 
         protected override void Initialize()
         {
@@ -21,7 +29,8 @@ namespace Editor
             GizmoRenderer.Initialize(Editor.GraphicsDevice);
 
             // Spin up our single responsibility services
-            _inputService = new EditorInputService();
+            _inputManager = new InputManager();
+            _inputService = new EditorInputService(_inputManager);
             _renderService = new EditorRenderService();
 
             _inputService.OnTransformModified = () =>
@@ -45,22 +54,42 @@ namespace Editor
 
         protected override void Update(GameTime gameTime)
         {
-            GameScene activeScene = EditorContextManager.ActiveLoadedScene;
-            if(activeScene == null)
-                return;
+            //base deltatime
+            deltaTime = (float) gameTime.ElapsedGameTime.Ticks / TimeSpan.TicksPerSecond;
 
-            GameObject selectedGo = GetSelectedGameObject();
+            
 
-            // Delegate completely to your input service module
-            _inputService.ProcessInputs(activeScene, selectedGo);
+            // 1. Tick the hardware state sensors to fire input events!
+            _inputManager.Update();
+
+            _activeScene = EditorContextManager.ActiveLoadedScene;
+           
+            if(_activeScene != null)
+            {
+           
+                
+                _activeScene.Update(deltaTime);
+                GameObject selectedGo = GetSelectedGameObject();
+
+                // 2. Feed the active selection contexts down into the service pipeline
+                // This replaces ProcessInputs() completely since events handle the heavy lifting now.
+                _inputService.SetContext(_activeScene, selectedGo);
+            }
+               
+
+
+
+            
+
+            
         }
 
         protected override void Draw()
         {
             Editor.GraphicsDevice.Clear(new Color(33, 33, 33));
 
-            GameScene activeScene = EditorContextManager.ActiveLoadedScene;
-            if(activeScene == null)
+            _activeScene = EditorContextManager.ActiveLoadedScene;
+            if(_activeScene == null)
                 return;
 
             GameObject selectedGo = GetSelectedGameObject();
@@ -68,7 +97,7 @@ namespace Editor
             Editor.spriteBatch.Begin();
 
             // Delegate completely to your dedicated rendering service module
-            _renderService.RenderSceneViewport(Editor.spriteBatch, activeScene, selectedGo);
+            _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo);
 
             Editor.spriteBatch.End();
         }

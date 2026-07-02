@@ -84,7 +84,7 @@ namespace Engine.Core.Serialization
         {
             try
             {
-                string targetFilePath = Path.Combine(targetSceneFolder, "Untitled.scene");
+                string targetFilePath = Path.Combine(targetSceneFolder, "Untitled.toml");
 
                 GameScene defaultScene = new GameScene
                 {
@@ -97,10 +97,7 @@ namespace Engine.Core.Serialization
                     Name = "Global Systems Anchor"
                 };
 
-                //defaultScene.GameObjects.Add(globalSystemsGo);
-
-                //string sceneJson = JsonSerializer.Serialize(defaultScene, JsonConfiguration.Options);
-                //File.WriteAllText(targetFilePath, sceneJson);
+                SceneSerializer.SaveScene(defaultScene, targetFilePath);
 
                 Log.Info($"[Project Factory] Successfully baked template file asset: {targetFilePath}");
             }

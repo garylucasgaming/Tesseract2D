@@ -98,8 +98,8 @@ namespace WinFormsApp1
             UpdateEditorTitle();
             if(EditorContextManager.IsProjectLoaded)
             {
-                // 1. Build the path where your default scene's json file should live
-                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", "Default Sandbox.json");
+                // 1. Build the path where your default scene's  file should live
+                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", "Default Sandbox.toml");
 
                 // 2. CHECK: If the file exists, load it! Otherwise, fall back to generating a clean slate template.
                 if(File.Exists(targetScenePath))
@@ -253,7 +253,7 @@ namespace WinFormsApp1
                 Log.Info("[Editor UI] Initiating scene hierarchy persistence pipeline...");
 
                 // 1. Build the path matching your project context rules
-                string sceneFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.json";
+                string sceneFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.toml";
                 string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", sceneFileName);
 
                 // 2. Ensure directories exist safely on disk

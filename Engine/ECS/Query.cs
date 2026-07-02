@@ -47,7 +47,11 @@ namespace Engine.Core.ECS
     {
         private readonly Type _type;
         public HasComponentQuery(Type type) => _type = type;
-        public bool IsMatched(GameObject entity) => entity.Components.Any(c => _type.IsAssignableFrom(c.GetType()));
+        public bool IsMatched(GameObject entity)
+        {
+            // 👇 FIX: Evaluate the dictionary .Values (the actual component instances)
+            return entity.Components.Values.Any(c => _type.IsAssignableFrom(c.GetType()));
+        }
     }
 
     public class AndQuery : IComponentQuery

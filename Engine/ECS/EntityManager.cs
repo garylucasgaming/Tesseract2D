@@ -1,4 +1,6 @@
-﻿using System;
+﻿
+using Engine.Core.ECS.Components;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,24 +27,33 @@ namespace Engine.Core.ECS
         public event Action<GameObject, GameComponent>? OnComponentAdded;
         public event Action<GameObject, GameComponent>? OnComponentRemoved;
 
-       
+
 
         //this adds an entity to the component bucket, as well as notifies any listeners who care about entities being created. 
         //it also subscribces to the entities on component added and removed events. so it can effectively update the component registry
         public void AddEntity(GameObject entity)
         {
+            
             if(_entities.ContainsKey(entity.Id))
                 return;
 
             _entities[entity.Id] = entity;
+
             entity.OnComponentAdded += HandleComponentAddedOnEntity;
             entity.OnComponentRemoved += HandleComponentRemovedFromEntity;
 
+
+            if(entity.Components.ContainsKey(typeof(TransformComponent)) == false)
+            {
+                entity.AddComponent<TransformComponent>();
+            }
+
+            
             // Track this entity inside the optimized system lookup buckets
             foreach(var component in entity.Components)
             {
                 RegisterEntityToComponentBucket(component.GetType(), entity);
-                
+
             }
             OnEntityCreated?.Invoke(entity);
         }
@@ -54,7 +65,7 @@ namespace Engine.Core.ECS
             {
                 entity.AddComponent<T>();
             }
-               
+
 
             // 1. Tell GameObject to update its list (This handles instance creation)
 
@@ -75,7 +86,7 @@ namespace Engine.Core.ECS
             foreach(var bucket in _componentTypeBuckets.Values)
             {
                 bucket.Remove(entity);
-                
+
             }
             OnEntityRemoved?.Invoke(entity);
         }
@@ -90,9 +101,9 @@ namespace Engine.Core.ECS
                 if(componentInstance == null)
                     return;
                 entity.RemoveComponent<T>();
-            }  
+            }
 
-            
+
 
 
         }
@@ -100,7 +111,7 @@ namespace Engine.Core.ECS
         //whenever an entity gets a component added to it, this meethod is subscribed to it's event and handles the registry update and fire for any listeners who care
         private void HandleComponentAddedOnEntity(GameObject entity, GameComponent component)
         {
-            
+
             RegisterEntityToComponentBucket(component.GetType(), entity);
             OnComponentAdded?.Invoke(entity, component);
         }
@@ -118,7 +129,7 @@ namespace Engine.Core.ECS
         // finds a  entity  by its guid id. returns null if not found
         public GameObject? Find(Guid id)
         {
-          return _entities.TryGetValue(id, out var entity) ? entity : null;
+            return _entities.TryGetValue(id, out var entity) ? entity : null;
         }
 
         //finds an entity with a specific name
@@ -133,7 +144,7 @@ namespace Engine.Core.ECS
             return _entities.Values.FirstOrDefault(e => e.tags.Contains(tag));
         }
 
-        
+
 
         // Returns ONLY the entities that actually possess the component type a system needs
         public IReadOnlyList<GameObject> GetEntitiesWithComponent(Type componentType)

@@ -17,7 +17,7 @@ namespace Engine.Core.ECS
 
         public Dictionary<Type, GameComponent> Components { get; set; } = new Dictionary<Type, GameComponent>();
         //public List<GameComponent> Components { get; set; } = new List<GameComponent>();
-       [JsonIgnore]
+        [JsonIgnore]
         public GameScene ContextScene { get; set; } = null!;
 
         public event Action<GameObject, GameComponent>? OnComponentAdded;
@@ -40,21 +40,7 @@ namespace Engine.Core.ECS
 
         // --- NEW: Frontloaded Core Components ---
 
-        [JsonIgnore] // Fast-access property shortcut for the editor and systems
-        public TransformComponent Transform
-        {
-            get; private set;
-        }
 
-        /// <summary>
-        /// Constructor guarantees every single GameObject spawns with a valid spatial footprint.
-        /// </summary>
-        public GameObject()
-        {
-            // Frontload the transform component automatically
-            Transform = new TransformComponent() { gameObject = this };
-            AddComponent(Transform);
-        }
 
         // --- NEW: Hierarchy Management Methods ---
 
@@ -106,7 +92,7 @@ namespace Engine.Core.ECS
             child.Parent = this;
             Children.Add(child);
 
-            
+
         }
 
         /// <summary>
@@ -146,7 +132,7 @@ namespace Engine.Core.ECS
             if(component == null)
                 return;
 
-             component.gameObject = this;
+            component.gameObject = this;
 
             Type componentType = component.GetType();
 
@@ -157,7 +143,7 @@ namespace Engine.Core.ECS
                 return;
             }
 
-           
+
             Components[componentType] = component;
 
             // This instantly updates the EntityManager's buckets in real-time!
@@ -167,10 +153,10 @@ namespace Engine.Core.ECS
         public T? GetComponent<T>() where T : GameComponent
         {
             // return Components.OfType<T>().FirstOrDefault();
-           if(Components.TryGetValue(typeof(T), out var component))
+            if(Components.TryGetValue(typeof(T), out var component))
             {
                 return (T) component;
-                
+
             }
             return null;
         }

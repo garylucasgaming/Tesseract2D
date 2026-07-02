@@ -1,149 +1,95 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Numerics;
-using System.Text.Json;
+using Tommy;
 using Engine.Core.ECS;
-using Engine.Core.Utilities;
 
 namespace Engine.Core.Serialization
 {
     public static class SceneSerializer
     {
-        // Setup central JSON rules with our custom polymorphic converter injected
-        private static readonly JsonSerializerOptions _jsonOptions = new()
-        {
-            WriteIndented = true,
-            Converters = {
-        new GameComponentConverter(),
-        new TypeDictionaryKeyConverter() // 👈 ADD THIS LINE HERE
-    },
-            PropertyNameCaseInsensitive = true
-        };
-
-
-
-        /// <summary>
-        /// Serializes a live runtime GameScene out to a clean, flat data layout on disk.
-        /// </summary>
         public static void SaveScene(GameScene scene, string absoluteFilePath)
         {
-            try
+            var root = new TomlTable();
+            root["scene_name"] = scene.SceneName;
+            root["id"] = scene.Id.ToString();
+
+            var entitiesTable = new TomlTable();
+            foreach(var entity in scene.Entities.GetSerializableEntities())
             {
-                var contract = new SceneFileContract
-                {
-                    SceneName = scene.SceneName,
-                    Id = scene.Id,
-                    Entities = scene.Entities.GetSerializableEntities()
-                };
-
-                string jsonStr = JsonSerializer.Serialize(contract, _jsonOptions);
-                File.WriteAllText(absoluteFilePath, jsonStr);
-
-                Log.Info($"[Scene Serializer] Successfully baked scene '{scene.SceneName}' to disk at: {absoluteFilePath}");
+                entitiesTable[entity.Id.ToString()] = GameObjectSerializer.ExportGameObject(entity);
             }
-            catch(Exception ex)
+            root["entities"] = entitiesTable;
+
+            using(var writer = File.CreateText(absoluteFilePath))
             {
-                Log.Error($"[Scene Serializer Error] Failed to serialize scene data! Reason: {ex.Message}");
-                throw;
+                root.WriteTo(writer);
             }
         }
 
-
-
-        /// <summary>
-        /// Reads a flat JSON file contract and converts it into a live, fully linked ECS runtime scene.
-        /// </summary>
         public static GameScene LoadScene(string absoluteFilePath)
         {
-            if(!File.Exists(absoluteFilePath))
+            using(var reader = File.OpenText(absoluteFilePath))
             {
-                throw new FileNotFoundException($"[Scene Serializer Error] Target scene file not found at: {absoluteFilePath}");
-            }
-
-            try
-            {
-
-                string jsonStr = File.ReadAllText(absoluteFilePath);
-                var contract = JsonSerializer.Deserialize<SceneFileContract>(jsonStr, _jsonOptions);
-
-                // 1. Build a brand-new live operational context container instance
-                GameScene newScene = new GameScene
+                var table = TOML.Parse(reader);
+                var scene = new GameScene
                 {
-                    SceneName = contract.SceneName,
-                    Id = contract.Id
+                    SceneName = table["scene_name"],
+                    Id = Guid.Parse(table["id"].ToString())
                 };
 
-                if(contract == null)
+                Console.WriteLine($"[LoadScene] Loading scene: {scene.SceneName}");
+
+                if(!table.HasKey("entities"))
                 {
-                    throw new JsonException($"[Scene Serializer Error] Deserialization returned a null contract for: {absoluteFilePath}");
+                    Console.WriteLine("[LoadScene] ❌ CRITICAL: The 'entities' key does not exist in the TOML file!");
+                    return scene;
+                }
+
+                var entitiesNode = table["entities"];
+                Console.WriteLine($"[LoadScene] 'entities' node type in Tommy: {entitiesNode.GetType().Name}");
+
+                var entitiesTable = entitiesNode.AsTable;
+                Console.WriteLine($"[LoadScene] Number of entity keys found: {entitiesTable.Keys.Count()}");
+
+                var idToEntityMap = new Dictionary<Guid, GameObject>();
+
+                // 1. Pass One: Create all entities
+                foreach(var entityKey in entitiesTable.Keys)
+                {
+                    Console.WriteLine($"[LoadScene] Found entity key: {entityKey}");
+                    var entityTable = entitiesTable[entityKey].AsTable;
+
+                    var entity = GameObjectSerializer.ImportGameObject(entityTable);
+                    scene.Entities.AddEntity(entity);
+                    idToEntityMap[entity.Id] = entity;
+                }
+
+                // 2. Pass Two: Restore Hierarchy
+                foreach(var entityKey in entitiesTable.Keys)
+                {
+                    var entityTable = entitiesTable[entityKey].AsTable;
+                    if(!entityTable.HasKey("id"))
+                        continue;
+
+                    Guid entityId = Guid.Parse(entityTable["id"].ToString());
+
+                    if(entityTable.HasKey("parent_id") && entityTable["parent_id"] != null)
+                    {
+                        string parentIdStr = entityTable["parent_id"].ToString();
+                        if(!string.IsNullOrEmpty(parentIdStr))
+                        {
+                            Guid parentId = Guid.Parse(parentIdStr);
+                            if(idToEntityMap.TryGetValue(parentId, out var parent))
+                            {
+                                idToEntityMap[entityId].SetParent(parent);
+                            }
+                        }
+                    }
                 }
 
                 
-
-                // 2. Initialize the operational managers (Systems, Entities, Events)
-                newScene.InitializeManagers();
-                // 3. PASS 1: Seed all raw flat GameObjects back into the EntityManager database.
-                foreach(var rawEntity in contract.Entities)
-                {
-                    // Register it to the system
-                    newScene.Entities.AddEntity(rawEntity);
-
-                    // 👇 FIX: Fetch the actual operational instance back out of the live database registry!
-                    var liveEntity = newScene.Entities.Find(rawEntity.Id);
-
-                    if(liveEntity != null && liveEntity.Transform != null)
-                    {
-                        // Bind the live component horizontally to the live engine entity
-                        liveEntity.Transform.gameObject = liveEntity;
-                    }
-
-                    }
-
-                // 4. PASS 2: Repair the live object graph relationships. 
-                foreach(var rawEntity in contract.Entities)
-                {
-                    // 👇 FIX: Use the live database entity here too!
-                    var liveEntity = newScene.Entities.Find(rawEntity.Id);
-
-                    var transform = liveEntity?.Transform;
-                    var oldPosition = transform?.WorldPosition;
-                    var oldOffset = new Vector2(transform?.XOffset ?? 0, transform?.YOffset ?? 0);
-
-
-                    if(liveEntity == null)
-                        continue;
-
-                    if(rawEntity.ParentId.HasValue)
-                    {
-                        var parentObject = newScene.Entities.Find(rawEntity.ParentId.Value);
-                        if(parentObject != null)
-                        {
-                            liveEntity.SetParent(parentObject);
-                            var child = parentObject.Children.Find(c => c.Id == liveEntity.Id);
-                            }
-                        else
-                        {
-                             }
-                    }
-                    foreach(var component in liveEntity.Components.Values)
-                    {
-                        component.gameObject = liveEntity; // Rebind the component to the live entity
-                    }
-
-                    transform.X = oldPosition.Value.X;
-                    transform.XOffset = 0;
-                    transform.XOffset = oldOffset.X;
-                    transform.Y = oldPosition.Value.Y;
-                    transform.YOffset = 0;
-                    transform.YOffset = oldOffset.Y;
-                }
-
-                 return newScene;
-            }
-            catch(Exception ex)
-            {
-                Log.Error($"[Scene Serializer Error] Failed to read or parse target scene data! Reason: {ex.Message}");
-                throw;
+                return scene;
             }
         }
     }

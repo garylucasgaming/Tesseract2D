@@ -1,6 +1,9 @@
-﻿using System;
+﻿
+using Engine.Core.ECS.Systems;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Engine.Core.ECS
 {
@@ -14,18 +17,27 @@ namespace Engine.Core.ECS
 
         public GameScene ContextScene { get; set; } = null!;
 
+        public static TransformSystem transformSystem { get; private set; } = null!;
+
         public SystemsManager()
         {
+
+
             // Automatically initialize a bucket list for every single policy enum type
             foreach(SystemUpdatePolicy policy in Enum.GetValues(typeof(SystemUpdatePolicy)))
             {
                 _policyBuckets[policy] = new List<GameSystem>();
             }
+
+            if(transformSystem == null) {
+                transformSystem = new TransformSystem();
+                AddSystem(transformSystem);
+            }
         }
 
-        
+
         /// Registers a system, assigns it to its timing bucket, and builds its initial matching cache.
-        
+
         public void AddSystem(GameSystem system)
         {
             if(system == null)
@@ -56,10 +68,10 @@ namespace Engine.Core.ECS
             }
         }
 
-        
+
         /// Global execution ticks called by your core engine loop.
         /// Handles FrameUpdate and processes individual FixedUpdate custom interval clocks.
-        
+
         public void Update(float deltaTime)
         {
             // FrameUpdate: Variable frame rate execution
@@ -82,14 +94,14 @@ namespace Engine.Core.ECS
             }
         }
 
-        
+
         /// Runs TickUpdate systems on your locked, rigid simulation step ticker.
         public void TickUpdate(float fixedDeltaTime)
         {
             ExecuteSystemBucket(SystemUpdatePolicy.TickUpdate, fixedDeltaTime);
         }
 
-        
+
         /// Drives Manual systems. Call this explicitly to trigger a manual system by type.
         //probably not needed as can just use events instead. 
         public void TriggerManualSystem<T>(float deltaTime) where T : GameSystem
@@ -101,9 +113,9 @@ namespace Engine.Core.ECS
             system.Update(_systemEntityCache[system], deltaTime);
         }
 
-        
+
         /// Helper to sweep through standard execution pipelines cleanly.
-        
+
         private void ExecuteSystemBucket(SystemUpdatePolicy policy, float deltaTime)
         {
             var systems = _policyBuckets[policy];
@@ -119,9 +131,9 @@ namespace Engine.Core.ECS
 
         // --- Reactive Engine Listeners: Hooked to your scene spawn/component change events ---
 
-        
+
         /// Call this whenever an entity spawns, gets activated, or gains a new component.
-        
+
         public void OnEntityChanged(GameObject entity, float deltaTime = 0.0f)
         {
             foreach(var kvp in _systemEntityCache)
@@ -129,12 +141,26 @@ namespace Engine.Core.ECS
                 var system = kvp.Key;
                 var cache = kvp.Value;
 
-                bool currentlyMatches = entity.isActive && system.RequiredComponents.IsMatched(entity);
+
                 bool wasInCache = cache.Contains(entity);
 
-                if(currentlyMatches)
+
+
+                // Ingest any pre-existing entities in the scene that match this query immediately
+                if(ContextScene?.Entities != null)
                 {
-                    cache.Add(entity);
+                    if(wasInCache)
+                    {
+                        continue;
+                    }
+                    else
+                    {
+                        if(system.RequiredComponents.IsMatched(entity))
+                        {
+                            cache.Add(entity);
+                        }
+                    }
+
 
                     // EntityUpdate Policy: If an entity mutates and matches, tick this system instantly!
                     if(system.UpdatePolicy == SystemUpdatePolicy.EntityUpdate && system.IsEnabled && !wasInCache)
@@ -143,16 +169,13 @@ namespace Engine.Core.ECS
                         system.Update(singleEntityBatch, deltaTime);
                     }
                 }
-                else
-                {
-                    cache.Remove(entity);
-                }
+
             }
         }
 
-        
+
         /// Call this whenever an entity is explicitly destroyed or removed from the active scene tree.
-        
+
         public void OnEntityDestroyed(GameObject entity)
         {
             foreach(var cache in _systemEntityCache.Values)

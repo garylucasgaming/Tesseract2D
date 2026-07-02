@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Engine.Core.Utilities;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -92,7 +93,8 @@ namespace Engine.Core.ECS
         /// <param name="deltaTime">The elapsed timestamp scale in seconds since the last frame draw.</param>
         public void Update(float deltaTime)
         {
-           Systems.Update(deltaTime);
+            
+            Systems.Update(deltaTime);
         }
 
         public void TickUpdate(float fixeddeltaTime)
