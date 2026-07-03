@@ -24,7 +24,8 @@ namespace Engine.Core.ECS.Systems
 
         public TransformSystem()
         {
-            RequiredComponents = Query.Has<TransformComponent>();
+            RequiredComponents = Query
+                .Has<TransformComponent>();
             UsedInEditor = true;
 
             

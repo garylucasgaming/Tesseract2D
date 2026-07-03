@@ -85,7 +85,7 @@ namespace Engine.Core.ECS
                 if(!system.IsEnabled)
                     continue;
 
-                // 💡 FIX: Filter FixedUpdate execution based on playMode status vs Editor rules
+                // Filter FixedUpdate execution based on playMode status vs Editor rules
                 if(!playModeActive && !system.UsedInEditor)
                     continue;
 

@@ -507,6 +507,7 @@ namespace WinFormsApp1
             else
             {
                 Log.Warning("[Simulation Error] Cannot pause/resume: Simulation is not currently running.");
+                
             }
         }
 
