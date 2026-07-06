@@ -59,32 +59,49 @@ namespace WinFormsApp1
                 return;
             }
 
-            // FIX: Pull flat entities directly from our core EntityManager contract
-            var rootEntities = activeScene.Entities.GetSerializableEntities().Where(go => go.Parent == null);
-            foreach(GameObject rootGo in rootEntities)
+            // Grab all entities currently tracked in the active scene
+            var allEntities = activeScene.Entities.GetSerializableEntities().ToList();
+
+            // Pass 1: Instantly generate a visual TreeNode wrapper for every single object
+            Dictionary<Guid, TreeNode> nodeMap = new Dictionary<Guid, TreeNode>();
+            foreach(GameObject go in allEntities)
             {
-                TreeNode visualNode = new TreeNode(rootGo.Name)
+                TreeNode visualNode = new TreeNode(go.Name)
                 {
-                    Tag = rootGo,
+                    Tag = go,
                     ImageKey = "GameObjectIcon",
                     SelectedImageKey = "GameObjectIcon"
                 };
-                hierarchyTreeView.Nodes.Add(visualNode);
-                CrawlSceneHierarchy(rootGo, visualNode);
+                nodeMap[go.Id] = visualNode;
             }
 
+            // Pass 2: High-efficiency layout linkage via your Parent graph references
+            foreach(GameObject go in allEntities)
+            {
+                TreeNode currentVisualNode = nodeMap[go.Id];
+
+                if(go.Parent != null && nodeMap.TryGetValue(go.Parent.Id, out TreeNode parentVisualNode))
+                {
+                    // If it has a valid structural parent, mount it directly to the parent node's collection
+                    parentVisualNode.Nodes.Add(currentVisualNode);
+                }
+                else
+                {
+                    // Otherwise, it belongs on the root shelf of your scene view
+                    hierarchyTreeView.Nodes.Add(currentVisualNode);
+                }
+            }
+
+            // Restore user UI context selections seamlessly
             RestoreExpandedStates(hierarchyTreeView.Nodes, expandedObjectIds);
 
-            if(selectedObjectId.HasValue)
+            if(selectedObjectId.HasValue && nodeMap.TryGetValue(selectedObjectId.Value, out TreeNode nodeToSelect))
             {
-                TreeNode nodeToSelect = FindNodeByGameObjectId(hierarchyTreeView.Nodes, selectedObjectId.Value);
-                if(nodeToSelect != null)
-                    hierarchyTreeView.SelectedNode = nodeToSelect;
+                hierarchyTreeView.SelectedNode = nodeToSelect;
             }
 
             hierarchyTreeView.EndUpdate();
         }
-
         private void CrawlSceneHierarchy(GameObject currentGo, TreeNode parentVisualNode)
         {
             foreach(GameObject childGo in currentGo.Children)
@@ -178,9 +195,10 @@ namespace WinFormsApp1
 
         private void DestroyHierarchyRecursively(GameObject target, GameScene scene)
         {
+
             for(int i = target.Children.Count - 1; i >= 0; i--)
             {
-                GameObject child = target.Children[i];
+                GameObject child = target.Children[i] as GameObject;
                 DestroyHierarchyRecursively(child, scene);
 
                 // FIX: Map database cleanup to EntityManager directly

@@ -43,17 +43,16 @@ namespace Engine.Core.ECS
             entity.OnComponentRemoved += HandleComponentRemovedFromEntity;
 
 
-            if(entity.Components.ContainsKey(typeof(TransformComponent)) == false)
+            if(!entity.Components.ContainsKey(typeof(TransformComponent)))
             {
                 entity.AddComponent<TransformComponent>();
             }
 
-            
-            // Track this entity inside the optimized system lookup buckets
-            foreach(var component in entity.Components)
-            {
-                RegisterEntityToComponentBucket(component.GetType(), entity);
 
+            // Track this entity inside the optimized system lookup buckets
+            foreach(var kvp in entity.Components)
+            {
+                RegisterEntityToComponentBucket(kvp.Value.GetType(), entity); // 👈 Target the active component value!
             }
             OnEntityCreated?.Invoke(entity);
         }
@@ -144,7 +143,10 @@ namespace Engine.Core.ECS
             return _entities.Values.FirstOrDefault(e => e.tags.Contains(tag));
         }
 
-
+       public bool HasEntity(Guid id)
+        {
+            return _entities.ContainsKey(id);
+        }
 
         // Returns ONLY the entities that actually possess the component type a system needs
         public IReadOnlyList<GameObject> GetEntitiesWithComponent(Type componentType)

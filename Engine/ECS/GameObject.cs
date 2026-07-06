@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text.Json.Serialization; // Essential for protecting our hierarchy from JSON loops!
 using Engine.Core.ECS.Components;
 using Engine.Core.Utilities;
+using GISM.Core.Attributes;
 
 namespace Engine.Core.ECS
 {
-    public class GameObject
+    public class GameObject : Object
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
+
+        
         public string Name { get; set; } = "Game Object";
         public bool isActive { get; set; } = true;
 
@@ -17,7 +20,7 @@ namespace Engine.Core.ECS
 
         public Dictionary<Type, GameComponent> Components { get; set; } = new Dictionary<Type, GameComponent>();
         //public List<GameComponent> Components { get; set; } = new List<GameComponent>();
-        [JsonIgnore]
+        [GISMIgnore]
         public GameScene ContextScene { get; set; } = null!;
 
         public event Action<GameObject, GameComponent>? OnComponentAdded;
@@ -25,88 +28,7 @@ namespace Engine.Core.ECS
 
 
 
-        // --- NEW: Hierarchy Tracking Properties ---
-
-        [JsonIgnore] // CRITICAL: Prevent circular reference crashes when saving scenes to JSON!
-        public GameObject? Parent
-        {
-            get; private set;
-        }
-
-        public Guid? ParentId { get; set; } = null;
-
-        [JsonIgnore]
-        public List<GameObject> Children { get; set; } = new List<GameObject>();
-
-        // --- NEW: Frontloaded Core Components ---
-
-
-
-        // --- NEW: Hierarchy Management Methods ---
-
-        /// <summary>
-        /// Attaches a child GameObject to this object, automatically handling transform inheritance.
-        /// </summary>
-        /// 
-        public void SetParent(GameObject? newParent)
-        {
-            if(Parent != null)
-            {
-                Parent.Children.Remove(this);
-            }
-
-            Parent = newParent;
-
-            if(newParent != null)
-            {
-                ParentId = newParent.Id;
-                if(!newParent.Children.Contains(this))
-                {
-                    newParent.Children.Add(this);
-                }
-
-                // 👇FIX: Synchronize the offsets using the absolute coordinates loaded from JSON!
-                var myTransform = GetComponent<TransformComponent>();
-                var parentTransform = newParent.GetComponent<TransformComponent>();
-
-                if(myTransform != null && parentTransform != null)
-                {
-                    // Calculate where I am in world space relative to my new parent's world space
-                    myTransform.XOffset = myTransform.X - parentTransform.X;
-                    myTransform.YOffset = myTransform.Y - parentTransform.Y;
-                }
-            }
-            else
-            {
-                ParentId = null;
-            }
-        }
-        public void AddChild(GameObject child)
-        {
-            if(child == null || child == this)
-                return;
-
-            // If the child already has a different parent, cleanly detach it first
-            child.Parent?.RemoveChild(child);
-
-            child.Parent = this;
-            Children.Add(child);
-
-
-        }
-
-        /// <summary>
-        /// Removes a child relationship and returns the object back to the root scene level.
-        /// </summary>
-        public void RemoveChild(GameObject child)
-        {
-            if(Children.Contains(child))
-            {
-                child.Parent = null;
-                Children.Remove(child);
-            }
-        }
-
+    
 
         /// <summary>
         /// Instantiates and attaches a component of type T to this GameObject.

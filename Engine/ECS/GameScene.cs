@@ -8,12 +8,11 @@ using System.Threading.Tasks;
 
 namespace Engine.Core.ECS
 {
-    public class GameScene
+    public class GameScene : Object
     {
         // Identification properties for the Editor UI to read
         public string SceneName { get; set; } = "Untitled Scene";
 
-        public Guid Id { get; set; } = Guid.NewGuid();
         public string ProjectPath { get; set; } = string.Empty;
 
         // Core Data Entities
@@ -35,9 +34,10 @@ namespace Engine.Core.ECS
 
         public void InitializeManagers() 
         {
+            Entities = new EntityManager() { ContextScene = this };
             Systems = new SystemsManager() { ContextScene = this};
             Managers = new ManagersManager() { ContextScene = this };
-            Entities = new EntityManager() { ContextScene = this };
+            
             InitializeManagerEvents();
 
         }
@@ -71,16 +71,24 @@ namespace Engine.Core.ECS
             {
                 Name = name,
                 ContextScene = this
-                
             };
 
+            // 1. Register with the manager first so events are fully wired
+            Entities.AddEntity(entity);
+
+            // 2. Add components now; they will correctly bubble up through the event chain
             foreach(var component in components)
             {
                 entity.AddComponent(component);
             }
-            Entities.AddEntity(entity);
-            
+
             return entity;
+        }
+
+        public void AddGameObject(GameObject go)
+        {
+            go.ContextScene = this;
+            Entities.AddEntity(go);
         }
 
 

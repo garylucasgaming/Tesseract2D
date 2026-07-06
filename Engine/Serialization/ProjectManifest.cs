@@ -11,6 +11,12 @@ namespace Engine.Core.Serialization
         public string EngineVersion { get; set; } = "1.0.0";
         public string ProjectName { get; set; } = "Unnamed Colony Sim";
 
+        public string LastUsedScene { get; set; } = "";
+
+        public string DefaultScene { get; set; } = "Content/Scenes/Main.scene";
+
+
+
         /// <summary>
         /// The absolute master index for the entire project workspace.
         /// Key: Unique Asset GUID (as a string)

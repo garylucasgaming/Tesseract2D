@@ -19,6 +19,11 @@ namespace Engine.Core.Serialization
             get; private set;
         }
 
+        public static ProjectManifest? CurrentProjectManifest
+        {
+            get; set;
+        }
+
         /// <summary>
         /// Helper flag to easily check if the editor has completed its loading sequence.
         /// </summary>

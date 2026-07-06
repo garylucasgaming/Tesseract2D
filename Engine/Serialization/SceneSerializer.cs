@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using Tommy;
 using Engine.Core.ECS;
+using Engine.Core.Utilities;
+using System.ComponentModel;
 
 namespace Engine.Core.Serialization
 {
@@ -38,57 +40,60 @@ namespace Engine.Core.Serialization
                     Id = Guid.Parse(table["id"].ToString())
                 };
 
-                Console.WriteLine($"[LoadScene] Loading scene: {scene.SceneName}");
+                Log.Info($"[LoadScene] Loading scene: {scene.SceneName}");
 
                 if(!table.HasKey("entities"))
                 {
-                    Console.WriteLine("[LoadScene] ❌ CRITICAL: The 'entities' key does not exist in the TOML file!");
+                    Log.Info("[LoadScene] ❌ CRITICAL: The 'entities' key does not exist in the TOML file!");
                     return scene;
                 }
 
                 var entitiesNode = table["entities"];
-                Console.WriteLine($"[LoadScene] 'entities' node type in Tommy: {entitiesNode.GetType().Name}");
+                Log.Info($"[LoadScene] 'entities' node type in Tommy: {entitiesNode.GetType().Name}");
 
                 var entitiesTable = entitiesNode.AsTable;
-                Console.WriteLine($"[LoadScene] Number of entity keys found: {entitiesTable.Keys.Count()}");
+                Log.Info($"[LoadScene] Number of entity keys found: {entitiesTable.Keys.Count()}");
 
                 var idToEntityMap = new Dictionary<Guid, GameObject>();
+                var entityList = new List<GameObject>();
 
                 // 1. Pass One: Create all entities
                 foreach(var entityKey in entitiesTable.Keys)
                 {
-                    Console.WriteLine($"[LoadScene] Found entity key: {entityKey}");
+                    Log.Info($"[LoadScene] Found entity key: {entityKey}");
                     var entityTable = entitiesTable[entityKey].AsTable;
 
                     var entity = GameObjectSerializer.ImportGameObject(entityTable);
-                    scene.Entities.AddEntity(entity);
+                    Log.Info($"[LoadScene] Imported entity: {entity.Name} with ID: {entity.Id}");
+                    if(entity.ParentId != Guid.Empty)
+                    {
+                        Log.Info($"[LoadScene] Entity {entity.Name} has parent ID: {entity.ParentId}");
+                    }
+                    entityList.Add(entity);
                     idToEntityMap[entity.Id] = entity;
                 }
 
-                // 2. Pass Two: Restore Hierarchy
-                foreach(var entityKey in entitiesTable.Keys)
+                // 2. Restore child parent relationship for each gameobject
+                foreach(var entity in entityList)
                 {
-                    var entityTable = entitiesTable[entityKey].AsTable;
-                    if(!entityTable.HasKey("id"))
-                        continue;
-
-                    Guid entityId = Guid.Parse(entityTable["id"].ToString());
-
-                    if(entityTable.HasKey("parent_id") && entityTable["parent_id"] != null)
+                    if(entity.ParentId != Guid.Empty && idToEntityMap.TryGetValue(entity.ParentId, out var parentEntity))
                     {
-                        string parentIdStr = entityTable["parent_id"].ToString();
-                        if(!string.IsNullOrEmpty(parentIdStr))
-                        {
-                            Guid parentId = Guid.Parse(parentIdStr);
-                            if(idToEntityMap.TryGetValue(parentId, out var parent))
-                            {
-                                idToEntityMap[entityId].SetParent(parent);
-                            }
-                        }
+                        parentEntity.AddChild(entity);
+                        entity.SetParent(parentEntity);
                     }
                 }
 
-                
+
+
+                //pass 3 populate scene
+                foreach(var e in entityList)
+                {
+                    scene.AddGameObject(e);
+                }
+
+               
+
+
                 return scene;
             }
         }

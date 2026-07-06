@@ -1,5 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
+using GISM.Core.Attributes;
+using GISM.Core.Serializer; // Added to expose [GISMIgnore]
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 
 namespace Engine.Core.ECS.Components
@@ -11,6 +13,18 @@ namespace Engine.Core.ECS.Components
             TopLeft, Top, TopRight, MiddleLeft, Center, MiddleRight, BottomLeft, Bottom, BottomRight
         }
 
+        // IGNORE: Transient runtime flag used for reentrancy control. Never serialize.
+        
+        private bool _isSettingOffset = false;
+
+        [Browsable(false)]
+        // IGNORE: State tracking property with no setter.
+        [GISMIgnore]
+        public bool IsSettingOffset => _isSettingOffset;
+
+        // KEEP PRIVATE FIELDS: Since the primitive floats are your raw data source,
+        // we KEEP the private scalar fields to represent your state, but we will
+        // IGNORE the public properties that wrap them to prevent double-saving.
         private float _x = 0.0f;
         private float _y = 0.0f;
         private float _xOFF = 0.0f;
@@ -21,13 +35,19 @@ namespace Engine.Core.ECS.Components
         private float _scaleY = 4f;
         private float _rotation = 0.0f;
         private TransformOrigin _origin = TransformOrigin.TopLeft;
+
+        // IGNORE: Computed cache or duplicate structural state.
+        
         private Vector2 _originVector = Vector2.Zero;
 
-        // Event for the TransformSystem to hook into when edited via UI/code
+        // The serializer naturally skips MulticastDelegates like this event.
         public event Action<TransformComponent>? OnTransformChanged;
 
         private void NotifyChange() => OnTransformChanged?.Invoke(this);
 
+        // IGNORE PROPERTIES: All of these properties map directly to the private fields 
+        // we're already capturing. Ignoring them saves processing time and text file bloat.
+        [GISMIgnore]
         public TransformOrigin Origin
         {
             get => _origin;
@@ -39,6 +59,7 @@ namespace Engine.Core.ECS.Components
         }
 
         [Browsable(true)]
+        [GISMIgnore]
         public float X
         {
             get => _x;
@@ -50,6 +71,7 @@ namespace Engine.Core.ECS.Components
         }
 
         [Browsable(true)]
+        [GISMIgnore]
         public float Y
         {
             get => _y;
@@ -60,26 +82,45 @@ namespace Engine.Core.ECS.Components
             }
         }
 
+        [GISMIgnore]
         public float XOffset
         {
             get => _xOFF;
             set
             {
-                _xOFF = value;
-                NotifyChange();
+                _isSettingOffset = true;
+                try
+                {
+                    _xOFF = value;
+                    NotifyChange();
+                }
+                finally
+                {
+                    _isSettingOffset = false;
+                }
             }
         }
 
+        [GISMIgnore]
         public float YOffset
         {
             get => _yOFF;
             set
             {
-                _yOFF = value;
-                NotifyChange();
+                _isSettingOffset = true;
+                try
+                {
+                    _yOFF = value;
+                    NotifyChange();
+                }
+                finally
+                {
+                    _isSettingOffset = false;
+                }
             }
         }
 
+        [GISMIgnore]
         public float SizeX
         {
             get => _sizeX;
@@ -90,6 +131,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
+        [GISMIgnore]
         public float SizeY
         {
             get => _sizeY;
@@ -100,6 +142,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
+        [GISMIgnore]
         public float ScaleX
         {
             get => _scaleX;
@@ -110,6 +153,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
+        [GISMIgnore]
         public float ScaleY
         {
             get => _scaleY;
@@ -120,6 +164,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
+        [GISMIgnore]
         public float Rotation
         {
             get => _rotation;
@@ -130,6 +175,9 @@ namespace Engine.Core.ECS.Components
             }
         }
 
+        // IGNORE COMPOUND PROPERTIES: These generate completely fresh MonoGame Vector2 structs. 
+        // Deserializing into these properties would crash or double-assign values over your raw scalar floats.
+        [GISMIgnore]
         public Vector2 WorldPosition
         {
             get => new Vector2(_x, _y);
@@ -141,17 +189,27 @@ namespace Engine.Core.ECS.Components
             }
         }
 
+        [GISMIgnore]
         public Vector2 LocalPosition
         {
             get => new Vector2(_xOFF, _yOFF);
             set
             {
-                _xOFF = value.X;
-                _yOFF = value.Y;
-                NotifyChange();
+                _isSettingOffset = true;
+                try
+                {
+                    _xOFF = value.X;
+                    _yOFF = value.Y;
+                    NotifyChange();
+                }
+                finally
+                {
+                    _isSettingOffset = false;
+                }
             }
         }
 
+        [GISMIgnore]
         public Vector2 Size
         {
             get => new Vector2(_sizeX, _sizeY);
@@ -163,6 +221,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
+        [GISMIgnore]
         public Vector2 Scale
         {
             get => new Vector2(_scaleX, _scaleY);
@@ -213,14 +272,16 @@ namespace Engine.Core.ECS.Components
             return new Vector2(x, y);
         }
 
+        // IGNORE READ-ONLY VALUE PROPERTIES
         [Browsable(false)]
+        [GISMIgnore]
         public Vector2 OriginVector
         {
             get => GetOriginOffset();
-            
         }
 
         [Browsable(false)]
+        [GISMIgnore]
         public Vector2 RenderTopLeft
         {
             get => WorldPosition - (GetOriginOffset() * Scale);

@@ -24,7 +24,7 @@ namespace Engine.Core.ECS
             {
                 if(gameObject != null)
                 {
-                    return gameObject?.Parent;
+                    return (GameObject)gameObject.Parent;
                 }
                 else
                 {

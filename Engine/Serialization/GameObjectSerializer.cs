@@ -33,7 +33,8 @@ public static class GameObjectSerializer
         var go = new GameObject();
         go.Name = table["name"];
         go.Id = Guid.Parse(table["id"].ToString());
-
+        go.ParentId = table.HasKey("parent_id") ? Guid.Parse(table["parent_id"].ToString()) : Guid.Empty;
+        go.tags = table.HasKey("tags") ? [.. table["tags"].AsArray.RawArray.Select(t => t.ToString())] : new List<string>();
         foreach(var entry in table.Keys)
         {
             if(entry == "name" || entry == "id" || entry == "parent_id")

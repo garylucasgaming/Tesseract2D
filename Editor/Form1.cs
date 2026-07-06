@@ -102,7 +102,10 @@ namespace WinFormsApp1
             if(EditorContextManager.IsProjectLoaded)
             {
                 // 1. Build the path where your default scene's  file should live
-                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", "Default Sandbox.toml");
+
+
+                // TODO   set the context managers project manfiest to the loaded project manifest file.
+                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", "Default Sandbox.gism");
 
                 // 2. CHECK: If the file exists, load it! Otherwise, fall back to generating a clean slate template.
                 if(File.Exists(targetScenePath))
@@ -112,7 +115,20 @@ namespace WinFormsApp1
                         Log.Info($"[Editor UI] Found existing workspace state file. Deserializing active layout tree...");
 
                         // Read the file structure straight back into memory
-                        GameScene loadedScene = SceneSerializer.LoadScene(targetScenePath);
+
+
+
+                        // TODO parse the loaded scenes entities into loadedScene?
+
+
+
+                        //toml serialization. 
+                        var loadedScene = new GameScene();
+                        loadedScene =  SceneSerializer.LoadScene(targetScenePath);
+
+                        //gism serialization
+                        //GameScene loadedScene = GISMSceneSerializer.LoadScene(targetScenePath);
+
 
                         // Set the context and populate your UI nodes with the genuine saved data
                         EditorContextManager.ActiveLoadedScene = loadedScene;
@@ -227,7 +243,7 @@ namespace WinFormsApp1
 
                     if(!File.Exists(manifestCheck))
                     {
-                        MessageBox.Show("The selected folder is not a valid engine project.", "Validation Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        Log.Error("The selected folder is not a valid engine project.");
                         return;
                     }
 
@@ -235,6 +251,10 @@ namespace WinFormsApp1
                     OnProjectLoaded();
                 }
             }
+        }
+
+        private void LoadScene()
+        {
         }
 
         public static void SaveScene()
@@ -257,6 +277,8 @@ namespace WinFormsApp1
 
                 // 1. Build the path matching your project context rules
                 string sceneFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.toml";
+                string GISMFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.gism";
+                string GISMTargetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", GISMFileName);
                 string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", sceneFileName);
 
                 // 2. Ensure directories exist safely on disk
@@ -268,6 +290,7 @@ namespace WinFormsApp1
 
                 // 3.  EXECUTE YOUR EXACT NATIVE ENGINE SERIALIZER 
                 // We pass the live scene layout and target destination directly
+                GISMSceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, GISMTargetScenePath);
                 SceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, targetScenePath);
 
                Log.Info($"Project workspace and active scene layout saved successfully.");
@@ -287,7 +310,7 @@ namespace WinFormsApp1
         {
             if(!EditorContextManager.IsProjectLoaded)
             {
-                MessageBox.Show("No active project workspace is currently open.", "Save Blocked", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Log.Warning("No active project workspace is currently open.");
                 return;
             }
 
@@ -299,24 +322,7 @@ namespace WinFormsApp1
 
             try
             {
-                Log.Info("[Editor UI] Initiating scene hierarchy persistence pipeline...");
-
-                // 1. Build the path matching your project context rules
-                string sceneFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.toml";
-                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", sceneFileName);
-
-                // 2. Ensure directories exist safely on disk
-                string directoryCheck = Path.GetDirectoryName(targetScenePath);
-                if(!string.IsNullOrEmpty(directoryCheck) && !Directory.Exists(directoryCheck))
-                {
-                    Directory.CreateDirectory(directoryCheck);
-                }
-
-                // 3.  EXECUTE YOUR EXACT NATIVE ENGINE SERIALIZER 
-                // We pass the live scene layout and target destination directly
-                SceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, targetScenePath);
-
-                Log.Info($"Project workspace and active scene layout saved successfully.");
+                SaveScene();
             }
             catch(Exception ex)
             {

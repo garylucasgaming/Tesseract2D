@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Engine\Engine.Core.csproj" />
+    <ProjectReference Include="..\GISM\GISM.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,4 +1,5 @@
 ﻿using Engine.Core.ECS.Systems;
+using Engine.Core.Utilities;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -16,8 +17,8 @@ namespace Engine.Core.ECS
 
         public GameScene ContextScene { get; set; } = null!;
 
-        public static TransformSystem transformSystem { get; private set; } = null!;
-        public static SpriteRenderSystem spriteRenderSystem { get; private set; } = null!;
+        public  TransformSystem transformSystem { get; private set; } = null!;
+        public  SpriteRenderSystem spriteRenderSystem { get; private set; } = null!;
 
         public SystemsManager()
         {

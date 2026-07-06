@@ -2,6 +2,8 @@
 using System.ComponentModel;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using GISM.Core.Serializer;
+using GISM.Core.Attributes; // Added for [GISMIgnore]
 
 namespace Engine.Core.ECS.Components
 {
@@ -15,7 +17,11 @@ namespace Engine.Core.ECS.Components
 
     public class SpriteComponent : GameComponent
     {
+        // TRAP: Texture2D is a volatile GPU resource. Trying to serialize it deep-scans 
+        // XNA internal graphics state and breaks. We ignore this completely and rely 
+        // on TexturePath to reconstruct it during asset loading.
         [Browsable(false)]
+        [GISMIgnore]
         public Texture2D? Texture
         {
             get; set;
@@ -26,6 +32,8 @@ namespace Engine.Core.ECS.Components
             get; set;
         }
 
+        // The serializer naturally skips MulticastDelegates, but explicitly tagging it keeps intent clear.
+        
         public Action<SpriteComponent>? onSpriteChanged;
 
         // Allows using a single master spritesheet for tiles/items/creatures
@@ -52,11 +60,9 @@ namespace Engine.Core.ECS.Components
         [Browsable(true)]
         public Vector2 CustomOrigin { get; set; } = Vector2.Zero;
 
-        
-
         public SpriteComponent()
         {
-            
+
         }
     }
 }

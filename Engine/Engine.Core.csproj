@@ -13,8 +13,14 @@
     <PackageReference Include="Tommy" Version="3.1.2" />
   </ItemGroup>
 
+
   <ItemGroup>
     <Folder Include="Collections\" />
+  </ItemGroup>
+
+
+  <ItemGroup>
+    <ProjectReference Include="..\GISM\GISM.csproj" />
   </ItemGroup>
 
 </Project>
