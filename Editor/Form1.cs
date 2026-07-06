@@ -105,7 +105,7 @@ namespace WinFormsApp1
 
 
                 // TODO   set the context managers project manfiest to the loaded project manifest file.
-                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", "Default Sandbox.gism");
+                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", "Default Sandbox.yml");
 
                 // 2. CHECK: If the file exists, load it! Otherwise, fall back to generating a clean slate template.
                 if(File.Exists(targetScenePath))
@@ -276,9 +276,9 @@ namespace WinFormsApp1
                 Log.Info("[Editor UI] Initiating scene hierarchy persistence pipeline...");
 
                 // 1. Build the path matching your project context rules
-                string sceneFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.toml";
-                string GISMFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.gism";
-                string GISMTargetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", GISMFileName);
+                string sceneFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.yml";
+                //string GISMFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.gism";
+                //string GISMTargetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", GISMFileName);
                 string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", sceneFileName);
 
                 // 2. Ensure directories exist safely on disk
@@ -290,7 +290,7 @@ namespace WinFormsApp1
 
                 // 3.  EXECUTE YOUR EXACT NATIVE ENGINE SERIALIZER 
                 // We pass the live scene layout and target destination directly
-                GISMSceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, GISMTargetScenePath);
+                //GISMSceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, GISMTargetScenePath);
                 SceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, targetScenePath);
 
                Log.Info($"Project workspace and active scene layout saved successfully.");

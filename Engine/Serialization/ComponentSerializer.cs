@@ -1,101 +1,92 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Reflection;
-using Tommy;
 using Engine.Core.ECS;
 
 namespace Engine.Core.Serialization
 {
     public static class ComponentSerializer
     {
-        public static TomlTable ExportComponent(GameComponent component)
+        private const BindingFlags Flags = BindingFlags.Public | BindingFlags.Instance;
+
+        public static Dictionary<string, object> ExportComponent(GameComponent component)
         {
-            var table = new TomlTable();
+            var data = new Dictionary<string, object>();
             var type = component.GetType();
 
-            // 1. Export Fields
-            var fields = type.GetFields(BindingFlags.Public | BindingFlags.Instance);
-            foreach(var field in fields)
+            // 1. Fields
+            foreach(var field in type.GetFields(Flags))
             {
-                if(field.Name == "gameObject")
+                if(field.Name == "gameObject" || field.Name == "Parent")
                     continue;
 
                 var value = field.GetValue(component);
-                if(value != null)
-                    table[field.Name] = value.ToString();
+                if(value != null && (field.FieldType.IsPrimitive || field.FieldType == typeof(string) || field.FieldType.IsEnum))
+                {
+                    data[field.Name] = field.FieldType.IsEnum ? value.ToString() : value;
+                }
             }
 
-            // 2. Export Properties
-            var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            foreach(var prop in properties)
+            // 2. Properties
+            foreach(var prop in type.GetProperties(Flags))
             {
-                if(!prop.CanRead || !prop.CanWrite || prop.Name == "gameObject")
+                if(!prop.CanRead || !prop.CanWrite || prop.Name == "gameObject" || prop.Name == "Parent")
                     continue;
 
                 var value = prop.GetValue(component);
-                if(value != null)
-                    table[prop.Name] = value.ToString();
+                if(value != null && (prop.PropertyType.IsPrimitive || prop.PropertyType == typeof(string) || prop.PropertyType.IsEnum))
+                {
+                    data[prop.Name] = prop.PropertyType.IsEnum ? value.ToString() : value;
+                }
             }
 
-            return table;
+            return data;
         }
 
-        public static void ImportComponent(GameComponent component, TomlTable table)
+        public static void ImportComponent(GameComponent component, Dictionary<string, object> state)
         {
+            if(state == null)
+                return;
             var type = component.GetType();
 
-            foreach(var entry in table.Keys)
+            foreach(var kvp in state)
             {
-                var node = table[entry];
-                if(node == null)
-                    continue;
-
-                object rawValue;
-                if(node.IsString)
-                    rawValue = node.AsString.Value;
-                else if(node.IsInteger)
-                    rawValue = node.AsInteger.Value;
-                else if(node.IsFloat)
-                    rawValue = node.AsFloat.Value;
-                else if(node.IsBoolean)
-                    rawValue = node.AsBoolean.Value;
-                else
-                    continue;
-
                 try
                 {
-                    // 1. Try Field
-                    var field = type.GetField(entry, BindingFlags.Public | BindingFlags.Instance);
+                    // Try Field
+                    var field = type.GetField(kvp.Key, Flags);
                     if(field != null)
                     {
-                        if(field.FieldType.IsPrimitive || field.FieldType == typeof(string))
+                        if(field.FieldType.IsEnum)
                         {
-                            object convertedValue = Convert.ChangeType(rawValue, field.FieldType);
-                            field.SetValue(component, convertedValue);
+                            field.SetValue(component, Enum.Parse(field.FieldType, kvp.Value.ToString()));
+                        }
+                        else
+                        {
+                            var converted = Convert.ChangeType(kvp.Value, field.FieldType);
+                            field.SetValue(component, converted);
                         }
                         continue;
                     }
 
-                    // 2. Try Property
-                    var prop = type.GetProperty(entry, BindingFlags.Public | BindingFlags.Instance);
+                    // Try Property
+                    var prop = type.GetProperty(kvp.Key, Flags);
                     if(prop != null && prop.CanWrite)
                     {
                         if(prop.PropertyType.IsEnum)
                         {
-                            object enumValue = Enum.Parse(prop.PropertyType, rawValue.ToString());
-                            prop.SetValue(component, enumValue, null);
-                            continue;
+                            prop.SetValue(component, Enum.Parse(prop.PropertyType, kvp.Value.ToString()), null);
                         }
-
-                        if(prop.PropertyType.IsPrimitive || prop.PropertyType == typeof(string))
+                        else
                         {
-                            object convertedValue = Convert.ChangeType(rawValue, prop.PropertyType);
-                            prop.SetValue(component, convertedValue, null);
+                            var converted = Convert.ChangeType(kvp.Value, prop.PropertyType);
+                            prop.SetValue(component, converted, null);
                         }
                     }
                 }
-                catch(Exception)
+                catch
                 {
-                    // Suppress complex layouts smoothly
+                    // Suppress or log structural mismatches smoothly
                 }
             }
         }

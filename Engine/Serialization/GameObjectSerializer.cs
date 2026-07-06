@@ -1,70 +1,55 @@
 ﻿using System;
+using System.Collections.Generic;
 using Engine.Core.ECS;
 using Engine.Core.Serialization;
-using Tommy;
 
 public static class GameObjectSerializer
 {
-    public static TomlTable ExportGameObject(GameObject go)
+    public static EntityDataDto ExportGameObject(GameObject go)
     {
-        var table = new TomlTable();
-        table["name"] = go.Name;
-        table["id"] = go.Id.ToString();
-
-        if(go.Parent != null)
-            table["parent_id"] = go.Parent.Id.ToString();
+        var dto = new EntityDataDto
+        {
+            Name = go.Name,
+            Id = go.Id.ToString(),
+            ParentId = go.Parent != null ? go.Parent.Id.ToString() : Guid.Empty.ToString(),
+            Tags = go.tags != null ? new List<string>(go.tags) : new List<string>()
+        };
 
         foreach(var kvp in go.Components)
         {
-            var exportedCompValue = ComponentSerializer.ExportComponent(kvp.Value);
-
-            // 👇 FIX: Force the component properties to layout beautifully inline
-            // inside the GameObject's main table without creating breaking dot-notation headers
-            exportedCompValue.IsInline = true;
-
-            table[kvp.Key.Name] = exportedCompValue;
+            dto.Components[kvp.Key.Name] = ComponentSerializer.ExportComponent(kvp.Value);
         }
 
-        return table;
+        return dto;
     }
 
-    public static GameObject ImportGameObject(TomlTable table)
+    public static GameObject ImportGameObject(EntityDataDto dto)
     {
-        var go = new GameObject();
-        go.Name = table["name"];
-        go.Id = Guid.Parse(table["id"].ToString());
-        go.ParentId = table.HasKey("parent_id") ? Guid.Parse(table["parent_id"].ToString()) : Guid.Empty;
-        go.tags = table.HasKey("tags") ? [.. table["tags"].AsArray.RawArray.Select(t => t.ToString())] : new List<string>();
-        foreach(var entry in table.Keys)
+        var go = new GameObject
         {
-            if(entry == "name" || entry == "id" || entry == "parent_id")
-                continue;
+            Name = dto.Name,
+            Id = Guid.Parse(dto.Id),
+            ParentId = !string.IsNullOrEmpty(dto.ParentId) ? Guid.Parse(dto.ParentId) : Guid.Empty,
+            tags = dto.Tags ?? new List<string>()
+        };
 
-            Type compType = Type.GetType($"Engine.Core.ECS.Components.{entry}, Engine.Core");
+        foreach(var compKvp in dto.Components)
+        {
+            string typeName = compKvp.Key;
+            Type compType = Type.GetType($"Engine.Core.ECS.Components.{typeName}, Engine.Core");
 
             if(compType != null)
             {
-                var newComp = Activator.CreateInstance(compType) as GameComponent;
-                TomlNode componentNode = table[entry];
-
-                // Handles inline table values smoothly
-                if(componentNode is TomlTable ||  componentNode.IsTable)
+                if(Activator.CreateInstance(compType) is GameComponent newComp)
                 {
-                    ComponentSerializer.ImportComponent(newComp, (TomlTable) componentNode);
-                }
+                    ComponentSerializer.ImportComponent(newComp, compKvp.Value);
+                    newComp.gameObject = go;
 
-                newComp.gameObject = go;
-
-                if(go.Components.ContainsKey(compType))
-                {
-                    go.Components[compType] = newComp;
+                    if(go.Components.ContainsKey(compType))
+                        go.Components[compType] = newComp;
+                    else
+                        go.Components.Add(compType, newComp);
                 }
-                else
-                {
-                    go.Components.Add(compType, newComp);
-                }
-
-                
             }
         }
 

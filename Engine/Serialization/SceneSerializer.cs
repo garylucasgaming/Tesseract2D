@@ -5,27 +5,72 @@ using Tommy;
 using Engine.Core.ECS;
 using Engine.Core.Utilities;
 using System.ComponentModel;
+using YamlDotNet.Serialization.NamingConventions;
+using YamlDotNet.Serialization;
 
 namespace Engine.Core.Serialization
 {
+
+    public class SceneDataDto
+    {
+        public string SceneName
+        {
+            get; set;
+        }
+        public string Id
+        {
+            get; set;
+        }
+        public List<EntityDataDto> Entities { get; set; } = new List<EntityDataDto>();
+    }
+
+    // A clean representation of an individual GameObject
+    public class EntityDataDto
+    {
+        public string Name
+        {
+            get; set;
+        }
+        public string Id
+        {
+            get; set;
+        }
+        public string ParentId
+        {
+            get; set;
+        }
+        public List<string> Tags { get; set; } = new List<string>();
+
+        // Key: Component Type Name (e.g., "TransformComponent"), Value: Field/Property key-value state
+        public Dictionary<string, Dictionary<string, object>> Components { get; set; } = new Dictionary<string, Dictionary<string, object>>();
+    }
     public static class SceneSerializer
     {
+        private static readonly ISerializer Serializer = new SerializerBuilder()
+            .WithNamingConvention(NullNamingConvention.Instance) // Keeps variable case clean
+            .Build();
+
+        private static readonly IDeserializer Deserializer = new DeserializerBuilder()
+            .WithNamingConvention(NullNamingConvention.Instance)
+            .IgnoreUnmatchedProperties() // Prevents throwing if extra meta fields exist
+            .Build();
+
         public static void SaveScene(GameScene scene, string absoluteFilePath)
         {
-            var root = new TomlTable();
-            root["scene_name"] = scene.SceneName;
-            root["id"] = scene.Id.ToString();
+            var sceneDto = new SceneDataDto
+            {
+                SceneName = scene.SceneName,
+                Id = scene.Id.ToString()
+            };
 
-            var entitiesTable = new TomlTable();
             foreach(var entity in scene.Entities.GetSerializableEntities())
             {
-                entitiesTable[entity.Id.ToString()] = GameObjectSerializer.ExportGameObject(entity);
+                sceneDto.Entities.Add(GameObjectSerializer.ExportGameObject(entity));
             }
-            root["entities"] = entitiesTable;
 
             using(var writer = File.CreateText(absoluteFilePath))
             {
-                root.WriteTo(writer);
+                Serializer.Serialize(writer, sceneDto);
             }
         }
 
@@ -33,47 +78,28 @@ namespace Engine.Core.Serialization
         {
             using(var reader = File.OpenText(absoluteFilePath))
             {
-                var table = TOML.Parse(reader);
+                var sceneDto = Deserializer.Deserialize<SceneDataDto>(reader);
+
                 var scene = new GameScene
                 {
-                    SceneName = table["scene_name"],
-                    Id = Guid.Parse(table["id"].ToString())
+                    SceneName = sceneDto.SceneName,
+                    Id = Guid.Parse(sceneDto.Id)
                 };
 
-                Log.Info($"[LoadScene] Loading scene: {scene.SceneName}");
-
-                if(!table.HasKey("entities"))
-                {
-                    Log.Info("[LoadScene] ❌ CRITICAL: The 'entities' key does not exist in the TOML file!");
-                    return scene;
-                }
-
-                var entitiesNode = table["entities"];
-                Log.Info($"[LoadScene] 'entities' node type in Tommy: {entitiesNode.GetType().Name}");
-
-                var entitiesTable = entitiesNode.AsTable;
-                Log.Info($"[LoadScene] Number of entity keys found: {entitiesTable.Keys.Count()}");
+                Log.Info($"[LoadScene] Loading YAML Scene: {scene.SceneName}");
 
                 var idToEntityMap = new Dictionary<Guid, GameObject>();
                 var entityList = new List<GameObject>();
 
-                // 1. Pass One: Create all entities
-                foreach(var entityKey in entitiesTable.Keys)
+                // Pass 1: Instantiate GameObjects
+                foreach(var entityDto in sceneDto.Entities)
                 {
-                    Log.Info($"[LoadScene] Found entity key: {entityKey}");
-                    var entityTable = entitiesTable[entityKey].AsTable;
-
-                    var entity = GameObjectSerializer.ImportGameObject(entityTable);
-                    Log.Info($"[LoadScene] Imported entity: {entity.Name} with ID: {entity.Id}");
-                    if(entity.ParentId != Guid.Empty)
-                    {
-                        Log.Info($"[LoadScene] Entity {entity.Name} has parent ID: {entity.ParentId}");
-                    }
+                    var entity = GameObjectSerializer.ImportGameObject(entityDto);
                     entityList.Add(entity);
                     idToEntityMap[entity.Id] = entity;
                 }
 
-                // 2. Restore child parent relationship for each gameobject
+                // Pass 2: Reconstruct Hierarchy Trees
                 foreach(var entity in entityList)
                 {
                     if(entity.ParentId != Guid.Empty && idToEntityMap.TryGetValue(entity.ParentId, out var parentEntity))
@@ -83,16 +109,11 @@ namespace Engine.Core.Serialization
                     }
                 }
 
-
-
-                //pass 3 populate scene
-                foreach(var e in entityList)
+                // Pass 3: Fill Scene Container
+                foreach(var entity in entityList)
                 {
-                    scene.AddGameObject(e);
+                    scene.AddGameObject(entity);
                 }
-
-               
-
 
                 return scene;
             }
