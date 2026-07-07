@@ -60,6 +60,9 @@ namespace Engine.Core.ECS.Components
         [Browsable(true)]
         public Vector2 CustomOrigin { get; set; } = Vector2.Zero;
 
+        [Browsable(true)]
+        public List<GameObject> test { get; set; } = new List<GameObject>();
+
         public SpriteComponent()
         {
 

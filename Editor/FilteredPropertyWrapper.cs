@@ -5,7 +5,33 @@ using System.Linq;
 
 namespace Engine.Editor.WinFormsApp1
 {
-    public class FilteredPropertyWrapper : CustomTypeDescriptor, ICustomTypeDescriptor
+    public class EngineObjectReferenceConverter : TypeConverter
+    {
+        // This stops the PropertyGrid from showing the "+" expand button
+        public override bool GetPropertiesSupported(ITypeDescriptorContext context) => false;
+
+        // Force it to display as a clean string representation in the grid row
+        public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
+        {
+            if(destinationType == typeof(string))
+            {
+                if(value == null)
+                    return "None (Object)";
+
+                // Use reflection to gracefully grab a Name property if it exists, or fallback to the type
+                var nameProp = value.GetType().GetProperty("Name");
+                if(nameProp != null)
+                {
+                    return $"{nameProp.GetValue(value)} ({value.GetType().Name})";
+                }
+
+                return $"({value.GetType().Name})";
+            }
+            return base.ConvertTo(context, culture, value, destinationType);
+        }
+    }
+
+public class FilteredPropertyWrapper : CustomTypeDescriptor, ICustomTypeDescriptor
     {
         private readonly object _target;
 
@@ -20,9 +46,8 @@ namespace Engine.Editor.WinFormsApp1
             var filteredProperties = new PropertyDescriptorCollection(null);
 
             string[] systemBlacklist = {
-                "Components", "Children", "Parent", "ParentId",
-                "ContextScene", "ParentTransform", "GameObjects", "Entities"
-            };
+         
+    };
 
             foreach(PropertyDescriptor prop in baseProperties)
             {
@@ -32,9 +57,28 @@ namespace Engine.Editor.WinFormsApp1
                 if(!prop.IsBrowsable)
                     continue;
 
-                // If it's a class type, make sure it isn't a string AND isn't an Enum type!
-                if(prop.PropertyType.IsClass && prop.PropertyType != typeof(string) && !prop.PropertyType.IsEnum)
-                    continue;
+                Type propType = prop.PropertyType;
+
+                if(propType.IsClass && propType != typeof(string))
+                {
+                    bool isCollection = typeof(System.Collections.IEnumerable).IsAssignableFrom(propType);
+
+                    // 👇 NEW: Detect custom engine references (GameObjects, Components, etc.)
+                    bool isEngineObject = typeof(Engine.Core.ECS.Object).IsAssignableFrom(propType) ||
+                                          propType.Name == "GameObject" ||
+                                          propType.Name.EndsWith("Component");
+
+                    if(isEngineObject)
+                    {
+                        // Let it through! We want to show the reference box.
+                        // We will override how it displays below so it doesn't cause a recursion loop.
+                    }
+                    else if(!isCollection)
+                    {
+                        // It's an unhandled external class object, skip to avoid loops
+                        continue;
+                    }
+                }
 
                 // Wrap the original property in our custom router descriptor
                 filteredProperties.Add(new FilteredPropertyDescriptor(prop, _target));
@@ -42,7 +86,6 @@ namespace Engine.Editor.WinFormsApp1
 
             return filteredProperties;
         }
-
         public override PropertyDescriptorCollection GetProperties() => GetProperties(null);
 
         // 👇 FIX: Return the actual target. This tells the PropertyGrid that the 
@@ -57,13 +100,23 @@ namespace Engine.Editor.WinFormsApp1
     {
         private readonly PropertyDescriptor _baseDescriptor;
         private readonly object _targetComponent;
+        private readonly TypeConverter _customConverter;
 
         public FilteredPropertyDescriptor(PropertyDescriptor baseDescriptor, object targetComponent)
             : base(baseDescriptor)
         {
             _baseDescriptor = baseDescriptor;
             _targetComponent = targetComponent;
+
+            // 👇 If it's an engine reference, attach our safe converter to choke off recursion loops
+            Type propType = baseDescriptor.PropertyType;
+            if(propType.IsClass && propType != typeof(string) && !typeof(System.Collections.IEnumerable).IsAssignableFrom(propType))
+            {
+                _customConverter = new EngineObjectReferenceConverter();
+            }
         }
+
+        public override TypeConverter Converter => _customConverter ?? base.Converter;
 
         // 👇 FIX: Route the component argument straight to the target for all structural methods
         public override bool CanResetValue(object component) => _baseDescriptor.CanResetValue(_targetComponent);
@@ -89,13 +142,20 @@ namespace Engine.Editor.WinFormsApp1
 
             if(propInfo != null && propInfo.CanWrite)
             {
-                object convertedValue = Convert.ChangeType(value, propInfo.PropertyType);
+                object convertedValue;
 
-                Log.Info($"[Wrapper Success] Successfully invoked setter for '{propInfo.Name}' via Reflection. Value: {convertedValue}");
+                // 👇 FIX: Bypasses simple conversion for arrays/lists
+                if(propInfo.PropertyType.IsClass && propInfo.PropertyType != typeof(string))
+                {
+                    convertedValue = value; // Keep reference intact
+                }
+                else
+                {
+                    convertedValue = Convert.ChangeType(value, propInfo.PropertyType);
+                }
 
+                Log.Info($"[Wrapper Success] Successfully invoked setter for '{propInfo.Name}' via Reflection.");
                 propInfo.SetValue(_targetComponent, convertedValue, null);
-
-                // Force the UI grid layout context to synchronize changes
                 TypeDescriptor.Refresh(_targetComponent);
             }
             else

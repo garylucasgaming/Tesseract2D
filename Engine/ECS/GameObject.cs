@@ -17,7 +17,8 @@ namespace Engine.Core.ECS
         public bool isActive { get; set; } = true;
 
         public List<String> tags { get; set; } = new List<String>();
-
+       
+        [Browsable(true)]
         public Dictionary<Type, GameComponent> Components { get; set; } = new Dictionary<Type, GameComponent>();
         //public List<GameComponent> Components { get; set; } = new List<GameComponent>();
         [GISMIgnore]
