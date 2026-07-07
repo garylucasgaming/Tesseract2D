@@ -6,6 +6,7 @@ using Engine.Core.ECS;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using Engine.Editor.WinFormsApp1;
+using Engine.Core.ECS.Components;
 
 namespace WinFormsApp1
 {
@@ -18,8 +19,8 @@ namespace WinFormsApp1
             SceneHierarchyTreeView.LabelEdit = true;
             SceneHierarchyTreeView.AllowDrop = true;
 
-            ToolStripMenuItem createEmptyItem = new ToolStripMenuItem("Create Empty");
-            createEmptyItem.Click += (s, e) => CreateEmptyGameObject_Click();
+            ToolStripMenuItem createEmpty = new ToolStripMenuItem("Create Empty");
+            createEmpty.Click += (s, e) => CreateEmptyGameObject_Click();
 
             ToolStripMenuItem renameItem = new ToolStripMenuItem("Rename Entity");
             renameItem.Click += (s, e) => RenameGameObject_Click();
@@ -27,9 +28,8 @@ namespace WinFormsApp1
             ToolStripMenuItem destroyItem = new ToolStripMenuItem("Destroy Entity");
             destroyItem.Click += (s, e) => DestroyGameObject_Click();
 
-            _hierarchyContextMenu.Items.Add(createEmptyItem);
+            _hierarchyContextMenu.Items.Add(createEmpty);
             _hierarchyContextMenu.Items.Add(renameItem);
-            _hierarchyContextMenu.Items.Add(new ToolStripSeparator());
             _hierarchyContextMenu.Items.Add(destroyItem);
 
             // Drag & Drop Wireups
@@ -39,6 +39,12 @@ namespace WinFormsApp1
             SceneHierarchyTreeView.MouseUp += SceneHierarchyTreeView_MouseUp;
             SceneHierarchyTreeView.AfterLabelEdit += SceneHierarchyTreeView_AfterLabelEdit;
             SceneHierarchyTreeView.AfterSelect += SceneHierarchyTreeView_AfterSelect;
+            SceneHierarchyTreeView.AfterLabelEdit += SceneHierarchyTreeView_AfterLabelEdit;
+            SceneHierarchyTreeView.AfterSelect += SceneHierarchyTreeView_AfterSelect;
+            sceneHierarchySearchBar.SearchTextChanged += (s, searchText) =>
+            {
+                PerformHierarchySearch(searchText);
+            };
         }
 
         public void PopulateSceneHierarchyTree(TreeView hierarchyTreeView, GameScene activeScene)
@@ -125,16 +131,21 @@ namespace WinFormsApp1
                 return;
 
             TreeNode selectedVisualNode = SceneHierarchyTreeView.SelectedNode;
+            GameObject newEntity; // Declared cleanly without a dummy allocation
 
-            // FIX: Use native high-performance Scene spawning API
-            GameObject newEntity = activeScene.Spawn("New GameObject");
-
+            // Safely check if we should wire up a parent hierarchy link
             if(selectedVisualNode != null && selectedVisualNode.Tag is GameObject parentEntity)
             {
-                // FIX: Use your structural SetParent assignment pattern
-                newEntity.SetParent(parentEntity);
+                // Spawns using your custom automatic parent context linking method
+                newEntity = activeScene.Spawn("New GameObject", parentEntity);
+            }
+            else
+            {
+                // Spawns a clean root-level object directly registered to the scene manager!
+                newEntity = activeScene.Spawn("New GameObject");
             }
 
+            // Completely rebuild the tree with the newly registered entity safely included
             PopulateSceneHierarchyTree(SceneHierarchyTreeView, activeScene);
 
             TreeNode brandNewNode = FindNodeByGameObjectId(SceneHierarchyTreeView.Nodes, newEntity.Id);
@@ -143,6 +154,7 @@ namespace WinFormsApp1
                 SceneHierarchyTreeView.SelectedNode = brandNewNode;
                 if(selectedVisualNode != null)
                     selectedVisualNode.Expand();
+
                 brandNewNode.BeginEdit();
             }
         }
@@ -325,6 +337,67 @@ namespace WinFormsApp1
             if(child.Parent == parent)
                 return true;
             return IsNodeDescendant(parent, child.Parent);
+        }
+
+        private void PerformHierarchySearch(string searchText)
+        {
+            SceneHierarchyTreeView.BeginUpdate();
+
+            // 1. Clear out previous styling artifacts
+            ClearNodeHighlights(SceneHierarchyTreeView.Nodes);
+
+            // 2. If the user cleared the bar, we are done
+            if(string.IsNullOrWhiteSpace(searchText))
+            {
+                SceneHierarchyTreeView.EndUpdate();
+                return;
+            }
+
+            string cleanSearch = searchText.Trim().ToLower();
+
+            // 3. Scan and highlight all matched partial instances recursively
+            HighlightMatchingNodes(SceneHierarchyTreeView.Nodes, cleanSearch);
+
+            SceneHierarchyTreeView.EndUpdate();
+        }
+
+        private void ClearNodeHighlights(TreeNodeCollection nodes)
+        {
+            foreach(TreeNode node in nodes)
+            {
+                node.BackColor = System.Drawing.Color.Empty; // Resets cleanly to systemic layout colors
+                node.ForeColor = System.Drawing.Color.Empty;
+                ClearNodeHighlights(node.Nodes);
+            }
+        }
+
+        private bool HighlightMatchingNodes(TreeNodeCollection nodes, string searchText)
+        {
+            bool anyChildMatched = false;
+
+            foreach(TreeNode node in nodes)
+            {
+                // Case-insensitive evaluation of the partial text segment
+                bool isMatch = node.Text.ToLower().Contains(searchText);
+
+                // Recursively walk downstream child branches first
+                bool childMatched = HighlightMatchingNodes(node.Nodes, searchText);
+
+                if(isMatch)
+                {
+                    node.BackColor = System.Drawing.Color.Yellow;
+                    node.ForeColor = System.Drawing.Color.Black;
+                }
+
+                // Auto-expand parents if this node or any downstream entity matches
+                if(isMatch || childMatched)
+                {
+                    node.Expand();
+                    anyChildMatched = true;
+                }
+            }
+
+            return anyChildMatched;
         }
 
         private void SceneHierarchyTreeView_AfterSelect(object sender, TreeViewEventArgs e)

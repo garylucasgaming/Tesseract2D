@@ -1,4 +1,5 @@
-﻿using Engine.Core.Utilities;
+﻿using Engine.Core.ECS.Components;
+using Engine.Core.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -82,6 +83,44 @@ namespace Engine.Core.ECS
                 entity.AddComponent(component);
             }
 
+            return entity;
+        }
+
+        // 1. In GameScene.cs, add an overload that handles initial placement:
+        public GameObject Spawn(string name, float initialX, float initialY)
+        {
+            var entity = new GameObject
+            {
+                Name = name,
+                ContextScene = this
+            };
+
+            // Explicitly add the component and set coordinates BEFORE adding to systems
+            var transform = entity.AddComponent<TransformComponent>();
+            transform.X = initialX;
+            transform.Y = initialY;
+
+            Entities.AddEntity(entity);
+            return entity;
+        }
+
+        // 1. In GameScene.cs, add an overload that handles initial placement:
+        public GameObject Spawn(string name, GameObject parentEntity)
+        {
+            var entity = Spawn(name); // Creates entity with Transform at 0,0
+
+            var childTransform = entity.GetComponent<TransformComponent>();
+            var parentTransform = parentEntity.GetComponent<TransformComponent>();
+
+            if(childTransform != null && parentTransform != null)
+            {
+                // 👇 MATCH WORLD POSITIONS FIRST, so the offset calculation inside 
+                // SetParent evaluates as: (parentX - parentX) = 0 offset!
+                childTransform.X = parentTransform.X;
+                childTransform.Y = parentTransform.Y;
+            }
+
+            entity.SetParent(parentEntity);
             return entity;
         }
 

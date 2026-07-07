@@ -41,23 +41,7 @@
             projectSettingsToolStripMenuItem = new ToolStripMenuItem();
             prjoectPreferencesToolStripMenuItem = new ToolStripMenuItem();
             editShortcutsToolStripMenuItem = new ToolStripMenuItem();
-            undoToolStripMenuItem = new ToolStripMenuItem();
-            redoToolStripMenuItem = new ToolStripMenuItem();
-            cutToolStripMenuItem = new ToolStripMenuItem();
-            copyToolStripMenuItem = new ToolStripMenuItem();
-            pasteToolStripMenuItem = new ToolStripMenuItem();
-            duplicateToolStripMenuItem = new ToolStripMenuItem();
-            deleteToolStripMenuItem = new ToolStripMenuItem();
-            codeTemplatesToolStripMenuItem = new ToolStripMenuItem();
             assetsToolStripMenuItem = new ToolStripMenuItem();
-            addNewAssetToolStripMenuItem = new ToolStripMenuItem();
-            gameObjectToolStripMenuItem = new ToolStripMenuItem();
-            componentToolStripMenuItem = new ToolStripMenuItem();
-            gameSystemToolStripMenuItem = new ToolStripMenuItem();
-            gameManagerToolStripMenuItem = new ToolStripMenuItem();
-            gameEventToolStripMenuItem = new ToolStripMenuItem();
-            databaseToolStripMenuItem = new ToolStripMenuItem();
-            resourceToolStripMenuItem = new ToolStripMenuItem();
             importAssetsToolStripMenuItem = new ToolStripMenuItem();
             openMGCBToolStripMenuItem = new ToolStripMenuItem();
             reimportAllAssetsToolStripMenuItem = new ToolStripMenuItem();
@@ -77,13 +61,14 @@
             runToolStripMenuItem = new ToolStripMenuItem();
             stopToolStripMenuItem = new ToolStripMenuItem();
             pauseToolStripMenuItem = new ToolStripMenuItem();
-            stepForwardToolStripMenuItem = new ToolStripMenuItem();
             helpToolStripMenuItem = new ToolStripMenuItem();
             documentationToolStripMenuItem = new ToolStripMenuItem();
             SceneHierarchy = new GroupBox();
+            sceneHierarchySearchBar = new Editor.TextSearchBarControl();
             HierarchyToolStrip = new ToolStrip();
             SaveSceneButton = new ToolStripButton();
             LoadSceneButton = new ToolStripButton();
+            CreateNewSceneButton = new ToolStripButton();
             SceneHierarchyTreeView = new TreeView();
             PropertiesWindow = new GroupBox();
             propertiesToolStrip = new ToolStrip();
@@ -97,7 +82,8 @@
             ProjectFolderTabPage = new TabPage();
             ProjectFolderTreeView = new TreeView();
             ConsoleTabPage = new TabPage();
-            ConsoleTextBox = new TextBox();
+            ConsoleTextBox = new RichTextBox();
+            consoleSearchBar = new Editor.TextSearchBarControl();
             panel1 = new Panel();
             SceneToolStrip = new ToolStrip();
             StartSimulationButton = new ToolStripButton();
@@ -174,7 +160,7 @@
             // 
             // editToolStripMenuItem
             // 
-            editToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { projectSettingsToolStripMenuItem, prjoectPreferencesToolStripMenuItem, editShortcutsToolStripMenuItem, undoToolStripMenuItem, redoToolStripMenuItem, cutToolStripMenuItem, copyToolStripMenuItem, pasteToolStripMenuItem, duplicateToolStripMenuItem, deleteToolStripMenuItem, codeTemplatesToolStripMenuItem });
+            editToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { projectSettingsToolStripMenuItem, prjoectPreferencesToolStripMenuItem, editShortcutsToolStripMenuItem });
             editToolStripMenuItem.Name = "editToolStripMenuItem";
             editToolStripMenuItem.Size = new Size(39, 20);
             editToolStripMenuItem.Text = "Edit";
@@ -197,109 +183,12 @@
             editShortcutsToolStripMenuItem.Size = new Size(175, 22);
             editShortcutsToolStripMenuItem.Text = "Edit Shortcuts";
             // 
-            // undoToolStripMenuItem
-            // 
-            undoToolStripMenuItem.Name = "undoToolStripMenuItem";
-            undoToolStripMenuItem.Size = new Size(175, 22);
-            undoToolStripMenuItem.Text = "Undo";
-            // 
-            // redoToolStripMenuItem
-            // 
-            redoToolStripMenuItem.Name = "redoToolStripMenuItem";
-            redoToolStripMenuItem.Size = new Size(175, 22);
-            redoToolStripMenuItem.Text = "Redo";
-            // 
-            // cutToolStripMenuItem
-            // 
-            cutToolStripMenuItem.Name = "cutToolStripMenuItem";
-            cutToolStripMenuItem.Size = new Size(175, 22);
-            cutToolStripMenuItem.Text = "Cut";
-            // 
-            // copyToolStripMenuItem
-            // 
-            copyToolStripMenuItem.Name = "copyToolStripMenuItem";
-            copyToolStripMenuItem.Size = new Size(175, 22);
-            copyToolStripMenuItem.Text = "Copy";
-            // 
-            // pasteToolStripMenuItem
-            // 
-            pasteToolStripMenuItem.Name = "pasteToolStripMenuItem";
-            pasteToolStripMenuItem.Size = new Size(175, 22);
-            pasteToolStripMenuItem.Text = "Paste";
-            // 
-            // duplicateToolStripMenuItem
-            // 
-            duplicateToolStripMenuItem.Name = "duplicateToolStripMenuItem";
-            duplicateToolStripMenuItem.Size = new Size(175, 22);
-            duplicateToolStripMenuItem.Text = "Duplicate";
-            // 
-            // deleteToolStripMenuItem
-            // 
-            deleteToolStripMenuItem.Name = "deleteToolStripMenuItem";
-            deleteToolStripMenuItem.Size = new Size(175, 22);
-            deleteToolStripMenuItem.Text = "Delete";
-            // 
-            // codeTemplatesToolStripMenuItem
-            // 
-            codeTemplatesToolStripMenuItem.Name = "codeTemplatesToolStripMenuItem";
-            codeTemplatesToolStripMenuItem.Size = new Size(175, 22);
-            codeTemplatesToolStripMenuItem.Text = "Code Templates";
-            // 
             // assetsToolStripMenuItem
             // 
-            assetsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { addNewAssetToolStripMenuItem, importAssetsToolStripMenuItem, openMGCBToolStripMenuItem, reimportAllAssetsToolStripMenuItem });
+            assetsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { importAssetsToolStripMenuItem, openMGCBToolStripMenuItem, reimportAllAssetsToolStripMenuItem });
             assetsToolStripMenuItem.Name = "assetsToolStripMenuItem";
             assetsToolStripMenuItem.Size = new Size(52, 20);
             assetsToolStripMenuItem.Text = "Assets";
-            // 
-            // addNewAssetToolStripMenuItem
-            // 
-            addNewAssetToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { gameObjectToolStripMenuItem, componentToolStripMenuItem, gameSystemToolStripMenuItem, gameManagerToolStripMenuItem, gameEventToolStripMenuItem, databaseToolStripMenuItem, resourceToolStripMenuItem });
-            addNewAssetToolStripMenuItem.Name = "addNewAssetToolStripMenuItem";
-            addNewAssetToolStripMenuItem.Size = new Size(176, 22);
-            addNewAssetToolStripMenuItem.Text = "Add New Asset";
-            // 
-            // gameObjectToolStripMenuItem
-            // 
-            gameObjectToolStripMenuItem.Name = "gameObjectToolStripMenuItem";
-            gameObjectToolStripMenuItem.Size = new Size(169, 22);
-            gameObjectToolStripMenuItem.Text = "GameObject";
-            // 
-            // componentToolStripMenuItem
-            // 
-            componentToolStripMenuItem.Name = "componentToolStripMenuItem";
-            componentToolStripMenuItem.Size = new Size(169, 22);
-            componentToolStripMenuItem.Text = "GameComponent";
-            // 
-            // gameSystemToolStripMenuItem
-            // 
-            gameSystemToolStripMenuItem.Name = "gameSystemToolStripMenuItem";
-            gameSystemToolStripMenuItem.Size = new Size(169, 22);
-            gameSystemToolStripMenuItem.Text = "GameSystem";
-            // 
-            // gameManagerToolStripMenuItem
-            // 
-            gameManagerToolStripMenuItem.Name = "gameManagerToolStripMenuItem";
-            gameManagerToolStripMenuItem.Size = new Size(169, 22);
-            gameManagerToolStripMenuItem.Text = "GameManager";
-            // 
-            // gameEventToolStripMenuItem
-            // 
-            gameEventToolStripMenuItem.Name = "gameEventToolStripMenuItem";
-            gameEventToolStripMenuItem.Size = new Size(169, 22);
-            gameEventToolStripMenuItem.Text = "GameEvent";
-            // 
-            // databaseToolStripMenuItem
-            // 
-            databaseToolStripMenuItem.Name = "databaseToolStripMenuItem";
-            databaseToolStripMenuItem.Size = new Size(169, 22);
-            databaseToolStripMenuItem.Text = "Database";
-            // 
-            // resourceToolStripMenuItem
-            // 
-            resourceToolStripMenuItem.Name = "resourceToolStripMenuItem";
-            resourceToolStripMenuItem.Size = new Size(169, 22);
-            resourceToolStripMenuItem.Text = "Resource";
             // 
             // importAssetsToolStripMenuItem
             // 
@@ -395,7 +284,7 @@
             // 
             // gameToolStripMenuItem
             // 
-            gameToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { runToolStripMenuItem, stopToolStripMenuItem, pauseToolStripMenuItem, stepForwardToolStripMenuItem });
+            gameToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { runToolStripMenuItem, stopToolStripMenuItem, pauseToolStripMenuItem });
             gameToolStripMenuItem.Name = "gameToolStripMenuItem";
             gameToolStripMenuItem.Size = new Size(50, 20);
             gameToolStripMenuItem.Text = "Game";
@@ -403,26 +292,20 @@
             // runToolStripMenuItem
             // 
             runToolStripMenuItem.Name = "runToolStripMenuItem";
-            runToolStripMenuItem.Size = new Size(140, 22);
+            runToolStripMenuItem.Size = new Size(105, 22);
             runToolStripMenuItem.Text = "Run ";
             // 
             // stopToolStripMenuItem
             // 
             stopToolStripMenuItem.Name = "stopToolStripMenuItem";
-            stopToolStripMenuItem.Size = new Size(140, 22);
+            stopToolStripMenuItem.Size = new Size(105, 22);
             stopToolStripMenuItem.Text = "Stop";
             // 
             // pauseToolStripMenuItem
             // 
             pauseToolStripMenuItem.Name = "pauseToolStripMenuItem";
-            pauseToolStripMenuItem.Size = new Size(140, 22);
+            pauseToolStripMenuItem.Size = new Size(105, 22);
             pauseToolStripMenuItem.Text = "Pause";
-            // 
-            // stepForwardToolStripMenuItem
-            // 
-            stepForwardToolStripMenuItem.Name = "stepForwardToolStripMenuItem";
-            stepForwardToolStripMenuItem.Size = new Size(140, 22);
-            stepForwardToolStripMenuItem.Text = "StepForward";
             // 
             // helpToolStripMenuItem
             // 
@@ -439,6 +322,7 @@
             // 
             // SceneHierarchy
             // 
+            SceneHierarchy.Controls.Add(sceneHierarchySearchBar);
             SceneHierarchy.Controls.Add(HierarchyToolStrip);
             SceneHierarchy.Controls.Add(SceneHierarchyTreeView);
             SceneHierarchy.Dock = DockStyle.Left;
@@ -449,9 +333,18 @@
             SceneHierarchy.TabStop = false;
             SceneHierarchy.Text = "Scene Hierarchy";
             // 
+            // sceneHierarchySearchBar
+            // 
+            sceneHierarchySearchBar.Dock = DockStyle.Top;
+            sceneHierarchySearchBar.Location = new Point(3, 44);
+            sceneHierarchySearchBar.Name = "sceneHierarchySearchBar";
+            sceneHierarchySearchBar.Size = new Size(256, 25);
+            sceneHierarchySearchBar.TabIndex = 3;
+            sceneHierarchySearchBar.Load += textSearchBarControl1_Load;
+            // 
             // HierarchyToolStrip
             // 
-            HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton });
+            HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton, CreateNewSceneButton });
             HierarchyToolStrip.Location = new Point(3, 19);
             HierarchyToolStrip.Name = "HierarchyToolStrip";
             HierarchyToolStrip.Size = new Size(256, 25);
@@ -478,14 +371,23 @@
             LoadSceneButton.Text = "LoadScene";
             LoadSceneButton.Click += onLoadProjectToolStripMenuItem_Click;
             // 
+            // CreateNewSceneButton
+            // 
+            CreateNewSceneButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            CreateNewSceneButton.Image = (Image) resources.GetObject("CreateNewSceneButton.Image");
+            CreateNewSceneButton.ImageTransparentColor = Color.Magenta;
+            CreateNewSceneButton.Name = "CreateNewSceneButton";
+            CreateNewSceneButton.Size = new Size(23, 22);
+            CreateNewSceneButton.Text = "CreateNewScene";
+            // 
             // SceneHierarchyTreeView
             // 
             SceneHierarchyTreeView.AllowDrop = true;
             SceneHierarchyTreeView.Dock = DockStyle.Bottom;
             SceneHierarchyTreeView.LabelEdit = true;
-            SceneHierarchyTreeView.Location = new Point(3, 52);
+            SceneHierarchyTreeView.Location = new Point(3, 69);
             SceneHierarchyTreeView.Name = "SceneHierarchyTreeView";
-            SceneHierarchyTreeView.Size = new Size(256, 602);
+            SceneHierarchyTreeView.Size = new Size(256, 585);
             SceneHierarchyTreeView.TabIndex = 1;
             SceneHierarchyTreeView.ItemDrag += SceneHierarchyTreeView_ItemDrag;
             SceneHierarchyTreeView.DragDrop += SceneHierarchyTreeView_DragDrop;
@@ -599,6 +501,7 @@
             // 
             // ProjectFolderTreeView
             // 
+            ProjectFolderTreeView.AllowDrop = true;
             ProjectFolderTreeView.Dock = DockStyle.Fill;
             ProjectFolderTreeView.HotTracking = true;
             ProjectFolderTreeView.Location = new Point(3, 3);
@@ -609,6 +512,7 @@
             // ConsoleTabPage
             // 
             ConsoleTabPage.Controls.Add(ConsoleTextBox);
+            ConsoleTabPage.Controls.Add(consoleSearchBar);
             ConsoleTabPage.Location = new Point(4, 24);
             ConsoleTabPage.Name = "ConsoleTabPage";
             ConsoleTabPage.Padding = new Padding(3);
@@ -619,14 +523,23 @@
             // 
             // ConsoleTextBox
             // 
-            ConsoleTextBox.Dock = DockStyle.Fill;
-            ConsoleTextBox.Location = new Point(3, 3);
-            ConsoleTextBox.Multiline = true;
+            ConsoleTextBox.Dock = DockStyle.Bottom;
+            ConsoleTextBox.Location = new Point(3, 27);
             ConsoleTextBox.Name = "ConsoleTextBox";
             ConsoleTextBox.ReadOnly = true;
-            ConsoleTextBox.ScrollBars = ScrollBars.Vertical;
-            ConsoleTextBox.Size = new Size(686, 172);
-            ConsoleTextBox.TabIndex = 0;
+            ConsoleTextBox.Size = new Size(686, 148);
+            ConsoleTextBox.TabIndex = 2;
+            ConsoleTextBox.Text = "";
+            // 
+            // consoleSearchBar
+            // 
+            consoleSearchBar.Dock = DockStyle.Top;
+            consoleSearchBar.Location = new Point(3, 3);
+            consoleSearchBar.Name = "consoleSearchBar";
+            consoleSearchBar.Size = new Size(686, 25);
+            consoleSearchBar.TabIndex = 1;
+            consoleSearchBar.SearchTextChanged += consoleSearchBar_SearchTextChanged;
+            consoleSearchBar.Load += consoleSearchBar_Load;
             // 
             // panel1
             // 
@@ -709,7 +622,6 @@
             tabControl2.ResumeLayout(false);
             ProjectFolderTabPage.ResumeLayout(false);
             ConsoleTabPage.ResumeLayout(false);
-            ConsoleTabPage.PerformLayout();
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
             SceneToolStrip.ResumeLayout(false);
@@ -731,7 +643,6 @@
         private ToolStripMenuItem prjoectPreferencesToolStripMenuItem;
         private ToolStripMenuItem editShortcutsToolStripMenuItem;
         private ToolStripMenuItem assetsToolStripMenuItem;
-        private ToolStripMenuItem addNewAssetToolStripMenuItem;
         private ToolStripMenuItem importAssetsToolStripMenuItem;
         private ToolStripMenuItem openMGCBToolStripMenuItem;
         private ToolStripMenuItem windowToolStripMenuItem;
@@ -739,11 +650,6 @@
         private ToolStripMenuItem spriteEditorToolStripMenuItem;
         private ToolStripMenuItem propertiesToolStripMenuItem;
         private ToolStripMenuItem documentationToolStripMenuItem;
-        private ToolStripMenuItem gameObjectToolStripMenuItem;
-        private ToolStripMenuItem componentToolStripMenuItem;
-        private ToolStripMenuItem gameSystemToolStripMenuItem;
-        private ToolStripMenuItem gameManagerToolStripMenuItem;
-        private ToolStripMenuItem gameEventToolStripMenuItem;
         private ToolStripMenuItem reimportAllAssetsToolStripMenuItem;
         private ToolStripMenuItem sceneHierarchyToolStripMenuItem;
         private ToolStripMenuItem consoleToolStripMenuItem;
@@ -753,16 +659,7 @@
         private ToolStripMenuItem animatorToolStripMenuItem;
         private ToolStripMenuItem uICanvasToolStripMenuItem;
         private ToolStripMenuItem projectSettingsToolStripMenuItem;
-        private ToolStripMenuItem undoToolStripMenuItem;
-        private ToolStripMenuItem redoToolStripMenuItem;
-        private ToolStripMenuItem cutToolStripMenuItem;
-        private ToolStripMenuItem copyToolStripMenuItem;
-        private ToolStripMenuItem pasteToolStripMenuItem;
-        private ToolStripMenuItem duplicateToolStripMenuItem;
-        private ToolStripMenuItem deleteToolStripMenuItem;
         private ToolStripMenuItem audioMixerToolStripMenuItem;
-        private ToolStripMenuItem databaseToolStripMenuItem;
-        private ToolStripMenuItem resourceToolStripMenuItem;
         private GroupBox SceneHierarchy;
         private GroupBox PropertiesWindow;
         private TabControl tabControl1;
@@ -774,11 +671,8 @@
         private TabControl tabControl2;
         private TabPage ProjectFolderTabPage;
         private TabPage ConsoleTabPage;
-        private TextBox ConsoleTextBox;
-        private ToolStripMenuItem codeTemplatesToolStripMenuItem;
         private ToolStripMenuItem projectFolderToolStripMenuItem;
         private ToolStripMenuItem pauseToolStripMenuItem;
-        private ToolStripMenuItem stepForwardToolStripMenuItem;
         public TreeView SceneHierarchyTreeView;
         private Editor.TextSearchBarControl SceneHierarchySearchBar;
         private TreeView ProjectFolderTreeView;
@@ -797,5 +691,9 @@
         private ToolStripButton RemoveComponentButton;
         private ToolStripButton LoadSceneButton;
         private ToolStripDropDownButton AddComponentButton;
+        private ToolStripButton CreateNewSceneButton;
+        private Editor.TextSearchBarControl sceneHierarchySearchBar;
+        private Editor.TextSearchBarControl consoleSearchBar;
+        private RichTextBox ConsoleTextBox;
     }
 }

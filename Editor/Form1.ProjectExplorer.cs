@@ -23,15 +23,192 @@ namespace WinFormsApp1
             ToolStripMenuItem deleteItem = new ToolStripMenuItem("Delete");
             deleteItem.Click += DeleteItem_Click;
 
+            ToolStripMenuItem addItem = new ToolStripMenuItem("Add");
+            addItem.Click += AddItem_Click;
+
+            ToolStripMenuItem createPrefab = new ToolStripMenuItem("New Prefab");
+
+            //c# block
+            ToolStripMenuItem cSharpBlock = new ToolStripMenuItem("C#");
+            ToolStripMenuItem createNewComponent = new ToolStripMenuItem("New Component");
+            ToolStripMenuItem createNewSystem = new ToolStripMenuItem("New System");
+            ToolStripMenuItem createNewManager = new ToolStripMenuItem("New Manager");
+            ToolStripMenuItem createNewCSharpScript = new ToolStripMenuItem("New C# Script");
+            ToolStripMenuItem baseComponent = new ToolStripMenuItem("Component");
+            ToolStripMenuItem dataComponent = new ToolStripMenuItem("Data Component");
+            cSharpBlock.DropDownItems.Add(createNewComponent);
+            cSharpBlock.DropDownItems.Add(createNewSystem);
+            cSharpBlock.DropDownItems.Add(createNewManager);
+            cSharpBlock.DropDownItems.Add(createNewCSharpScript);
+            createNewComponent.DropDownItems.Add(baseComponent);
+            createNewComponent.DropDownItems.Add(dataComponent);
+
+            // lua block
+            ToolStripMenuItem luaBlock = new ToolStripMenuItem("Lua");
+            ToolStripMenuItem createNewLuaComponent = new ToolStripMenuItem("New Lua Component");
+            ToolStripMenuItem createNewLuaSystem = new ToolStripMenuItem("New Lua System");
+            ToolStripMenuItem createNewLuaManager = new ToolStripMenuItem("New Lua Manager");
+            ToolStripMenuItem createNewLuaScript = new ToolStripMenuItem("New Lua Script");
+            ToolStripMenuItem baseLuaComponent = new ToolStripMenuItem("Lua Component");
+            ToolStripMenuItem dataLuaComponent = new ToolStripMenuItem("Lua Data Component");
+            luaBlock.DropDownItems.Add(createNewLuaComponent);
+            luaBlock.DropDownItems.Add(createNewLuaSystem);
+            luaBlock.DropDownItems.Add(createNewLuaManager);
+            luaBlock.DropDownItems.Add(createNewLuaScript);
+            createNewLuaComponent.DropDownItems.Add(baseLuaComponent);
+            createNewLuaComponent.DropDownItems.Add(dataLuaComponent);
+
+            ToolStripLabel cSharpStripLabel = new ToolStripLabel("C#");
+            ToolStripLabel luaStripLabel = new ToolStripLabel("Lua");
+
             _folderContextMenu.Items.Add(newFolderItem);
             _folderContextMenu.Items.Add(new ToolStripSeparator());
+            _folderContextMenu.Items.Add(addItem);
             _folderContextMenu.Items.Add(renameItem);
             _folderContextMenu.Items.Add(deleteItem);
+            _folderContextMenu.Items.Add(new ToolStripSeparator());
+            _folderContextMenu.Items.Add(createPrefab);
+            _folderContextMenu.Items.Add(new ToolStripSeparator());
+            _folderContextMenu.Items.Add(cSharpBlock);
+            _folderContextMenu.Items.Add(new ToolStripSeparator());
+            _folderContextMenu.Items.Add(luaBlock);
+
 
             ProjectFolderTreeView.MouseUp += ProjectFolderTreeView_MouseUp;
             ProjectFolderTreeView.LabelEdit = false; // Using prompt fallback for disk operations
+
+            // 💡 NEW: Initialize Drag & Drop Settings and Hooks
+            ProjectFolderTreeView.AllowDrop = true;
+            ProjectFolderTreeView.DragEnter += ProjectFolderTreeView_DragEnter;
+            ProjectFolderTreeView.DragDrop += ProjectFolderTreeView_DragDrop;
         }
 
+        private void ProjectFolderTreeView_DragEnter(object sender, DragEventArgs e)
+        {
+            // Verify if the dragged data contains actual OS file drops
+            if(e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                e.Effect = DragDropEffects.Copy; // Changes the cursor to show a plus/copy sign
+            }
+            else
+            {
+                e.Effect = DragDropEffects.None;
+            }
+        }
+
+        private void ProjectFolderTreeView_DragDrop(object sender, DragEventArgs e)
+        {
+            // Ensure data contains files
+            if(!e.Data.GetDataPresent(DataFormats.FileDrop))
+                return;
+
+            // Extract the string array of absolute file paths dropped onto the control
+            string[] droppedFiles = (string[]) e.Data.GetData(DataFormats.FileDrop);
+            if(droppedFiles == null || droppedFiles.Length == 0)
+                return;
+
+            // Find where the cursor was exactly dropped relative to the TreeView coordinates
+            System.Drawing.Point clientPoint = ProjectFolderTreeView.PointToClient(new System.Drawing.Point(e.X, e.Y));
+            TreeNode targetNode = ProjectFolderTreeView.GetNodeAt(clientPoint);
+
+            string destinationDirectory = null;
+
+            // Determine target path layout context
+            if(targetNode != null)
+            {
+                string targetPath = targetNode.Tag as string;
+                if(!string.IsNullOrEmpty(targetPath))
+                {
+                    destinationDirectory = Directory.Exists(targetPath)
+                        ? targetPath
+                        : Path.GetDirectoryName(targetPath);
+                }
+            }
+            else
+            {
+                // Fallback option: If dropped in the empty space of the tree, default to the Project Root folder
+                if(EditorContextManager.IsProjectLoaded)
+                {
+                    destinationDirectory = EditorContextManager.CurrentProjectRoot;
+                }
+            }
+
+            if(string.IsNullOrEmpty(destinationDirectory) || !Directory.Exists(destinationDirectory))
+            {
+                Log.Warning("[Content Pipeline] Drag & Drop canceled: No valid destination directory found.");
+                return;
+            }
+
+            try
+            {
+                bool treeNeedsRefresh = false;
+
+                foreach(string sourceFilePath in droppedFiles)
+                {
+                    // Support copying whole folders or individual files
+                    if(File.Exists(sourceFilePath))
+                    {
+                        string fileName = Path.GetFileName(sourceFilePath);
+                        string destFilePath = Path.Combine(destinationDirectory, fileName);
+
+                        if(File.Exists(destFilePath))
+                        {
+                            var result = MessageBox.Show(
+                                $"An asset named '{fileName}' already exists in this folder. Overwrite it?",
+                                "Asset Conflict",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Question
+                            );
+
+                            if(result == DialogResult.No)
+                                continue;
+                        }
+
+                        File.Copy(sourceFilePath, destFilePath, overwrite: true);
+                        Log.Info($"[Content Pipeline] Drag-Imported file: {fileName}");
+                        treeNeedsRefresh = true;
+                    }
+                    else if(Directory.Exists(sourceFilePath))
+                    {
+                        // Handle directory drops gracefully by copying directories recursively
+                        string dirName = Path.GetFileName(sourceFilePath);
+                        string destDirPath = Path.Combine(destinationDirectory, dirName);
+
+                        CopyDirectoryRecursively(sourceFilePath, destDirPath);
+                        Log.Info($"[Content Pipeline] Drag-Imported directory: {dirName}");
+                        treeNeedsRefresh = true;
+                    }
+                }
+
+                if(treeNeedsRefresh)
+                {
+                    PopulateProjectExplorerTree(ProjectFolderTreeView, destinationDirectory);
+                }
+            }
+            catch(Exception ex)
+            {
+                Log.Error($"[Drag & Drop Import Error] Failed processing external drag data: {ex.Message}");
+                MessageBox.Show($"Failed to drag-import items: {ex.Message}", "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Helper method to support dropping whole directory folders from Windows File Explorer
+        private void CopyDirectoryRecursively(string sourceDir, string destDir)
+        {
+            Directory.CreateDirectory(destDir);
+
+            foreach(string file in Directory.GetFiles(sourceDir))
+            {
+                string destFile = Path.Combine(destDir, Path.GetFileName(file));
+                File.Copy(file, destFile, overwrite: true);
+            }
+
+            foreach(string subDir in Directory.GetDirectories(sourceDir))
+            {
+                string destSubDir = Path.Combine(destDir, Path.GetFileName(subDir));
+                CopyDirectoryRecursively(subDir, destSubDir);
+            }
+        }
         private void InitializeExplorerIcons()
         {
             _systemImageList.ColorDepth = ColorDepth.Depth32Bit;
@@ -39,11 +216,23 @@ namespace WinFormsApp1
             ProjectFolderTreeView.ImageList = _systemImageList;
         }
 
-        public void PopulateProjectExplorerTree(TreeView treeView)
+        public void PopulateProjectExplorerTree(TreeView treeView, string selectedPath = null)
         {
             if(treeView == null)
                 return;
+
             treeView.BeginUpdate();
+
+            // 💡 STEP 1: Collect the paths of all currently expanded folder nodes
+            HashSet<string> expandedPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            KeepTrackOfExpandedNodes(treeView.Nodes, expandedPaths);
+
+            // If a specific path was targeted (e.g. where we just added an item), ensure it is expanded
+            if(!string.IsNullOrEmpty(selectedPath))
+            {
+                expandedPaths.Add(selectedPath);
+            }
+
             treeView.Nodes.Clear();
             _systemImageList.Images.Clear();
 
@@ -63,7 +252,25 @@ namespace WinFormsApp1
                 treeView.Nodes.Add(rootNode);
 
                 CrawlDirectoryTree(rootPath, rootNode);
-                rootNode.Expand();
+
+                // 💡 STEP 2: Restore the expansion states recursively across the new nodes
+                RestoreExpandedNodesState(treeView.Nodes, expandedPaths);
+
+                // 💡 NEW STEP 3: Find and select the targeted node if provided
+                if(!string.IsNullOrEmpty(selectedPath))
+                {
+                    TreeNode targetNode = FindNodeByPath(treeView.Nodes, selectedPath);
+                    if(targetNode != null)
+                    {
+                        treeView.SelectedNode = targetNode;
+                        targetNode.EnsureVisible(); // Scrolls the tree view to focus on it if necessary
+                    }
+                }
+                else if(expandedPaths.Count == 0)
+                {
+                    // Always make sure the root node itself is expanded if nothing else was tracked yet
+                    rootNode.Expand();
+                }
             }
             catch(Exception ex)
             {
@@ -75,6 +282,25 @@ namespace WinFormsApp1
             }
         }
 
+        // Helper method to recursively search for a node matching the disk path
+        private TreeNode FindNodeByPath(TreeNodeCollection nodes, string path)
+        {
+            foreach(TreeNode node in nodes)
+            {
+                if(node.Tag is string nodePath && nodePath.Equals(path, StringComparison.OrdinalIgnoreCase))
+                {
+                    return node;
+                }
+
+                if(node.Nodes.Count > 0)
+                {
+                    TreeNode found = FindNodeByPath(node.Nodes, path);
+                    if(found != null)
+                        return found;
+                }
+            }
+            return null;
+        }
         private void CrawlDirectoryTree(string currentDirectory, TreeNode parentNode)
         {
             try
@@ -105,6 +331,39 @@ namespace WinFormsApp1
             catch(Exception ex)
             {
                 Log.Error($"[Directory Crawler Error] Failed to read structural paths: {ex.Message}");
+            }
+        }
+
+        private void KeepTrackOfExpandedNodes(TreeNodeCollection nodes, HashSet<string> expandedPaths)
+        {
+            foreach(TreeNode node in nodes)
+            {
+                if(node.IsExpanded && node.Tag is string path)
+                {
+                    expandedPaths.Add(path);
+                }
+
+                if(node.Nodes.Count > 0)
+                {
+                    KeepTrackOfExpandedNodes(node.Nodes, expandedPaths);
+                }
+            }
+        }
+
+        // 💡 HELPER 2: Matches the new tree layout nodes against our open path registry
+        private void RestoreExpandedNodesState(TreeNodeCollection nodes, HashSet<string> expandedPaths)
+        {
+            foreach(TreeNode node in nodes)
+            {
+                if(node.Tag is string path && expandedPaths.Contains(path))
+                {
+                    node.Expand();
+                }
+
+                if(node.Nodes.Count > 0)
+                {
+                    RestoreExpandedNodesState(node.Nodes, expandedPaths);
+                }
             }
         }
 
@@ -164,6 +423,75 @@ namespace WinFormsApp1
             }
         }
 
+        private void AddItem_Click(object sender, EventArgs e)
+        {
+            TreeNode selectedNode = ProjectFolderTreeView.SelectedNode;
+            if(selectedNode == null)
+                return;
+
+            string targetPath = selectedNode.Tag as string;
+            if(string.IsNullOrEmpty(targetPath))
+                return;
+
+            string destinationDirectory = Directory.Exists(targetPath)
+                ? targetPath
+                : Path.GetDirectoryName(targetPath);
+
+            if(string.IsNullOrEmpty(destinationDirectory) || !Directory.Exists(destinationDirectory))
+                return;
+
+            using(OpenFileDialog openFileDialog = new OpenFileDialog())
+            {
+                openFileDialog.Multiselect = true;
+                openFileDialog.Title = "Import Assets into Project";
+                openFileDialog.Filter = "All Files (*.*)|*.*|" +
+                                        "Images (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp|" +
+                                        "Audio (*.wav;*.mp3;*.ogg)|*.wav;*.mp3;*.ogg|" +
+                                        "Data (*.toml;*.yaml;*.json;*.txt)|*.toml;*.yaml;*.json;*.txt";
+
+                if(openFileDialog.ShowDialog() == DialogResult.OK)
+                {
+                    try
+                    {
+                        bool itemsImported = false;
+
+                        foreach(string sourceFilePath in openFileDialog.FileNames)
+                        {
+                            string fileName = Path.GetFileName(sourceFilePath);
+                            string destFilePath = Path.Combine(destinationDirectory, fileName);
+
+                            if(File.Exists(destFilePath))
+                            {
+                                var result = MessageBox.Show(
+                                    $"An asset named '{fileName}' already exists in this folder. Overwrite it?",
+                                    "Asset Conflict",
+                                    MessageBoxButtons.YesNo,
+                                    MessageBoxIcon.Question
+                                );
+
+                                if(result == DialogResult.No)
+                                    continue;
+                            }
+
+                            File.Copy(sourceFilePath, destFilePath, overwrite: true);
+                            Log.Info($"[Content Pipeline] Imported asset source: {fileName}");
+                            itemsImported = true;
+                        }
+
+                        // Refresh tree layout and explicitly pass the target folder to expand/select it
+                        if(itemsImported)
+                        {
+                            PopulateProjectExplorerTree(ProjectFolderTreeView, destinationDirectory);
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+                        Log.Error($"[Asset Import Error] Failed to copy external asset dependencies: {ex.Message}");
+                        MessageBox.Show($"Failed to import some files: {ex.Message}", "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
         private void NewFolderItem_Click(object sender, EventArgs e)
         {
             TreeNode selectedNode = ProjectFolderTreeView.SelectedNode;

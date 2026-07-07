@@ -8,9 +8,12 @@ using Engine.Core.ECS;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using SharpDX.WIC;
+using Editor;
+using Engine.Editor;
 
 namespace WinFormsApp1
 {
+
     public partial class Form1 : Form
     {
         // --- Windows Native API Hooks (Shell Icon & Theme Extraction) ---
@@ -23,7 +26,8 @@ namespace WinFormsApp1
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool DestroyIcon(IntPtr hIcon);
-
+        private readonly System.Collections.Generic.List<(LogSeverity Severity, string Message)> _masterLogHistory =
+    new System.Collections.Generic.List<(LogSeverity, string)>();
         public static TreeView ActiveHierarchyTreeView
         {
             get; private set;
@@ -64,6 +68,7 @@ namespace WinFormsApp1
                 AppendMessageToConsoleBox(severity, message);
             };
             InitializeComponent();
+
             Log.Info("[Editor UI] Initializing editor main form...");
             SetTreeViewTheme(ProjectFolderTreeView.Handle);
             InitializeExplorerIcons();
@@ -76,8 +81,21 @@ namespace WinFormsApp1
             InitializePropertiesToolstripEvents();
 
 
+            Log.Print("Print test for color reading");
+            Log.Info("Info test for color reading");
+            Log.Warning("Warning test for color reading");
+            Log.Error("Error test for color reading");
+
         }
 
+        private void TextSearchBarControl1_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+
+
+       
         public static void SetTreeViewTheme(IntPtr treeHandle)
         {
             SetWindowTheme(treeHandle, "explorer", null);
@@ -124,7 +142,7 @@ namespace WinFormsApp1
 
                         //toml serialization. 
                         var loadedScene = new GameScene();
-                        loadedScene =  SceneSerializer.LoadScene(targetScenePath);
+                        loadedScene = SceneSerializer.LoadScene(targetScenePath);
 
                         //gism serialization
                         //GameScene loadedScene = GISMSceneSerializer.LoadScene(targetScenePath);
@@ -293,17 +311,17 @@ namespace WinFormsApp1
                 //GISMSceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, GISMTargetScenePath);
                 SceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, targetScenePath);
 
-               Log.Info($"Project workspace and active scene layout saved successfully.");
+                Log.Info($"Project workspace and active scene layout saved successfully.");
             }
             catch(Exception ex)
             {
                 // Failures during save are already logged by SceneSerializer, but this provides a UI safety fallback
-               Log.Warning($"Failed to save project layout safely to disk:\n{ex.Message}");
+                Log.Warning($"Failed to save project layout safely to disk:\n{ex.Message}");
             }
         }
 
 
-       
+
 
 
         public void onSaveProjectToolStripMenuItem_Click(object sender, EventArgs e)
@@ -337,7 +355,54 @@ namespace WinFormsApp1
                 ConsoleTextBox.Invoke(new Action(() => AppendMessageToConsoleBox(severity, formattedText)));
                 return;
             }
-            ConsoleTextBox.AppendText(formattedText + Environment.NewLine);
+
+            // 1. Permanently keep track of this entry for subsequent search filtering
+            // Note: Storing as a named tuple matching your historical layout
+            _masterLogHistory.Add((Severity: severity, Message: formattedText));
+
+            // 2. Only append directly to the view if it passes the current active search filter
+            // FIX: Using the exposed .SearchQuery property from your TextSearchBarControl
+            string activeFilter = consoleSearchBar.SearchQuery;
+
+            if(string.IsNullOrEmpty(activeFilter) || formattedText.Contains(activeFilter, StringComparison.CurrentCultureIgnoreCase))
+            {
+                ConsoleTextBox.BeginUpdate();
+
+                // 3. Select the color based on severity rules
+                System.Drawing.Color logColor;
+                switch(severity)
+                {
+                    case LogSeverity.Info:
+                        logColor = System.Drawing.Color.DarkGreen; // Stands out nicely on dark/light themes
+                        break;
+                    case LogSeverity.Warning:
+                        logColor = System.Drawing.Color.DarkGoldenrod;
+                        break;
+                    case LogSeverity.Error:
+                        logColor = System.Drawing.Color.DarkRed;
+                        break;
+                    case LogSeverity.Print:
+                    default:
+                        logColor = ConsoleTextBox.ForeColor; // Default system text color
+                        break;
+                }
+
+                // 4. Position selection at the end, assign color, and append the string
+                ConsoleTextBox.SelectionStart = ConsoleTextBox.TextLength;
+                ConsoleTextBox.SelectionLength = 0;
+                ConsoleTextBox.SelectionColor = logColor;
+
+                ConsoleTextBox.AppendText(formattedText + Environment.NewLine);
+
+                // 5. Reset selection back to standard color so future non-colored text stays clean
+                ConsoleTextBox.SelectionColor = ConsoleTextBox.ForeColor;
+
+                // Auto-scroll mechanics
+                ConsoleTextBox.SelectionStart = ConsoleTextBox.TextLength;
+                ConsoleTextBox.ScrollToCaret();
+
+                ConsoleTextBox.EndUpdate();
+            }
         }
 
         // Tree Shared Searching Utilities
@@ -508,12 +573,12 @@ namespace WinFormsApp1
             if(mgWindowControl.SimulationRunning)
             {
                 mgWindowControl.pauseSimulation();
-                
+
             }
             else
             {
                 Log.Warning("[Simulation Error] Cannot pause/resume: Simulation is not currently running.");
-                
+
             }
         }
 
@@ -554,7 +619,8 @@ namespace WinFormsApp1
                         // Repopulate the main tree view panel UI
                         if(Form1.ActiveHierarchyTreeView != null)
                         {
-                            Form1.ActiveHierarchyTreeView.BeginInvoke(new Action(() => {
+                            Form1.ActiveHierarchyTreeView.BeginInvoke(new Action(() =>
+                            {
                                 // 💡 FIX: Find the live instance of Form1 that owns this TreeView control
                                 if(Form1.ActiveHierarchyTreeView.FindForm() is Form1 mainForm)
                                 {
@@ -608,6 +674,48 @@ namespace WinFormsApp1
         private void toolStripComboBox1_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void textSearchBarControl1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void consoleSearchBar_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void consoleSearchBar_SearchTextChanged(object sender, string e)
+        {
+            string filterText = e; // Lowercase sanitized string passed directly from the event payload
+
+            ConsoleTextBox.BeginUpdate();
+            ConsoleTextBox.Clear();
+
+            foreach(var log in _masterLogHistory)
+            {
+                if(string.IsNullOrEmpty(filterText) || log.Message.Contains(filterText, StringComparison.CurrentCultureIgnoreCase))
+                {
+                    // Reapply colors during the historical filter stream build
+                    System.Drawing.Color logColor = log.Severity switch
+                    {
+                        LogSeverity.Info => System.Drawing.Color.DarkGreen,
+                        LogSeverity.Warning => System.Drawing.Color.DarkGoldenrod,
+                        LogSeverity.Error => System.Drawing.Color.DarkRed,
+                        _ => ConsoleTextBox.ForeColor
+                    };
+
+                    ConsoleTextBox.SelectionStart = ConsoleTextBox.TextLength;
+                    ConsoleTextBox.SelectionColor = logColor;
+                    ConsoleTextBox.AppendText(log.Message + Environment.NewLine);
+                }
+            }
+
+            ConsoleTextBox.SelectionStart = ConsoleTextBox.TextLength;
+            ConsoleTextBox.SelectionColor = ConsoleTextBox.ForeColor; // Reset
+            
+            ConsoleTextBox.EndUpdate();
         }
     }
 }
