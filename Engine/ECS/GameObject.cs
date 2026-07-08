@@ -12,9 +12,24 @@ namespace Engine.Core.ECS
     public class GameObject : Object
     {
 
-        
+        private bool _isActive = true;
         public string Name { get; set; } = "Game Object";
-        public bool isActive { get; set; } = true;
+        public bool isActive { 
+            get => _isActive;
+            set 
+            {
+            _isActive = value;
+                if(_isActive)
+                {
+                    OnEnable();
+                }
+                else
+                {
+                    OnDisable();
+                }
+                    ActiveEvent?.Invoke(this, isActive);
+            }
+        }
 
         public List<String> tags { get; set; } = new List<String>();
        
@@ -26,10 +41,136 @@ namespace Engine.Core.ECS
 
         public event Action<GameObject, GameComponent>? OnComponentAdded;
         public event Action<GameObject, GameComponent>? OnComponentRemoved;
+        public event Action<GameObject, bool>? ActiveEvent;
+
+
+        // --- NEW: Hierarchy Tracking Properties ---
+
+        // CRITICAL: Prevent circular reference crashes when saving scenes 
+
+        [Browsable(false)]
+        public Guid Id { get; set; } = Guid.NewGuid();
+        [Browsable(false)]
+        public GameObject? Parent
+        {
+            get; set;
+        }
+        [Browsable(false)]
+        public Guid ParentId { get; set; } = Guid.Empty;
+
+
+        [GISMIgnore]
+        public List<GameObject> Children { get; set; } = new List<GameObject>();
+
+
+        // --- NEW: Frontloaded Core Components ---
 
 
 
-    
+        // --- NEW: Hierarchy Management Methods ---
+
+        /// <summary>
+        /// Attaches a child GameObject to this object, automatically handling transform inheritance.
+        /// </summary>
+        /// 
+
+        public void AddChild(GameObject child)
+        {
+            if(child == null || child == this)
+                return;
+
+            // If the child already has a different parent, cleanly detach it first
+            child.Parent?.RemoveChild(child);
+
+            child.Parent = this;
+            Children.Add(child);
+
+
+        }
+
+        /// <summary>
+        /// Removes a child relationship and returns the object back to the root scene level.
+        /// </summary>
+        public void RemoveChild(GameObject child)
+        {
+            if(Children.Contains(child))
+            {
+                child.Parent = null;
+                Children.Remove(child);
+            }
+        }
+
+        public List<GameObject> GetChildGameObjects()
+        {
+            var tempList = new List<GameObject>();
+            foreach(var child in Children)
+            {
+                if(child is GameObject gameObject)
+                {
+                    tempList.Add(gameObject);
+
+                }
+            }
+            return tempList;
+        }
+
+        public GameObject? GetChildGameObject(string name)
+        {
+            foreach(var child in Children)
+            {
+                if(child is GameObject gameObject)
+                {
+                    if(gameObject.Name == name)
+                    {
+                        return gameObject;
+                    }
+                }
+            }
+            return null;
+        }
+
+        public void SetParent(GameObject? newParent)
+        {
+
+            if(Parent != null)
+            {
+                Parent.Children.Remove(this);
+            }
+
+
+            if(newParent != null)
+            {
+                Parent = newParent;
+
+                ParentId = newParent.Id;
+                if(!newParent.Children.Contains(this))
+                {
+                    newParent.Children.Add(this);
+                }
+
+                if(this is GameObject myGameObject && newParent is GameObject newParentGameObject)
+                {
+
+                    if(myGameObject != null && newParentGameObject != null)
+                    {
+                        // 👇FIX: Synchronize the offsets using the absolute coordinates loaded from JSON!
+                        var myTransform = myGameObject.GetComponent<TransformComponent>();
+                        var parentTransform = newParentGameObject.GetComponent<TransformComponent>();
+
+                        if(myTransform != null && parentTransform != null)
+                        {
+                            // Calculate where I am in world space relative to my new parent's world space
+                            myTransform.XOffset = myTransform.X - parentTransform.X;
+                            myTransform.YOffset = myTransform.Y - parentTransform.Y;
+                        }
+                    }
+                }
+
+            }
+
+        }
+
+
 
         /// <summary>
         /// Instantiates and attaches a component of type T to this GameObject.
@@ -137,5 +278,70 @@ namespace Engine.Core.ECS
                 OnComponentRemoved?.Invoke(this, component);
             }
         }
+
+
+
+        public void OnDisable()
+        {
+            foreach(var kvp in Components)
+            {
+                if(kvp.Value is ScriptComponent script)
+                {
+                    // Only trigger if it was initialized and running
+                   
+                    script.OnDisable();
+                    script.hasStarted = false;
+                }
+            }
+        }
+
+        public void OnEnable()
+        {
+            foreach(var kvp in Components)
+            {
+                if(kvp.Value is ScriptComponent script)
+                {
+                    
+                    script.OnEnable();
+                    
+                }
+            }
+        }
+
+        public void Destroy()
+        {
+            if(ContextScene == null)
+                return;
+
+            // 1. Notify systems manager immediately to wipe it out of all warm hashes
+            ContextScene.Systems?.OnEntityDestroyed(this);
+
+            // 2. Propagate destruction downward to all tracking scripts
+            foreach(var kvp in Components)
+            {
+                if(kvp.Value is ScriptComponent script)
+                {
+                    // Reset lifecycle flags just in case
+                   
+                    script.hasStarted = false;
+                }
+            }
+
+            // 3. Unlink relationships dynamically from the hierarchy tree
+            Parent?.RemoveChild(this);
+
+            // Unlink any children cleanly so they return to root scene level or drop out safely
+            var currentChildren = new List<GameObject>(Children);
+            foreach(var child in currentChildren)
+            {
+                RemoveChild(child);
+            }
+
+            // 4. Finally, pull the plug out of the underlying registry bucket array
+            ContextScene.Entities.RemoveEntity(this);
+        }
+
+
+
     }
 }

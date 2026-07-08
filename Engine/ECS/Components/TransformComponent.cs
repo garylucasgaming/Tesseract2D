@@ -58,7 +58,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [Browsable(true)]
+        [Browsable(false)]
         [GISMIgnore]
         public float X
         {
@@ -70,7 +70,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [Browsable(true)]
+        [Browsable(false)]
         [GISMIgnore]
         public float Y
         {
@@ -83,6 +83,7 @@ namespace Engine.Core.ECS.Components
         }
 
         [GISMIgnore]
+        [Browsable(false)]
         public float XOffset
         {
             get => _xOFF;
@@ -102,6 +103,7 @@ namespace Engine.Core.ECS.Components
         }
 
         [GISMIgnore]
+        [Browsable(false)]
         public float YOffset
         {
             get => _yOFF;
@@ -121,6 +123,7 @@ namespace Engine.Core.ECS.Components
         }
 
         [GISMIgnore]
+        [Browsable(false)]
         public float SizeX
         {
             get => _sizeX;
@@ -132,6 +135,7 @@ namespace Engine.Core.ECS.Components
         }
 
         [GISMIgnore]
+        [Browsable(false)]
         public float SizeY
         {
             get => _sizeY;
@@ -143,6 +147,7 @@ namespace Engine.Core.ECS.Components
         }
 
         [GISMIgnore]
+        [Browsable(false)]
         public float ScaleX
         {
             get => _scaleX;
@@ -154,6 +159,7 @@ namespace Engine.Core.ECS.Components
         }
 
         [GISMIgnore]
+        [Browsable(false)]
         public float ScaleY
         {
             get => _scaleY;

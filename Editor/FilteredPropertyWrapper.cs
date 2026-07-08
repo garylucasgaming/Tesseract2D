@@ -64,7 +64,7 @@ public class FilteredPropertyWrapper : CustomTypeDescriptor, ICustomTypeDescript
                     bool isCollection = typeof(System.Collections.IEnumerable).IsAssignableFrom(propType);
 
                     // 👇 NEW: Detect custom engine references (GameObjects, Components, etc.)
-                    bool isEngineObject = typeof(Engine.Core.ECS.Object).IsAssignableFrom(propType) ||
+                    bool isEngineObject = typeof(Engine.Core.ECS.GameObject).IsAssignableFrom(propType) ||
                                           propType.Name == "GameObject" ||
                                           propType.Name.EndsWith("Component");
 

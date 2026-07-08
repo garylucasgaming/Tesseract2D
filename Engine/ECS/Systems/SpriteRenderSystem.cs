@@ -89,13 +89,15 @@ namespace Engine.Core.ECS.Systems
                     {
                         continue;
                     }
+                    Vector3 sv = sc.Colour;
+                    Color c = new Color(sv.X, sv.Y, sv.Z);
                     if(sc.SourceRectangle != null && sc.SourceRectangle.HasValue)
                     {
-                        sb.Draw(sc.Texture, transform.WorldPosition, sc.SourceRectangle.Value, sc.Color, transform.Rotation, transform.OriginVector, transform.Scale, sc.Effects, sc.LayerDepth);
+                        sb.Draw(sc.Texture, transform.WorldPosition, sc.SourceRectangle.Value, c, transform.Rotation, transform.OriginVector, transform.Scale, sc.Effects, sc.LayerDepth);
                     }
                     else
                     {
-                        sb.Draw(sc.Texture, transform.WorldPosition, null, sc.Color, transform.Rotation, transform.OriginVector, transform.Scale, sc.Effects, sc.LayerDepth);
+                        sb.Draw(sc.Texture, transform.WorldPosition, null, c, transform.Rotation, transform.OriginVector, transform.Scale, sc.Effects, sc.LayerDepth);
                     }
                 }
             }

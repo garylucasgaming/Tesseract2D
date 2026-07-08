@@ -7,6 +7,9 @@ using GISM.Core.Attributes; // Added for [GISMIgnore]
 
 namespace Engine.Core.ECS.Components
 {
+
+
+   
     public enum DrawLayer
     {
         Background = 0,
@@ -17,6 +20,10 @@ namespace Engine.Core.ECS.Components
 
     public class SpriteComponent : GameComponent
     {
+
+
+        private Color _colour = Color.White;
+
         // TRAP: Texture2D is a volatile GPU resource. Trying to serialize it deep-scans 
         // XNA internal graphics state and breaks. We ignore this completely and rely 
         // on TexturePath to reconstruct it during asset loading.
@@ -37,11 +44,29 @@ namespace Engine.Core.ECS.Components
         public Action<SpriteComponent>? onSpriteChanged;
 
         // Allows using a single master spritesheet for tiles/items/creatures
-        [Browsable(true)]
+        [Browsable(false)]
         public Rectangle? SourceRectangle { get; set; } = null;
-
         [Browsable(true)]
-        public Color Color { get; set; } = Color.White;
+        public string ? SpriteSheetPath { get; set; }
+      
+        [Browsable(true)]
+        public Vector3 Colour {
+            get
+            {
+               var c = new Vector3(_colour.R, _colour.G, _colour.B);
+                return c;
+            }
+            set
+            {
+
+                
+                _colour.R = (byte)value.X;
+                _colour.G = (byte) value.Y;
+                _colour.B = (byte) value.Z;
+            } 
+        }
+
+        
 
         [Browsable(true)]
         public DrawLayer SortingLayer { get; set; } = DrawLayer.Default;
@@ -55,14 +80,12 @@ namespace Engine.Core.ECS.Components
 
         //Custom pivot overrides for precise tile/grid placement
         [Browsable(true)]
-        public bool UseCustomOrigin { get; set; } = false;
+        public bool UseSpriteOrigin { get; set; } = false;
 
         [Browsable(true)]
-        public Vector2 CustomOrigin { get; set; } = Vector2.Zero;
+        public Vector2 SprteOrigin { get; set; } = Vector2.Zero;
 
-        [Browsable(true)]
-        public List<GameObject> test { get; set; } = new List<GameObject>();
-
+       
         public SpriteComponent()
         {
 

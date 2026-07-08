@@ -36,8 +36,30 @@ public static class GameObjectSerializer
         foreach(var compKvp in dto.Components)
         {
             string typeName = compKvp.Key;
-            Type compType = Type.GetType($"Engine.Core.ECS.Components.{typeName}, Engine.Core");
+            Type? compType = null;
 
+            // Pass 1: Try finding it as a built-in core engine component
+            compType = Type.GetType($"Engine.Core.ECS.Components.{typeName}, Engine.Core");
+
+            // Pass 2: If it's a user script, it won't be in the core engine namespace. 
+            // Scan the executing app domains for the class type name directly!
+            if(compType == null)
+            {
+                foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                {
+                    // Look for an exact match by class name (e.g., "PlayerController")
+                    var foundType = assembly.GetType(typeName) ??
+                                     assembly.GetType($"Game.Scripts.{typeName}"); // Or whatever your script namespace prefix is
+
+                    if(foundType != null && typeof(GameComponent).IsAssignableFrom(foundType))
+                    {
+                        compType = foundType;
+                        break;
+                    }
+                }
+            }
+
+            // Pass 3: Process and instantiate if a matching runtime target is recovered
             if(compType != null)
             {
                 if(Activator.CreateInstance(compType) is GameComponent newComp)
@@ -50,6 +72,10 @@ public static class GameObjectSerializer
                     else
                         go.Components.Add(compType, newComp);
                 }
+            }
+            else
+            {
+                Engine.Core.Utilities.Log.Warning($"[Serialization] Skipped component: {typeName}. Type definition not found in any loaded assembly.");
             }
         }
 

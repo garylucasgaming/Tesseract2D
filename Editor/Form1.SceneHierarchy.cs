@@ -7,6 +7,8 @@ using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using Engine.Editor.WinFormsApp1;
 using Engine.Core.ECS.Components;
+using SharpDX.WIC;
+using System.Reflection;
 
 namespace WinFormsApp1
 {
@@ -25,12 +27,23 @@ namespace WinFormsApp1
             ToolStripMenuItem renameItem = new ToolStripMenuItem("Rename Entity");
             renameItem.Click += (s, e) => RenameGameObject_Click();
 
+            ToolStripMenuItem duplicateItem = new ToolStripMenuItem("Duplicate Entity");
+            duplicateItem.Click += (s, e) => DuplicateGameObject();
+
             ToolStripMenuItem destroyItem = new ToolStripMenuItem("Destroy Entity");
             destroyItem.Click += (s, e) => DestroyGameObject_Click();
 
+            ToolStripMenuItem saveAsPrefab = new ToolStripMenuItem("Save as Prefab");
+
+            ToolStripMenuItem addPrefab = new ToolStripMenuItem("Add Prefab Object");
+
             _hierarchyContextMenu.Items.Add(createEmpty);
             _hierarchyContextMenu.Items.Add(renameItem);
+            _hierarchyContextMenu.Items.Add(duplicateItem);
             _hierarchyContextMenu.Items.Add(destroyItem);
+            _hierarchyContextMenu.Items.Add(new ToolStripSeparator());
+            _hierarchyContextMenu.Items.Add(saveAsPrefab);
+            _hierarchyContextMenu.Items.Add(addPrefab);
 
             // Drag & Drop Wireups
             SceneHierarchyTreeView.ItemDrag += SceneHierarchyTreeView_ItemDrag;
@@ -123,6 +136,110 @@ namespace WinFormsApp1
             }
         }
 
+        private void DuplicateGameObject()
+        {
+            GameScene activeScene = EditorContextManager.ActiveLoadedScene;
+            if(activeScene == null)
+                return;
+
+            // 1. Target the ACTUAL engine object reference from the selected node's Tag
+            TreeNode selectedNode = SceneHierarchyTreeView.SelectedNode;
+            if(selectedNode == null || selectedNode.Tag is not GameObject originalEntity)
+                return;
+
+            // 2. Clone the GameObject using a memory serialization pass (Deep Copy)
+            GameObject duplicatedEntity = DeepCloneGameObject(originalEntity);
+            if(duplicatedEntity == null)
+                return;
+
+            // 3. Assign structural identity differentiations 
+            duplicatedEntity.Id = Guid.NewGuid();
+            duplicatedEntity.Name = $"{originalEntity.Name} (Copy)";
+
+            // 4. Handle hierarchy routing safely
+            if(originalEntity.Parent != null)
+            {
+                duplicatedEntity.SetParent(originalEntity.Parent);
+                activeScene.AddGameObject(duplicatedEntity);
+            }
+            else
+            {
+                // If it was root-level, register it straight to the active scene array context
+                activeScene.AddGameObject(duplicatedEntity);
+            }
+
+            // 5. Completely rebuild the layout tree
+            PopulateSceneHierarchyTree(SceneHierarchyTreeView, activeScene);
+
+            // 6. Automatically find and highlight the newly created copy node in the UI
+            TreeNode matchNode = FindNodeByGameObjectId(SceneHierarchyTreeView.Nodes, duplicatedEntity.Id);
+            if(matchNode != null)
+            {
+                SceneHierarchyTreeView.SelectedNode = matchNode;
+            }
+        }
+
+        /// <summary>
+        /// Helper to handle structural deep copying via your engine serialization namespace logic
+        /// </summary>
+        private GameObject DeepCloneGameObject(GameObject source)
+        {
+            try
+            {
+                // 1. Create the base entity copy
+                GameObject clone = new GameObject() { Name = source.Name };
+
+                // 2. Loop through every component on the original object
+                foreach(var originalComp in source.Components.Values)
+                {
+                    Type compType = originalComp.GetType();
+
+                    // Instantiate a fresh instance of the specific component type
+                    var clonedComp = Activator.CreateInstance(compType);
+
+                    // 👉 FIX 1: Copy all public PROPERTIES
+                    foreach(var prop in compType.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                    {
+                        if(!prop.CanWrite || !prop.CanRead)
+                            continue;
+
+                        // Skip structural engine references so we don't link back to the old object
+                        if(prop.Name == "Id" || prop.Name == "GameObject" || prop.Name == "Parent")
+                            continue;
+
+                        prop.SetValue(clonedComp, prop.GetValue(originalComp));
+                    }
+
+                    // 👉 FIX 2: Copy all public FIELDS (Vectors, ints, strings, etc.)
+                    foreach(var field in compType.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                    {
+                        if(field.Name == "Id" || field.Name == "GameObject" || field.Name == "Parent")
+                            continue;
+
+                        field.SetValue(clonedComp, field.GetValue(originalComp));
+                    }
+
+                    // 👉 FIX 3: Register this newly populated component to your cloned GameObject!
+                    // Adjust this method call to match your actual engine API (e.g., clone.AddComponent() or directly adding to a dictionary)
+                    if(clonedComp is GameComponent gameComp)
+                    {
+                        // If your system uses a dict directly:
+                        clone.Components[compType] = gameComp;
+
+                        // Optional: If your component has a back-reference property to its owner, wire it up
+                        var goProp = compType.GetProperty("GameObject") ?? compType.GetProperty("Parent");
+                        goProp?.SetValue(clonedComp, clone);
+                    }
+                }
+
+                return clone;
+            }
+            catch(Exception ex)
+            {
+                Log.Error($"[Duplicate Failed] Reflection copy crashed: {ex.Message}");
+                return null;
+            }
+        }
         // --- Creation & Modification Core Events ---
         private void CreateEmptyGameObject_Click()
         {

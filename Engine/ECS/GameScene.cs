@@ -23,8 +23,8 @@ namespace Engine.Core.ECS
 
         public ManagersManager Managers { get; private set; } = null!;
 
- 
 
+        public Guid Id { get; set; } = Guid.NewGuid();
        
 
         public GameScene()
