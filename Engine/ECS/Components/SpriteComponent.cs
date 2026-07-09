@@ -3,7 +3,8 @@ using System.ComponentModel;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using GISM.Core.Serializer;
-using GISM.Core.Attributes; // Added for [GISMIgnore]
+using GISM.Core.Attributes;
+using System.Reflection; // Added for [GISMIgnore]
 
 namespace Engine.Core.ECS.Components
 {
@@ -48,6 +49,7 @@ namespace Engine.Core.ECS.Components
         public Rectangle? SourceRectangle { get; set; } = null;
         [Browsable(true)]
         public string ? SpriteSheetPath { get; set; }
+
       
         [Browsable(true)]
         public Vector3 Colour {
