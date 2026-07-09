@@ -27,7 +27,7 @@ namespace WinFormsApp1
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool DestroyIcon(IntPtr hIcon);
         private readonly System.Collections.Generic.List<(LogSeverity Severity, string Message)> _masterLogHistory =
-    new System.Collections.Generic.List<(LogSeverity, string)>();
+             new System.Collections.Generic.List<(LogSeverity, string)>();
         public static TreeView ActiveHierarchyTreeView
         {
             get; private set;
@@ -95,7 +95,7 @@ namespace WinFormsApp1
 
 
 
-       
+
         public static void SetTreeViewTheme(IntPtr treeHandle)
         {
             SetWindowTheme(treeHandle, "explorer", null);
@@ -117,6 +117,7 @@ namespace WinFormsApp1
         private void OnProjectLoaded()
         {
             UpdateEditorTitle();
+
             if(EditorContextManager.IsProjectLoaded)
             {
                 // 1. Build the path where your default scene's  file should live
@@ -150,6 +151,7 @@ namespace WinFormsApp1
 
                         // Set the context and populate your UI nodes with the genuine saved data
                         EditorContextManager.ActiveLoadedScene = loadedScene;
+                        UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
                         PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
                     }
                     catch(Exception ex)
@@ -165,6 +167,11 @@ namespace WinFormsApp1
                 }
             }
             PopulateProjectExplorerTree(ProjectFolderTreeView);
+        }
+
+        private void UpdateSceneHierarchyTitle(string sceneName)
+        {
+            SceneHierarchyPanel.Text = SceneHierarchyPanel.Text + ": '" + sceneName + "'";
         }
 
         public static void RefreshComponentInspector(object targetComponent)
@@ -245,6 +252,10 @@ namespace WinFormsApp1
                     }
                 }
             }
+        }
+
+        private void OpenProjectSettings(object sender, EventArgs e)
+        {
         }
 
         private void onLoadProjectToolStripMenuItem_Click(object sender, EventArgs e)
@@ -714,7 +725,7 @@ namespace WinFormsApp1
 
             ConsoleTextBox.SelectionStart = ConsoleTextBox.TextLength;
             ConsoleTextBox.SelectionColor = ConsoleTextBox.ForeColor; // Reset
-            
+
             ConsoleTextBox.EndUpdate();
         }
     }
