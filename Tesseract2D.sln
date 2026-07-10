@@ -15,10 +15,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engine.Android", "Engine.An
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engine.Ios", "Engine.Ios\Engine.Ios.csproj", "{ADF68BC1-D03D-468A-8AB2-20521AB18A28}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engine.Desktop", "Engine.Desktop\Engine.Desktop.csproj", "{6158C4AA-3C67-48AC-B8FC-18A4EC776A4D}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engine.Content", "Engine.Content\Engine.Content.csproj", "{39EE80C0-C088-4A50-A711-10F1AA0418D3}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -49,14 +45,6 @@ Global
 		{ADF68BC1-D03D-468A-8AB2-20521AB18A28}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{ADF68BC1-D03D-468A-8AB2-20521AB18A28}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{ADF68BC1-D03D-468A-8AB2-20521AB18A28}.Release|Any CPU.Build.0 = Release|Any CPU
-		{6158C4AA-3C67-48AC-B8FC-18A4EC776A4D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{6158C4AA-3C67-48AC-B8FC-18A4EC776A4D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{6158C4AA-3C67-48AC-B8FC-18A4EC776A4D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{6158C4AA-3C67-48AC-B8FC-18A4EC776A4D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{39EE80C0-C088-4A50-A711-10F1AA0418D3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{39EE80C0-C088-4A50-A711-10F1AA0418D3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{39EE80C0-C088-4A50-A711-10F1AA0418D3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{39EE80C0-C088-4A50-A711-10F1AA0418D3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

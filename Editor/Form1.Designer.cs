@@ -79,20 +79,15 @@
             StopSimulationButton = new ToolStripButton();
             progressBar = new ToolStripProgressBar();
             progressBarTextBox = new ToolStripTextBox();
-            panel1 = new Panel();
-            splitContainer1 = new SplitContainer();
             tabControl2 = new TabControl();
+            ProjectFolderTabPage = new TabPage();
+            ProjectFolderTreeView = new TreeView();
             ConsoleTabPage = new TabPage();
             ConsoleTextBox = new RichTextBox();
             consoleSearchBar = new Editor.TextSearchBarControl();
-            tabControl4 = new TabControl();
-            tabPage1 = new TabPage();
-            ProjectFolderTreeView = new TreeView();
+            panel1 = new Panel();
             panel2 = new Panel();
             panel3 = new Panel();
-            splitContainer2 = new SplitContainer();
-            splitContainer3 = new SplitContainer();
-            splitContainer4 = new SplitContainer();
             menuStrip1.SuspendLayout();
             SceneHierarchyPanel.SuspendLayout();
             tabControl3.SuspendLayout();
@@ -103,29 +98,12 @@
             tabControl1.SuspendLayout();
             SceneView.SuspendLayout();
             SceneToolStrip.SuspendLayout();
-            panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize) splitContainer1).BeginInit();
-            splitContainer1.Panel1.SuspendLayout();
-            splitContainer1.Panel2.SuspendLayout();
-            splitContainer1.SuspendLayout();
             tabControl2.SuspendLayout();
+            ProjectFolderTabPage.SuspendLayout();
             ConsoleTabPage.SuspendLayout();
-            tabControl4.SuspendLayout();
-            tabPage1.SuspendLayout();
+            panel1.SuspendLayout();
             panel2.SuspendLayout();
             panel3.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize) splitContainer2).BeginInit();
-            splitContainer2.Panel1.SuspendLayout();
-            splitContainer2.Panel2.SuspendLayout();
-            splitContainer2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize) splitContainer3).BeginInit();
-            splitContainer3.Panel1.SuspendLayout();
-            splitContainer3.Panel2.SuspendLayout();
-            splitContainer3.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize) splitContainer4).BeginInit();
-            splitContainer4.Panel1.SuspendLayout();
-            splitContainer4.Panel2.SuspendLayout();
-            splitContainer4.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -134,7 +112,7 @@
             menuStrip1.Items.AddRange(new ToolStripItem[] { menuToolStripMenuItem, editToolStripMenuItem, assetsToolStripMenuItem, windowToolStripMenuItem, helpToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(805, 24);
+            menuStrip1.Size = new Size(734, 24);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -299,7 +277,7 @@
             SceneHierarchyPanel.Dock = DockStyle.Fill;
             SceneHierarchyPanel.Location = new Point(0, 0);
             SceneHierarchyPanel.Name = "SceneHierarchyPanel";
-            SceneHierarchyPanel.Size = new Size(193, 681);
+            SceneHierarchyPanel.Size = new Size(265, 681);
             SceneHierarchyPanel.TabIndex = 1;
             SceneHierarchyPanel.TabStop = false;
             SceneHierarchyPanel.Text = "Scene Hierarchy";
@@ -313,7 +291,7 @@
             tabControl3.Location = new Point(3, 19);
             tabControl3.Name = "tabControl3";
             tabControl3.SelectedIndex = 0;
-            tabControl3.Size = new Size(187, 659);
+            tabControl3.Size = new Size(259, 659);
             tabControl3.TabIndex = 4;
             // 
             // SceneHierarchyTab
@@ -324,7 +302,7 @@
             SceneHierarchyTab.Location = new Point(4, 24);
             SceneHierarchyTab.Name = "SceneHierarchyTab";
             SceneHierarchyTab.Padding = new Padding(3);
-            SceneHierarchyTab.Size = new Size(179, 631);
+            SceneHierarchyTab.Size = new Size(251, 631);
             SceneHierarchyTab.TabIndex = 0;
             SceneHierarchyTab.Text = "Scene";
             SceneHierarchyTab.UseVisualStyleBackColor = true;
@@ -334,7 +312,7 @@
             HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton, CreateNewSceneButton });
             HierarchyToolStrip.Location = new Point(3, 28);
             HierarchyToolStrip.Name = "HierarchyToolStrip";
-            HierarchyToolStrip.Size = new Size(173, 25);
+            HierarchyToolStrip.Size = new Size(245, 25);
             HierarchyToolStrip.TabIndex = 2;
             HierarchyToolStrip.Text = "toolStrip2";
             // 
@@ -372,7 +350,7 @@
             sceneHierarchySearchBar.Dock = DockStyle.Top;
             sceneHierarchySearchBar.Location = new Point(3, 3);
             sceneHierarchySearchBar.Name = "sceneHierarchySearchBar";
-            sceneHierarchySearchBar.Size = new Size(173, 25);
+            sceneHierarchySearchBar.Size = new Size(245, 25);
             sceneHierarchySearchBar.TabIndex = 3;
             sceneHierarchySearchBar.Load += textSearchBarControl1_Load;
             // 
@@ -383,7 +361,7 @@
             SceneHierarchyTreeView.LabelEdit = true;
             SceneHierarchyTreeView.Location = new Point(3, 80);
             SceneHierarchyTreeView.Name = "SceneHierarchyTreeView";
-            SceneHierarchyTreeView.Size = new Size(173, 548);
+            SceneHierarchyTreeView.Size = new Size(245, 548);
             SceneHierarchyTreeView.TabIndex = 1;
             SceneHierarchyTreeView.ItemDrag += SceneHierarchyTreeView_ItemDrag;
             SceneHierarchyTreeView.DragDrop += SceneHierarchyTreeView_DragDrop;
@@ -394,7 +372,7 @@
             ManagersTab.Location = new Point(4, 24);
             ManagersTab.Name = "ManagersTab";
             ManagersTab.Padding = new Padding(3);
-            ManagersTab.Size = new Size(179, 631);
+            ManagersTab.Size = new Size(251, 631);
             ManagersTab.TabIndex = 1;
             ManagersTab.Text = "Managers";
             ManagersTab.UseVisualStyleBackColor = true;
@@ -403,7 +381,7 @@
             // 
             SystemsTab.Location = new Point(4, 24);
             SystemsTab.Name = "SystemsTab";
-            SystemsTab.Size = new Size(179, 631);
+            SystemsTab.Size = new Size(251, 631);
             SystemsTab.TabIndex = 2;
             SystemsTab.Text = "Systems";
             SystemsTab.UseVisualStyleBackColor = true;
@@ -418,7 +396,7 @@
             PropertiesWindow.FlatStyle = FlatStyle.Flat;
             PropertiesWindow.Location = new Point(0, 0);
             PropertiesWindow.Name = "PropertiesWindow";
-            PropertiesWindow.Size = new Size(258, 681);
+            PropertiesWindow.Size = new Size(265, 681);
             PropertiesWindow.TabIndex = 2;
             PropertiesWindow.TabStop = false;
             PropertiesWindow.Text = "Properties";
@@ -430,7 +408,7 @@
             InspectorFlowPanel.FlowDirection = FlowDirection.TopDown;
             InspectorFlowPanel.Location = new Point(3, 44);
             InspectorFlowPanel.Name = "InspectorFlowPanel";
-            InspectorFlowPanel.Size = new Size(252, 634);
+            InspectorFlowPanel.Size = new Size(259, 634);
             InspectorFlowPanel.TabIndex = 0;
             InspectorFlowPanel.WrapContents = false;
             // 
@@ -439,7 +417,7 @@
             propertiesToolStrip.Items.AddRange(new ToolStripItem[] { AddComponentButton, RemoveComponentButton });
             propertiesToolStrip.Location = new Point(3, 19);
             propertiesToolStrip.Name = "propertiesToolStrip";
-            propertiesToolStrip.Size = new Size(252, 25);
+            propertiesToolStrip.Size = new Size(259, 25);
             propertiesToolStrip.TabIndex = 1;
             propertiesToolStrip.Text = "toolStrip3";
             // 
@@ -465,10 +443,10 @@
             // 
             tabControl1.Controls.Add(SceneView);
             tabControl1.Dock = DockStyle.Fill;
-            tabControl1.Location = new Point(0, 0);
+            tabControl1.Location = new Point(0, 24);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(805, 409);
+            tabControl1.Size = new Size(734, 438);
             tabControl1.TabIndex = 3;
             // 
             // SceneView
@@ -478,7 +456,7 @@
             SceneView.Location = new Point(4, 24);
             SceneView.Name = "SceneView";
             SceneView.Padding = new Padding(3);
-            SceneView.Size = new Size(797, 381);
+            SceneView.Size = new Size(726, 410);
             SceneView.TabIndex = 0;
             SceneView.Text = "Scene View";
             SceneView.UseVisualStyleBackColor = true;
@@ -491,7 +469,7 @@
             mgWindowControl.Name = "mgWindowControl";
             mgWindowControl.SimulationPaused = false;
             mgWindowControl.SimulationRunning = false;
-            mgWindowControl.Size = new Size(791, 350);
+            mgWindowControl.Size = new Size(720, 379);
             mgWindowControl.TabIndex = 0;
             mgWindowControl.Text = "mgWindowControl2";
             // 
@@ -501,9 +479,9 @@
             SceneToolStrip.BackColor = SystemColors.Control;
             SceneToolStrip.Dock = DockStyle.Bottom;
             SceneToolStrip.Items.AddRange(new ToolStripItem[] { StartSimulationButton, PauseSimulationButton, StopSimulationButton, progressBar, progressBarTextBox });
-            SceneToolStrip.Location = new Point(3, 353);
+            SceneToolStrip.Location = new Point(3, 382);
             SceneToolStrip.Name = "SceneToolStrip";
-            SceneToolStrip.Size = new Size(791, 25);
+            SceneToolStrip.Size = new Size(720, 25);
             SceneToolStrip.TabIndex = 4;
             SceneToolStrip.Text = "toolStrip1";
             // 
@@ -546,44 +524,39 @@
             // 
             progressBarTextBox.Name = "progressBarTextBox";
             progressBarTextBox.ReadOnly = true;
-            progressBarTextBox.Size = new Size(300, 23);
-            // 
-            // panel1
-            // 
-            panel1.Controls.Add(splitContainer4);
-            panel1.Controls.Add(menuStrip1);
-            panel1.Dock = DockStyle.Fill;
-            panel1.Location = new Point(0, 0);
-            panel1.Name = "panel1";
-            panel1.Size = new Size(805, 681);
-            panel1.TabIndex = 4;
-            // 
-            // splitContainer1
-            // 
-            splitContainer1.Dock = DockStyle.Fill;
-            splitContainer1.Location = new Point(0, 0);
-            splitContainer1.Name = "splitContainer1";
-            // 
-            // splitContainer1.Panel1
-            // 
-            splitContainer1.Panel1.Controls.Add(tabControl2);
-            // 
-            // splitContainer1.Panel2
-            // 
-            splitContainer1.Panel2.Controls.Add(tabControl4);
-            splitContainer1.Size = new Size(805, 244);
-            splitContainer1.SplitterDistance = 373;
-            splitContainer1.TabIndex = 5;
+            progressBarTextBox.Size = new Size(300, 25);
             // 
             // tabControl2
             // 
+            tabControl2.Controls.Add(ProjectFolderTabPage);
             tabControl2.Controls.Add(ConsoleTabPage);
-            tabControl2.Dock = DockStyle.Fill;
-            tabControl2.Location = new Point(0, 0);
+            tabControl2.Dock = DockStyle.Bottom;
+            tabControl2.Location = new Point(0, 462);
             tabControl2.Name = "tabControl2";
             tabControl2.SelectedIndex = 0;
-            tabControl2.Size = new Size(373, 244);
+            tabControl2.Size = new Size(734, 219);
             tabControl2.TabIndex = 1;
+            // 
+            // ProjectFolderTabPage
+            // 
+            ProjectFolderTabPage.Controls.Add(ProjectFolderTreeView);
+            ProjectFolderTabPage.Location = new Point(4, 24);
+            ProjectFolderTabPage.Name = "ProjectFolderTabPage";
+            ProjectFolderTabPage.Padding = new Padding(3);
+            ProjectFolderTabPage.Size = new Size(726, 191);
+            ProjectFolderTabPage.TabIndex = 0;
+            ProjectFolderTabPage.Text = "Project Folder";
+            ProjectFolderTabPage.UseVisualStyleBackColor = true;
+            // 
+            // ProjectFolderTreeView
+            // 
+            ProjectFolderTreeView.AllowDrop = true;
+            ProjectFolderTreeView.Dock = DockStyle.Fill;
+            ProjectFolderTreeView.HotTracking = true;
+            ProjectFolderTreeView.Location = new Point(3, 3);
+            ProjectFolderTreeView.Name = "ProjectFolderTreeView";
+            ProjectFolderTreeView.Size = new Size(720, 185);
+            ProjectFolderTreeView.TabIndex = 1;
             // 
             // ConsoleTabPage
             // 
@@ -592,7 +565,7 @@
             ConsoleTabPage.Location = new Point(4, 24);
             ConsoleTabPage.Name = "ConsoleTabPage";
             ConsoleTabPage.Padding = new Padding(3);
-            ConsoleTabPage.Size = new Size(365, 216);
+            ConsoleTabPage.Size = new Size(726, 191);
             ConsoleTabPage.TabIndex = 1;
             ConsoleTabPage.Text = "Editor Console";
             ConsoleTabPage.UseVisualStyleBackColor = true;
@@ -600,10 +573,10 @@
             // ConsoleTextBox
             // 
             ConsoleTextBox.Dock = DockStyle.Bottom;
-            ConsoleTextBox.Location = new Point(3, 65);
+            ConsoleTextBox.Location = new Point(3, 40);
             ConsoleTextBox.Name = "ConsoleTextBox";
             ConsoleTextBox.ReadOnly = true;
-            ConsoleTextBox.Size = new Size(359, 148);
+            ConsoleTextBox.Size = new Size(720, 148);
             ConsoleTextBox.TabIndex = 2;
             ConsoleTextBox.Text = "";
             // 
@@ -612,112 +585,39 @@
             consoleSearchBar.Dock = DockStyle.Top;
             consoleSearchBar.Location = new Point(3, 3);
             consoleSearchBar.Name = "consoleSearchBar";
-            consoleSearchBar.Size = new Size(359, 25);
+            consoleSearchBar.Size = new Size(720, 25);
             consoleSearchBar.TabIndex = 1;
             consoleSearchBar.SearchTextChanged += consoleSearchBar_SearchTextChanged;
             consoleSearchBar.Load += consoleSearchBar_Load;
             // 
-            // tabControl4
+            // panel1
             // 
-            tabControl4.Controls.Add(tabPage1);
-            tabControl4.Dock = DockStyle.Fill;
-            tabControl4.Location = new Point(0, 0);
-            tabControl4.Name = "tabControl4";
-            tabControl4.SelectedIndex = 0;
-            tabControl4.Size = new Size(428, 244);
-            tabControl4.TabIndex = 2;
-            // 
-            // tabPage1
-            // 
-            tabPage1.Controls.Add(ProjectFolderTreeView);
-            tabPage1.Location = new Point(4, 24);
-            tabPage1.Name = "tabPage1";
-            tabPage1.Padding = new Padding(3);
-            tabPage1.Size = new Size(420, 216);
-            tabPage1.TabIndex = 0;
-            tabPage1.Text = "Project Folder";
-            tabPage1.UseVisualStyleBackColor = true;
-            // 
-            // ProjectFolderTreeView
-            // 
-            ProjectFolderTreeView.AllowDrop = true;
-            ProjectFolderTreeView.Dock = DockStyle.Fill;
-            ProjectFolderTreeView.HotTracking = true;
-            ProjectFolderTreeView.LabelEdit = true;
-            ProjectFolderTreeView.Location = new Point(3, 3);
-            ProjectFolderTreeView.Name = "ProjectFolderTreeView";
-            ProjectFolderTreeView.Size = new Size(414, 210);
-            ProjectFolderTreeView.TabIndex = 1;
+            panel1.Controls.Add(tabControl1);
+            panel1.Controls.Add(tabControl2);
+            panel1.Controls.Add(menuStrip1);
+            panel1.Dock = DockStyle.Fill;
+            panel1.Location = new Point(265, 0);
+            panel1.Name = "panel1";
+            panel1.Size = new Size(734, 681);
+            panel1.TabIndex = 4;
             // 
             // panel2
             // 
             panel2.Controls.Add(SceneHierarchyPanel);
-            panel2.Dock = DockStyle.Fill;
+            panel2.Dock = DockStyle.Left;
             panel2.Location = new Point(0, 0);
             panel2.Name = "panel2";
-            panel2.Size = new Size(193, 681);
+            panel2.Size = new Size(265, 681);
             panel2.TabIndex = 5;
             // 
             // panel3
             // 
             panel3.Controls.Add(PropertiesWindow);
-            panel3.Dock = DockStyle.Fill;
-            panel3.Location = new Point(0, 0);
+            panel3.Dock = DockStyle.Right;
+            panel3.Location = new Point(999, 0);
             panel3.Name = "panel3";
-            panel3.Size = new Size(258, 681);
+            panel3.Size = new Size(265, 681);
             panel3.TabIndex = 6;
-            // 
-            // splitContainer2
-            // 
-            splitContainer2.Dock = DockStyle.Fill;
-            splitContainer2.Location = new Point(0, 0);
-            splitContainer2.Name = "splitContainer2";
-            // 
-            // splitContainer2.Panel1
-            // 
-            splitContainer2.Panel1.Controls.Add(panel2);
-            // 
-            // splitContainer2.Panel2
-            // 
-            splitContainer2.Panel2.Controls.Add(splitContainer3);
-            splitContainer2.Size = new Size(1264, 681);
-            splitContainer2.SplitterDistance = 193;
-            splitContainer2.TabIndex = 5;
-            // 
-            // splitContainer3
-            // 
-            splitContainer3.Dock = DockStyle.Fill;
-            splitContainer3.Location = new Point(0, 0);
-            splitContainer3.Name = "splitContainer3";
-            // 
-            // splitContainer3.Panel1
-            // 
-            splitContainer3.Panel1.Controls.Add(panel1);
-            // 
-            // splitContainer3.Panel2
-            // 
-            splitContainer3.Panel2.Controls.Add(panel3);
-            splitContainer3.Size = new Size(1067, 681);
-            splitContainer3.SplitterDistance = 805;
-            splitContainer3.TabIndex = 0;
-            // 
-            // splitContainer4
-            // 
-            splitContainer4.Dock = DockStyle.Fill;
-            splitContainer4.Location = new Point(0, 24);
-            splitContainer4.Name = "splitContainer4";
-            splitContainer4.Orientation = Orientation.Horizontal;
-            // 
-            // splitContainer4.Panel1
-            // 
-            splitContainer4.Panel1.Controls.Add(tabControl1);
-            // 
-            // splitContainer4.Panel2
-            // 
-            splitContainer4.Panel2.Controls.Add(splitContainer1);
-            splitContainer4.Size = new Size(805, 657);
-            splitContainer4.SplitterDistance = 409;
-            splitContainer4.TabIndex = 6;
             // 
             // Form1
             // 
@@ -725,7 +625,9 @@
             AutoScaleMode = AutoScaleMode.Font;
             BackColor = SystemColors.Control;
             ClientSize = new Size(1264, 681);
-            Controls.Add(splitContainer2);
+            Controls.Add(panel1);
+            Controls.Add(panel3);
+            Controls.Add(panel2);
             Icon = (Icon) resources.GetObject("$this.Icon");
             MainMenuStrip = menuStrip1;
             Margin = new Padding(3, 2, 3, 2);
@@ -748,31 +650,14 @@
             SceneView.ResumeLayout(false);
             SceneToolStrip.ResumeLayout(false);
             SceneToolStrip.PerformLayout();
+            tabControl2.ResumeLayout(false);
+            ProjectFolderTabPage.ResumeLayout(false);
+            ConsoleTabPage.ResumeLayout(false);
             panel1.ResumeLayout(false);
             panel1.PerformLayout();
-            splitContainer1.Panel1.ResumeLayout(false);
-            splitContainer1.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize) splitContainer1).EndInit();
-            splitContainer1.ResumeLayout(false);
-            tabControl2.ResumeLayout(false);
-            ConsoleTabPage.ResumeLayout(false);
-            tabControl4.ResumeLayout(false);
-            tabPage1.ResumeLayout(false);
             panel2.ResumeLayout(false);
             panel3.ResumeLayout(false);
             panel3.PerformLayout();
-            splitContainer2.Panel1.ResumeLayout(false);
-            splitContainer2.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize) splitContainer2).EndInit();
-            splitContainer2.ResumeLayout(false);
-            splitContainer3.Panel1.ResumeLayout(false);
-            splitContainer3.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize) splitContainer3).EndInit();
-            splitContainer3.ResumeLayout(false);
-            splitContainer4.Panel1.ResumeLayout(false);
-            splitContainer4.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize) splitContainer4).EndInit();
-            splitContainer4.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -807,8 +692,12 @@
         private TabControl tabControl1;
         private TabPage SceneView;
         private Editor.MGWindowControl mgWindowControl1;
+        private TabControl tabControl2;
+        private TabPage ProjectFolderTabPage;
+        private TabPage ConsoleTabPage;
         public TreeView SceneHierarchyTreeView;
         private Editor.TextSearchBarControl SceneHierarchySearchBar;
+        private TreeView ProjectFolderTreeView;
         private Editor.TextSearchBarControl ProjectFolderSearchBar;
         private ToolStripMenuItem fileToolStripMenuItem;
         private Editor.MGWindowControl mgWindowControl;
@@ -826,6 +715,8 @@
         private ToolStripDropDownButton AddComponentButton;
         private ToolStripButton CreateNewSceneButton;
         private Editor.TextSearchBarControl sceneHierarchySearchBar;
+        private Editor.TextSearchBarControl consoleSearchBar;
+        private RichTextBox ConsoleTextBox;
         private TabControl tabControl3;
         private TabPage SceneHierarchyTab;
         private TabPage ManagersTab;
@@ -834,16 +725,5 @@
         private Panel panel3;
         private ToolStripProgressBar progressBar;
         private ToolStripTextBox progressBarTextBox;
-        private SplitContainer splitContainer1;
-        private TabControl tabControl4;
-        private TabPage tabPage1;
-        private TreeView ProjectFolderTreeView;
-        private TabControl tabControl2;
-        private TabPage ConsoleTabPage;
-        private RichTextBox ConsoleTextBox;
-        private Editor.TextSearchBarControl consoleSearchBar;
-        private SplitContainer splitContainer2;
-        private SplitContainer splitContainer3;
-        private SplitContainer splitContainer4;
     }
 }

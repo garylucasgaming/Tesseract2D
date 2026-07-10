@@ -5,7 +5,6 @@ using System.Drawing;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using System.Runtime.InteropServices;
-using Engine.Editor.Utilities;
 
 namespace WinFormsApp1
 {
@@ -99,7 +98,6 @@ namespace WinFormsApp1
 
         private void ProjectFolderTreeView_DragDrop(object sender, DragEventArgs e)
         {
-
             // Ensure data contains files
             if(!e.Data.GetDataPresent(DataFormats.FileDrop))
                 return;
@@ -167,7 +165,6 @@ namespace WinFormsApp1
                         }
 
                         File.Copy(sourceFilePath, destFilePath, overwrite: true);
-                        //ContentPipelineService.QueueAsset(destFilePath);
                         Log.Info($"[Content Pipeline] Drag-Imported file: {fileName}");
                         treeNeedsRefresh = true;
                     }
@@ -185,7 +182,6 @@ namespace WinFormsApp1
 
                 if(treeNeedsRefresh)
                 {
-                    ContentPipelineService.RunBatchBuild();
                     PopulateProjectExplorerTree(ProjectFolderTreeView, destinationDirectory);
                 }
             }

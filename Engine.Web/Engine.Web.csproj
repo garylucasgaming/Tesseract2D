@@ -29,7 +29,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.4.1" />
     <PackageReference Include="nkast.Xna.Framework" Version="4.2.9001" />
     <PackageReference Include="nkast.Xna.Framework.Content" Version="4.2.9001" />
     <PackageReference Include="nkast.Xna.Framework.Graphics" Version="4.2.9001" />
@@ -51,10 +50,6 @@
 
   <ItemGroup>
     <KniContentReference Include="Content\Engine.WebContent.mgcb" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Engine.Core\Engine.Core.csproj" />
   </ItemGroup>
 
 </Project>
