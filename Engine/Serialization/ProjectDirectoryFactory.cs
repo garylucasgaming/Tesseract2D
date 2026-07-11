@@ -28,45 +28,48 @@ namespace Engine.Core.Serialization
                     Directory.CreateDirectory(projectRoot);
                 }
 
-                // 2. Define the major engine Root Folders
-                string assetsRoot = Path.Combine(projectRoot, "Assets");
+                // 2. Define the major engine Root Folder
                 string contentRoot = Path.Combine(projectRoot, "Content");
                 string projectSettingsRoot = Path.Combine(projectRoot, "ProjectSettings");
                 string libraryRoot = Path.Combine(projectRoot, "Library");
                 string tempRoot = Path.Combine(projectRoot, "Temp");
 
-                Directory.CreateDirectory(assetsRoot);
+                
                 Directory.CreateDirectory(contentRoot);
                 Directory.CreateDirectory(projectSettingsRoot);
                 Directory.CreateDirectory(libraryRoot);
                 Directory.CreateDirectory(tempRoot);
+
+                //assets subfolder
+                string assetsRoot = Path.Combine(contentRoot, "Assets");
+                Directory.CreateDirectory(assetsRoot);
+
 
                 // 3. Populate sub-folders inside the Assets directory
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Scripts"));
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Textures"));
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Materials"));
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Audio"));
-                Directory.CreateDirectory(Path.Combine(assetsRoot, "Scenes"));
+                string sceneFolder = Path.Combine(assetsRoot, "Scenes");
+                Directory.CreateDirectory(sceneFolder);
+                Directory.CreateDirectory(Path.Combine(assetsRoot, "Prefabs"));
+                Directory.CreateDirectory(Path.Combine(assetsRoot, "Databases"));
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Prefabs"));
 
-                // 4. Populate sub-folders inside our data-driven Content directory
-                string dbFolder = Path.Combine(contentRoot, "Databases");
-                string sceneDataFolder = Path.Combine(contentRoot, "Scenes");
-                string prefabDataFolder = Path.Combine(contentRoot, "Prefabs");
 
-                Directory.CreateDirectory(dbFolder);
-                Directory.CreateDirectory(sceneDataFolder);
-                Directory.CreateDirectory(prefabDataFolder);
+               
+                
 
                 Log.Info($"[Project Factory] Successfully initialized workspace layouts at: {projectRoot}");
 
                 // 5. Stamp out a blank, fresh Project Manifest JSON database inside the data Content folder
                 string manifestPath = Path.Combine(contentRoot, "ProjectManifest.db");
+               //actually write data to the project manifest
                 File.WriteAllText(manifestPath, "{}");
                 Log.Info("[Project Factory] Stamped data-link ProjectManifest.db file.");
 
                 // 6. Bake our initial boilerplate scene data asset into Content/Scenes/
-                CreateDefaultSceneTemplate(sceneDataFolder);
+                CreateDefaultSceneTemplate(sceneFolder);
 
                 return projectRoot;
             }
@@ -84,17 +87,17 @@ namespace Engine.Core.Serialization
         {
             try
             {
-                string targetFilePath = Path.Combine(targetSceneFolder, "Untitled.toml");
+                string targetFilePath = Path.Combine(targetSceneFolder, "Main.scene");
 
                 GameScene defaultScene = new GameScene
                 {
-                    SceneName = "Untitled Scene"
+                    SceneName = "Main"
                 };
 
                 // Create an anchor node to give the user something immediate to select in the hierarchy view
                 GameObject globalSystemsGo = new GameObject
                 {
-                    Name = "Global Systems Anchor"
+                    Name = "DefaultObject"
                 };
 
                 SceneSerializer.SaveScene(defaultScene, targetFilePath);
@@ -103,7 +106,7 @@ namespace Engine.Core.Serialization
             }
             catch(Exception ex)
             {
-                Log.Error($"[Project Factory Error] Failed to generate baseline Untitled.scene template. Reason: {ex.Message}");
+                Log.Error($"[Project Factory Error] Failed to generate baseline Main.scene template. Reason: {ex.Message}");
             }
         }
     }

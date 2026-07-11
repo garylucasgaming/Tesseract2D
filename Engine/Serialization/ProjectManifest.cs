@@ -9,18 +9,15 @@ namespace Engine.Core.Serialization
     public class ProjectManifest
     {
         public string EngineVersion { get; set; } = "1.0.0";
-        public string ProjectName { get; set; } = "Unnamed Colony Sim";
+        public string ProjectName { get; set; } = "New Project";
 
         public string LastUsedScene { get; set; } = "";
 
-        public string DefaultScene { get; set; } = "Content/Scenes/Main.scene";
-
-
-
+       
         /// <summary>
         /// The absolute master index for the entire project workspace.
         /// Key: Unique Asset GUID (as a string)
-        /// Value: Relative file path on disk (e.g., "Content/Scenes/Main.scene", "Content/Databases/Items.database")
+        /// Value: Relative file path on disk (e.g.,  "Content/Databases/Items.database")
         /// </summary>
         public Dictionary<string, string> AssetRegistry { get; set; } = new();
     }

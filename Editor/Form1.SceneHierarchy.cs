@@ -255,11 +255,13 @@ namespace WinFormsApp1
             {
                 // Spawns using your custom automatic parent context linking method
                 newEntity = activeScene.Spawn("New GameObject", parentEntity);
+                
             }
             else
             {
                 // Spawns a clean root-level object directly registered to the scene manager!
                 newEntity = activeScene.Spawn("New GameObject");
+                newEntity.GetComponent<TransformComponent>().WorldPosition = new Microsoft.Xna.Framework.Vector2(mgWindowControl.Width/2, mgWindowControl.Height/2);
             }
 
             // Completely rebuild the tree with the newly registered entity safely included
@@ -398,18 +400,24 @@ namespace WinFormsApp1
         private void LoadDefaultSandboxScene()
         {
             // FIX: Rebuilt initialization steps to use the exact structural factory API layout
-            GameScene sandbox = new GameScene() { SceneName = "Default Sandbox" };
+            GameScene sandbox = new GameScene() { SceneName = "Main" };
             sandbox.InitializeManagers();
 
-            sandbox.Spawn("Main Camera");
+            var camera = sandbox.Spawn("Main Camera");
+            camera.GetComponent<TransformComponent>().WorldPosition = new Microsoft.Xna.Framework.Vector2(400, 180);
+
             var playerNode = sandbox.Spawn("Player Entity");
+            playerNode.GetComponent<TransformComponent>().WorldPosition = new Microsoft.Xna.Framework.Vector2(200,300);
 
-            var childWeapon = sandbox.Spawn("Equipped Weapon Staff");
-            childWeapon.SetParent(playerNode);
+            var childWeapon = sandbox.Spawn("Equipped Weapon Staff", playerNode);
+            childWeapon.GetComponent<TransformComponent>().LocalPosition = new Microsoft.Xna.Framework.Vector2(45, 15);
 
-            sandbox.Spawn("Static Level Floor");
+
+            var floor = sandbox.Spawn("Static Level Floor");
+            floor.GetComponent<TransformComponent>().WorldPosition = new Microsoft.Xna.Framework.Vector2(300, 80);
 
             EditorContextManager.ActiveLoadedScene = sandbox;
+            SceneNameBox.Text = sandbox.SceneName;
             PopulateSceneHierarchyTree(SceneHierarchyTreeView, sandbox);
         }
 

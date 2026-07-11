@@ -9,12 +9,13 @@
 
 using Microsoft.Xna.Framework.Content.Pipeline;
 using MonoGame.Framework.Content.Pipeline.Builder;
+using Engine.Core.Serialization;
 
 var contentCollectionArgs = new ContentBuilderParams()
 {
     Mode = ContentBuilderMode.Builder,
-    WorkingDirectory = $"{AppContext.BaseDirectory}../../", // path to where your content folder can be located
-    SourceDirectory = "Assets", // Not actually needed as this is the default, but added for reference
+    WorkingDirectory = Path.Combine(EditorContextManager.ContentPath, "Assets"), // path to where your content folder can be located
+    SourceDirectory = Path.Combine(EditorContextManager.ContentPath, "Assets"), // Not actually needed as this is the default, but added for reference
     Platform = TargetPlatform.DesktopGL
 };
 var builder = new Builder();
@@ -32,6 +33,7 @@ return builder.FailedToBuild > 0 ? -1 : 0;
 
 public class Builder : ContentBuilder
 {
+    
     public override IContentCollection GetContentCollection()
     {
         var contentCollection = new ContentCollection();
@@ -58,6 +60,28 @@ public class Builder : ContentBuilder
             }
         );
         */
+
+
+        //start by including everything
+        contentCollection.Include<WildcardRule>("*");
+        
+        //exlcudes
+        contentCollection.Exclude<WildcardRule>("*.git");
+        contentCollection.Exclude<WildcardRule>("*.svn");
+
+        //include copy
+        contentCollection.IncludeCopy<WildcardRule>("*.yml");
+
+        contentCollection.IncludeCopy<WildcardRule>("*.cs");
+
+        contentCollection.IncludeCopy<WildcardRule>("*.lua");
+
+        contentCollection.IncludeCopy<WildcardRule>("*.scene");
+
+        contentCollection.IncludeCopy<WildcardRule>("*.prefab");
+
+        contentCollection.IncludeCopy<WildcardRule>("*.data");
+
 
         return contentCollection;
     }

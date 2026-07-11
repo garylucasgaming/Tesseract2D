@@ -19,4 +19,7 @@
     <PackageReference Include="MonoGame.Tool.FFmpeg" Version="7.0.0.10" />
     <PackageReference Include="MonoGame.Tool.FFprobe" Version="7.0.0.10" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Engine\Engine.Core.csproj" />
+  </ItemGroup>
 </Project>

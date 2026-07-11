@@ -10,6 +10,7 @@ using Engine.Core.Utilities;
 using SharpDX.WIC;
 using Editor;
 using Engine.Editor;
+using static System.Environment;
 
 namespace WinFormsApp1
 {
@@ -79,13 +80,6 @@ namespace WinFormsApp1
             ActiveInspectorPanel = this.PropertiesWindow;
             UpdateEditorTitle();
             InitializePropertiesToolstripEvents();
-
-
-            Log.Print("Print test for color reading");
-            Log.Info("Info test for color reading");
-            Log.Warning("Warning test for color reading");
-            Log.Error("Error test for color reading");
-
         }
 
         private void TextSearchBarControl1_TextChanged(object sender, EventArgs e)
@@ -94,6 +88,26 @@ namespace WinFormsApp1
         }
 
 
+        private void CreateNewScene()
+        {
+            if(!EditorContextManager.IsProjectLoaded)
+            {
+                MessageBox.Show("No Project is Selected. Cannot load or Create new scenes");
+                return;
+            }
+                
+            string sceneName = PromptUserForSceneName();
+            var newScene = new GameScene();
+            newScene.SceneName = sceneName;
+            string sceneFileName = sceneName + ".scene";
+            string scenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Assets", "Scenes", sceneFileName);
+
+            SceneSerializer.SaveScene(newScene, scenePath);
+            LoadScene(newScene, scenePath);
+            ProjectFolderTreeView.Refresh();
+
+           
+        }
 
 
         public static void SetTreeViewTheme(IntPtr treeHandle)
@@ -123,8 +137,9 @@ namespace WinFormsApp1
                 // 1. Build the path where your default scene's  file should live
 
 
-                // TODO   set the context managers project manfiest to the loaded project manifest file.
-                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", "Default Sandbox.yml");
+                // TODO  set the loaded scene to the project manifests last used scene, default to first scene in scene folder if one exists, if one doesn't exist create a base scene file
+
+                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", "Main.scene");
 
                 // 2. CHECK: If the file exists, load it! Otherwise, fall back to generating a clean slate template.
                 if(File.Exists(targetScenePath))
@@ -141,7 +156,7 @@ namespace WinFormsApp1
 
 
 
-                        //toml serialization. 
+                        //yaml serialization. 
                         var loadedScene = new GameScene();
                         loadedScene = SceneSerializer.LoadScene(targetScenePath);
 
@@ -151,6 +166,7 @@ namespace WinFormsApp1
 
                         // Set the context and populate your UI nodes with the genuine saved data
                         EditorContextManager.ActiveLoadedScene = loadedScene;
+                        SceneNameBox.Text = EditorContextManager.ActiveLoadedScene.SceneName;
                         UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
                         PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
                     }
@@ -226,6 +242,27 @@ namespace WinFormsApp1
             return prompt.ShowDialog() == DialogResult.OK ? textBox.Text : string.Empty;
         }
 
+        private string PromptUserForSceneName()
+        {
+            Form prompt = new Form()
+            {
+                Width = 400,
+                Height = 150,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = "Enter Scene Name",
+                StartPosition = FormStartPosition.CenterParent
+            };
+            Label textLabel = new Label() { Left = 20, Top = 20, Text = "Scene Name:", Width = 150 };
+            TextBox textBox = new TextBox() { Left = 20, Top = 45, Width = 340 };
+            Button confirmation = new Button() { Text = "Ok", Left = 280, Width = 80, Top = 80, DialogResult = DialogResult.OK };
+            prompt.Controls.Add(textBox);
+            prompt.Controls.Add(confirmation);
+            prompt.Controls.Add(textLabel);
+            prompt.AcceptButton = confirmation;
+
+            return prompt.ShowDialog() == DialogResult.OK ? textBox.Text : string.Empty;
+        }
+
         // --- Core Global Menu Strip Items ---
         private void onCreateProjectToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -282,22 +319,94 @@ namespace WinFormsApp1
             }
         }
 
+
+
+
+
         private void LoadScene()
         {
+            if(!EditorContextManager.IsProjectLoaded)
+            {
+                MessageBox.Show("No project is loaded. Cannot create or load scenes");
+                return;
+            }
+            using(var folderDialog = new OpenFileDialog())
+            {
+                folderDialog.Multiselect = false;
+                folderDialog.InitialDirectory = Path.Combine(EditorContextManager.ContentPath, "Assets", "Scenes");
+                folderDialog.Filter = "Scene files (*.scene)|*.scene|All files (*.*)|*.*";
+                folderDialog.RestoreDirectory = true;
+
+
+                if(folderDialog.ShowDialog() == DialogResult.OK)
+                {
+                    string targetScenePath = folderDialog.FileName;
+                    UpdateEditorTitle();
+                    try
+                    {
+                        Log.Info($"[Editor UI] Found existing Scene file. Deserializing active layout tree...");
+
+                        //yaml serialization. 
+                        var loadedScene = new GameScene();
+                        loadedScene = SceneSerializer.LoadScene(targetScenePath);
+
+
+                        // Set the context and populate your UI nodes with the genuine saved data
+                        EditorContextManager.ActiveLoadedScene = loadedScene;
+                        SceneNameBox.Text = EditorContextManager.ActiveLoadedScene.SceneName;
+                        UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
+                        PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
+                    }
+                    catch(Exception ex)
+                    {
+                        Log.Error($"[Editor UI Error] Scene file was found but failed to deserialize. Falling back to default layout. Reason: {ex.Message}");
+                        LoadDefaultSandboxScene();
+                    }
+                }
+            }
+        }
+
+        private void LoadScene(GameScene sceneToLoad, string targetScenePath)
+        {
+           
+                  
+            UpdateEditorTitle();
+            try
+            {
+                Log.Info($"[Editor UI] Found existing Scene file. Deserializing active layout tree...");
+
+                //yaml serialization. 
+                var loadedScene = sceneToLoad;
+                loadedScene = SceneSerializer.LoadScene(targetScenePath);
+
+
+                // Set the context and populate your UI nodes with the genuine saved data
+                EditorContextManager.ActiveLoadedScene = loadedScene;
+                SceneNameBox.Text = EditorContextManager.ActiveLoadedScene.SceneName;
+                UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
+                PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
+            }
+            catch(Exception ex)
+            {
+                Log.Error($"[Editor UI Error] Scene file was found but failed to deserialize. Falling back to default layout. Reason: {ex.Message}");
+                LoadDefaultSandboxScene();
+            }
+                
+            
         }
 
         public static void SaveScene()
         {
             if(!EditorContextManager.IsProjectLoaded)
             {
-                Log.Warning("No active project workspace is currently open.");
+                MessageBox.Show("No project is loaded. Cannot save Scene.");
                 return;
             }
 
             if(EditorContextManager.ActiveLoadedScene == null)
             {
-                Log.Warning("[Editor UI] Save aborted: There is no active scene context loaded to persist.");
-                return;
+                MessageBox.Show("No Scene Loaded. Cannot Save Scene.");
+                 return;
             }
 
             try
@@ -305,10 +414,10 @@ namespace WinFormsApp1
                 Log.Info("[Editor UI] Initiating scene hierarchy persistence pipeline...");
 
                 // 1. Build the path matching your project context rules
-                string sceneFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.yml";
+                string sceneFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.scene";
                 //string GISMFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.gism";
                 //string GISMTargetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", GISMFileName);
-                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", sceneFileName);
+                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Assets", "Scenes", sceneFileName);
 
                 // 2. Ensure directories exist safely on disk
                 string directoryCheck = Path.GetDirectoryName(targetScenePath);
@@ -337,17 +446,7 @@ namespace WinFormsApp1
 
         public void onSaveProjectToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if(!EditorContextManager.IsProjectLoaded)
-            {
-                Log.Warning("No active project workspace is currently open.");
-                return;
-            }
-
-            if(EditorContextManager.ActiveLoadedScene == null)
-            {
-                Log.Warning("[Editor UI] Save aborted: There is no active scene context loaded to persist.");
-                return;
-            }
+            
 
             try
             {
@@ -615,10 +714,9 @@ namespace WinFormsApp1
                 try
                 {
                     string targetScenePath = Path.Combine(
-                        EditorContextManager.CurrentProjectRoot,
-                        "Content",
+                        EditorContextManager.AssetsPath,
                         "Scenes",
-                        $"{EditorContextManager.ActiveLoadedScene.SceneName}.toml"
+                        $"{EditorContextManager.ActiveLoadedScene.SceneName}.scene"
                     );
 
                     if(File.Exists(targetScenePath))
@@ -727,6 +825,21 @@ namespace WinFormsApp1
             ConsoleTextBox.SelectionColor = ConsoleTextBox.ForeColor; // Reset
 
             ConsoleTextBox.EndUpdate();
+        }
+
+        private void SceneNameBox_TextChanged(object sender, EventArgs e)
+        {
+            EditorContextManager.ActiveLoadedScene.SceneName = SceneNameBox.Text;
+        }
+
+        private void LoadSceneButton_Click(object sender, EventArgs e)
+        {
+            LoadScene();
+        }
+
+        private void CreateNewSceneButton_Click(object sender, EventArgs e)
+        {
+            CreateNewScene();
         }
     }
 }

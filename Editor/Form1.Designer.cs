@@ -57,12 +57,13 @@
             SceneHierarchyPanel = new GroupBox();
             tabControl3 = new TabControl();
             SceneHierarchyTab = new TabPage();
+            SceneHierarchyTreeView = new TreeView();
             HierarchyToolStrip = new ToolStrip();
             SaveSceneButton = new ToolStripButton();
             LoadSceneButton = new ToolStripButton();
             CreateNewSceneButton = new ToolStripButton();
+            SceneNameBox = new ToolStripTextBox();
             sceneHierarchySearchBar = new Editor.TextSearchBarControl();
-            SceneHierarchyTreeView = new TreeView();
             ManagersTab = new TabPage();
             SystemsTab = new TabPage();
             PropertiesWindow = new GroupBox();
@@ -296,9 +297,9 @@
             // 
             // SceneHierarchyTab
             // 
+            SceneHierarchyTab.Controls.Add(SceneHierarchyTreeView);
             SceneHierarchyTab.Controls.Add(HierarchyToolStrip);
             SceneHierarchyTab.Controls.Add(sceneHierarchySearchBar);
-            SceneHierarchyTab.Controls.Add(SceneHierarchyTreeView);
             SceneHierarchyTab.Location = new Point(4, 24);
             SceneHierarchyTab.Name = "SceneHierarchyTab";
             SceneHierarchyTab.Padding = new Padding(3);
@@ -307,9 +308,22 @@
             SceneHierarchyTab.Text = "Scene";
             SceneHierarchyTab.UseVisualStyleBackColor = true;
             // 
+            // SceneHierarchyTreeView
+            // 
+            SceneHierarchyTreeView.AllowDrop = true;
+            SceneHierarchyTreeView.Dock = DockStyle.Fill;
+            SceneHierarchyTreeView.LabelEdit = true;
+            SceneHierarchyTreeView.Location = new Point(3, 53);
+            SceneHierarchyTreeView.Name = "SceneHierarchyTreeView";
+            SceneHierarchyTreeView.Size = new Size(245, 575);
+            SceneHierarchyTreeView.TabIndex = 1;
+            SceneHierarchyTreeView.ItemDrag += SceneHierarchyTreeView_ItemDrag;
+            SceneHierarchyTreeView.DragDrop += SceneHierarchyTreeView_DragDrop;
+            SceneHierarchyTreeView.DragEnter += SceneHierarchyTreeView_DragEnter;
+            // 
             // HierarchyToolStrip
             // 
-            HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton, CreateNewSceneButton });
+            HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton, CreateNewSceneButton, SceneNameBox });
             HierarchyToolStrip.Location = new Point(3, 28);
             HierarchyToolStrip.Name = "HierarchyToolStrip";
             HierarchyToolStrip.Size = new Size(245, 25);
@@ -334,7 +348,7 @@
             LoadSceneButton.Name = "LoadSceneButton";
             LoadSceneButton.Size = new Size(23, 22);
             LoadSceneButton.Text = "LoadScene";
-            LoadSceneButton.Click += onLoadProjectToolStripMenuItem_Click;
+            LoadSceneButton.Click += LoadSceneButton_Click;
             // 
             // CreateNewSceneButton
             // 
@@ -344,6 +358,13 @@
             CreateNewSceneButton.Name = "CreateNewSceneButton";
             CreateNewSceneButton.Size = new Size(23, 22);
             CreateNewSceneButton.Text = "CreateNewScene";
+            CreateNewSceneButton.Click += CreateNewSceneButton_Click;
+            // 
+            // SceneNameBox
+            // 
+            SceneNameBox.Name = "SceneNameBox";
+            SceneNameBox.Size = new Size(100, 25);
+            SceneNameBox.TextChanged += SceneNameBox_TextChanged;
             // 
             // sceneHierarchySearchBar
             // 
@@ -353,19 +374,6 @@
             sceneHierarchySearchBar.Size = new Size(245, 25);
             sceneHierarchySearchBar.TabIndex = 3;
             sceneHierarchySearchBar.Load += textSearchBarControl1_Load;
-            // 
-            // SceneHierarchyTreeView
-            // 
-            SceneHierarchyTreeView.AllowDrop = true;
-            SceneHierarchyTreeView.Dock = DockStyle.Bottom;
-            SceneHierarchyTreeView.LabelEdit = true;
-            SceneHierarchyTreeView.Location = new Point(3, 80);
-            SceneHierarchyTreeView.Name = "SceneHierarchyTreeView";
-            SceneHierarchyTreeView.Size = new Size(245, 548);
-            SceneHierarchyTreeView.TabIndex = 1;
-            SceneHierarchyTreeView.ItemDrag += SceneHierarchyTreeView_ItemDrag;
-            SceneHierarchyTreeView.DragDrop += SceneHierarchyTreeView_DragDrop;
-            SceneHierarchyTreeView.DragEnter += SceneHierarchyTreeView_DragEnter;
             // 
             // ManagersTab
             // 
@@ -725,5 +733,6 @@
         private Panel panel3;
         private ToolStripProgressBar progressBar;
         private ToolStripTextBox progressBarTextBox;
+        private ToolStripTextBox SceneNameBox;
     }
 }
