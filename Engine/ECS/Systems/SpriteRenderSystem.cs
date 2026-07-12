@@ -64,6 +64,9 @@ namespace Engine.Core.ECS.Systems
 
         }
 
+
+        
+
         public override void Render(HashSet<GameObject> gameObjects, SpriteBatch spriteBatch)
         {
             DrawSprites(spriteBatch);

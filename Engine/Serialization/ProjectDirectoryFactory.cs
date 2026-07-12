@@ -57,7 +57,17 @@ namespace Engine.Core.Serialization
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Prefabs"));
 
 
-               
+                //project content pipeline config
+                var projectConfig = new
+                {
+                    ProjectName = projectName,
+                    AssetDirectory = assetsRoot,
+                    ScriptDirectory = Path.Combine(assetsRoot, "Scripts"),
+                    TargetPlatform = "DesktopGL"
+                };
+
+                string configPath = Path.Combine(projectSettingsRoot, "ProjectConfig.json");
+                File.WriteAllText(configPath, JsonSerializer.Serialize(projectConfig));
                 
 
                 Log.Info($"[Project Factory] Successfully initialized workspace layouts at: {projectRoot}");

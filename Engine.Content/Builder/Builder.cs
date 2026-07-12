@@ -14,8 +14,8 @@ using Engine.Core.Serialization;
 var contentCollectionArgs = new ContentBuilderParams()
 {
     Mode = ContentBuilderMode.Builder,
-    WorkingDirectory = Path.Combine(EditorContextManager.ContentPath, "Assets"), // path to where your content folder can be located
-    SourceDirectory = Path.Combine(EditorContextManager.ContentPath, "Assets"), // Not actually needed as this is the default, but added for reference
+    WorkingDirectory = $"{AppContext.BaseDirectory}../../../", // path to where your content folder can be located
+    SourceDirectory = "Engine.Content/Assets", // Not actually needed as this is the default, but added for reference
     Platform = TargetPlatform.DesktopGL
 };
 var builder = new Builder();
@@ -28,6 +28,7 @@ else
 {
     builder.Run(contentCollectionArgs);
 }
+
 
 return builder.FailedToBuild > 0 ? -1 : 0;
 
@@ -60,7 +61,7 @@ public class Builder : ContentBuilder
             }
         );
         */
-
+        
 
         //start by including everything
         contentCollection.Include<WildcardRule>("*");

@@ -1,15 +1,18 @@
-using System;
-using System.IO;
-using System.Linq;
-using System.Windows.Forms;
-using System.Drawing;
-using System.Runtime.InteropServices;
+using Editor;
+using Engine.Content.Builder;
 using Engine.Core.ECS;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
-using SharpDX.WIC;
-using Editor;
 using Engine.Editor;
+using Microsoft.Xna.Framework.Content.Pipeline;
+using MonoGame.Framework.Content.Pipeline.Builder;
+using SharpDX.WIC;
+using System;
+using System.Drawing;
+using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Windows.Forms;
 using static System.Environment;
 
 namespace WinFormsApp1
@@ -38,6 +41,8 @@ namespace WinFormsApp1
         {
             get; private set;
         }
+
+       
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         private struct SHFILEINFO
@@ -139,7 +144,7 @@ namespace WinFormsApp1
 
                 // TODO  set the loaded scene to the project manifests last used scene, default to first scene in scene folder if one exists, if one doesn't exist create a base scene file
 
-                string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", "Main.scene");
+                string targetScenePath = Path.Combine(EditorContextManager.ScenesPath, "Main.scene");
 
                 // 2. CHECK: If the file exists, load it! Otherwise, fall back to generating a clean slate template.
                 if(File.Exists(targetScenePath))
@@ -167,8 +172,10 @@ namespace WinFormsApp1
                         // Set the context and populate your UI nodes with the genuine saved data
                         EditorContextManager.ActiveLoadedScene = loadedScene;
                         SceneNameBox.Text = EditorContextManager.ActiveLoadedScene.SceneName;
+                        RunContentBuilder();
                         UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
                         PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
+                        
                     }
                     catch(Exception ex)
                     {
@@ -184,6 +191,45 @@ namespace WinFormsApp1
             }
             PopulateProjectExplorerTree(ProjectFolderTreeView);
         }
+
+
+        private void RunContentBuilder()
+        {
+            Log.Info("[Content Builder] Attempting to run content builder");
+            Task.Run(() =>
+            {
+                try
+                {
+                    Log.Info("[Content Builder] Running Content Builder");
+                    var builder = new DynamicBuilder();
+                    builder.Logger = new  EngineContentLogger();
+                    var args = new ContentBuilderParams
+                    {
+                        Mode = ContentBuilderMode.Builder,
+                        WorkingDirectory = EditorContextManager.AssetsPath,
+                        SourceDirectory = EditorContextManager.AssetsPath,
+                        OutputDirectory = Path.Combine(EditorContextManager.ContentPath, "Bin"),
+                        Platform = TargetPlatform.DesktopGL
+                        
+                    };
+
+                    builder.Run(args);
+
+                    // Invoke back to the UI thread if you need to update a status bar or "Ready" icon
+                    this.Invoke(new Action(() => {
+                        Log.Info("[Content Builder] Content build complete.");
+                        // Update UI status here
+                        ProjectFolderTreeView.Refresh();
+                    }));
+                }
+                catch(Exception ex)
+                {
+                    Log.Error($"[Content Build Error] {ex.Message}");
+                }
+            });
+
+        }
+        
 
         private void UpdateSceneHierarchyTitle(string sceneName)
         {

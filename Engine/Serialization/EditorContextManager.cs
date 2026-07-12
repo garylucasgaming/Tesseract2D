@@ -30,10 +30,25 @@ namespace Engine.Core.Serialization
         public static bool IsProjectLoaded => !string.IsNullOrEmpty(CurrentProjectRoot);
 
         // --- Standard Subdirectory Quick-Pointers ---
-        public static string AssetsPath => GetProjectSubFolder("Assets");
-        public static string ContentPath => GetProjectSubFolder("Content");
-        public static string ProjectSettingsPath => GetProjectSubFolder("ProjectSettings");
-        public static string LibraryPath => GetProjectSubFolder("Library");
+        
+        public static string ContentPath => GetPath("Content");
+
+        public static string AssetsPath => GetPath("Content", "Assets");
+        public static string ProjectSettingsPath => GetPath("ProjectSettings");
+        public static string LibraryPath => GetPath("Library");
+
+        public static string ScenesPath => GetPath(AssetsPath, "Scenes");
+        public static string ScriptsPath => GetPath(AssetsPath, "Scripts");
+
+        public static string PrefabsPath => GetPath(AssetsPath, "Prefabs");
+
+        public static string AudioPath => GetPath(AssetsPath, "Audio");
+
+        public static string DatabasePath => GetPath(AssetsPath, "Databases");
+
+        public static string MaterialsPath => GetPath(AssetsPath, "Materials");
+
+        public static string TexturesPath => GetPath(AssetsPath, "Textures");
 
         /// Gets or sets the live, in-memory runtime scene currently active in the editor workspace.
         /// </summary>
@@ -105,11 +120,20 @@ namespace Engine.Core.Serialization
             return absolutePath; // Return original if it doesn't live inside the project layout
         }
 
-        private static string GetProjectSubFolder(string folderName)
+        public static string GetPath(params string[] segments)
         {
             if(!IsProjectLoaded)
                 return string.Empty;
-            return Path.Combine(CurrentProjectRoot!, folderName);
+
+            // Start with the root
+            var path = CurrentProjectRoot!;
+
+            // Build the segments
+            foreach(var segment in segments)
+            {
+                path = Path.Combine(path, segment);
+            }
+            return path;
         }
     }
 }
