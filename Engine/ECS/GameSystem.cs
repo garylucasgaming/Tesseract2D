@@ -17,7 +17,7 @@ namespace Engine.Core.ECS
 
         public bool UsedInEditor { get; set; } = false;
 
-        public virtual SystemUpdatePolicy UpdatePolicy => SystemUpdatePolicy.FrameUpdate;
+        public SystemUpdatePolicy UpdatePolicy = SystemUpdatePolicy.FrameUpdate;
 
 
         public float UpdateInterval = 0.0f; // For FixedUpdate and EntityUpdate policies
@@ -29,7 +29,7 @@ namespace Engine.Core.ECS
 
        public bool shouldUpdate { get; set; } = true; // Internal flag to determine if the system should update this frame
 
-        public virtual GameScene? ContextScene { get; set; } = null;
+        public GameScene? ContextScene { get; set; }
 
         // Default to null for global systems that don't belong to a specific component
         public abstract IComponentQuery RequiredComponents{ get; set; }

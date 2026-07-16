@@ -216,11 +216,19 @@ namespace Engine.Core.ECS
 
         public T? GetComponent<T>() where T : GameComponent
         {
+            Type targetType = typeof(T);
             // return Components.OfType<T>().FirstOrDefault();
-            if(Components.TryGetValue(typeof(T), out var component))
+            if(Components.TryGetValue(targetType, out var exactComponent))
             {
-                return (T) component;
+                return exactComponent as T;
+            }
 
+            foreach(var component in Components.Values)
+            {
+                if(component is T polymorphicComponent)
+                {
+                    return polymorphicComponent;
+                }
             }
             return null;
         }

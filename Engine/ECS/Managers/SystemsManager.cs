@@ -5,7 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Engine.Core.ECS
+namespace Engine.Core.ECS.Managers
 {
     public class SystemsManager
     {
@@ -20,6 +20,8 @@ namespace Engine.Core.ECS
         public  TransformSystem transformSystem { get; private set; } = null!;
         public  SpriteRenderSystem spriteRenderSystem { get; private set; } = null!;
 
+        public PhysicsSystem physicsSystem { get; private set; } = null!;
+
         public SystemsManager()
         {
             // Automatically initialize a bucket list for every single policy enum type
@@ -30,13 +32,19 @@ namespace Engine.Core.ECS
 
             if(transformSystem == null)
             {
-                transformSystem = new TransformSystem();
+                transformSystem = new TransformSystem() { ContextScene = ContextScene};
                 AddSystem(transformSystem);
             }
             if(spriteRenderSystem == null)
             {
-                spriteRenderSystem = new SpriteRenderSystem();
+                spriteRenderSystem = new SpriteRenderSystem() { ContextScene = ContextScene };
                 AddSystem(spriteRenderSystem);
+            }
+
+            if(physicsSystem == null)
+            {
+                physicsSystem = new PhysicsSystem() { ContextScene = ContextScene };
+                AddSystem(physicsSystem);
             }
         }
 

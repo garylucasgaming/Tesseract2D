@@ -1,5 +1,4 @@
-﻿
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using MonoGame.Forms.NET.Controls;
 using Engine.Core.ECS;
@@ -12,6 +11,7 @@ using Engine.Core.Runtime;
 using Engine.Core.Utilities;
 using Engine.Core.ECS.Components;
 using Engine.Core.ECS.Systems;
+using System;
 
 namespace Editor
 {
@@ -23,55 +23,75 @@ namespace Editor
         private float deltaTime;
         private GameScene _activeScene;
 
+        // --- Timestep Accumulator Variables ---
+        private const float TargetTickTime = 1f / 60f; // 60 Ticks per second (~0.01667s)
+        private float _physicsAccumulator = 0.0f;
+
         public bool SimulationRunning { get; set; } = false;
         public bool SimulationPaused { get; set; } = false;
 
         protected override void Initialize()
         {
-            // Set up our centralized native asset matrices
             GizmoRenderer.Initialize(Editor.GraphicsDevice);
 
-            // Spin up our single responsibility services
             _inputManager = new InputManager();
             _inputService = new EditorInputService(_inputManager);
             _renderService = new EditorRenderService();
 
             _inputService.OnTransformModified = () =>
             {
-                // Find whichever entity is currently selected in the tree view
-                if(Form1.ActiveHierarchyTreeView?.SelectedNode?.Tag is GameObject selectedGo)
-                {
-                    // Get its live transform instance
-                    foreach(var kvp in selectedGo.Components)
-                    {
-                        if(kvp.Key.Name == "TransformComponent")
-                        {
-                            // Direct specific card refresh!
-                            Form1.RefreshComponentInspector(kvp.Value);
-                            break;
-                        }
-                    }
-                }
+                RefreshInspector("TransformComponent");
+            };
+
+            // Handle Collider modifications (BoxCollider, SphereCollider, etc.)
+            _inputService.OnColliderModified = () =>
+            {
+                RefreshInspector("Collider");
             };
         }
-
         protected override void Update(GameTime gameTime)
         {
-            //base deltatime
             deltaTime = (float) gameTime.ElapsedGameTime.Ticks / TimeSpan.TicksPerSecond;
-           
-            // 1. Tick the hardware state sensors to fire input events!
+
             _inputManager.Update();
             _activeScene = EditorContextManager.ActiveLoadedScene;
+           
+
             if(_activeScene != null)
             {
+                
                 bool playModeActive = SimulationRunning && !SimulationPaused;
-                _activeScene.Update(deltaTime);
+                
                 GameObject selectedGo = GetSelectedGameObject();
-
-                // 2. Feed the active selection contexts down into the service pipeline
-                // This replaces ProcessInputs() completely since events handle the heavy lifting now.
+                object selectedComponent = Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance;
                 _inputService.SetContext(_activeScene, selectedGo);
+                _inputService.Update();
+                // 1. Cap deltaTime to 0.25s (prevents massive physics spikes/crashes when dragging window/debugging)
+                float clampedDelta = Math.Min(deltaTime, 0.25f);
+
+                // 2. Only tick the rigid simulation systems (Physics) when play mode is active
+                if(playModeActive)
+                {
+                    _physicsAccumulator += clampedDelta;
+                    while(_physicsAccumulator >= TargetTickTime)
+                    {
+                        // Run TickUpdate (including your PhysicsSystem)
+                        _activeScene.TickUpdate(TargetTickTime, playModeActive);
+                        _physicsAccumulator -= TargetTickTime;
+                    }
+                }
+                else
+                {
+                    // Clear the buffer if simulation is not active so it doesn't 
+                    // "catch up" instantly when you resume/start the simulation.
+                    _physicsAccumulator = 0.0f;
+                }
+
+                // 3. Update all standard systems (FrameUpdate & FixedUpdate)
+                // Note: Ensure your Scene's Update handles passing this parameter down to Systems.Update()
+                _activeScene.Update(clampedDelta, playModeActive);
+
+               
             }
         }
 
@@ -87,12 +107,11 @@ namespace Editor
 
             Editor.spriteBatch.Begin();
 
-            // Delegate completely to your dedicated rendering service module
-            _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo);
+            _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo,  Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance, _inputService.CurrentMode);
             _activeScene.Systems.Render(Editor.spriteBatch);
+
             Editor.spriteBatch.End();
         }
-
 
         public void StartSimulation()
         {
@@ -100,9 +119,11 @@ namespace Editor
             {
                 SimulationPaused = false;
                 Log.Info("[Simulation] Simulation unpaused.");
-            } else if(!SimulationRunning)
+            }
+            else if(!SimulationRunning)
             {
-               
+                // Reset the accumulator to fresh 0.0s before the simulation starts
+                _physicsAccumulator = 0.0f;
                 SimulationRunning = true;
                 SimulationPaused = false;
                 Log.Info("[Simulation] Simulation started.");
@@ -124,22 +145,10 @@ namespace Editor
             {
                 SimulationRunning = false;
                 SimulationPaused = false;
+                _physicsAccumulator = 0.0f; // Flush buffer
                 Log.Info("[Simulation] Simulation stopped.");
-                
             }
         }
-        
-
-        public void UpdateSimulationSystems(float deltaTime)
-        {
-            // Determine if we are running standard gameplay loop systems right now
-            bool playModeActive = SimulationRunning && !SimulationPaused;
-
-          
-        }
-
-
-
 
         private GameObject GetSelectedGameObject()
         {
@@ -149,5 +158,32 @@ namespace Editor
             }
             return null;
         }
+
+        private void RefreshInspector(string fallbackComponentTypeName)
+        {
+            // 1. Try to refresh the active component card to keep focus/selection
+            object selectedComponent = Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance;
+            if(selectedComponent != null)
+            {
+                Form1.RefreshComponentInspector(selectedComponent);
+                return;
+            }
+
+            // 2. Fallback: If no card is active, find the component on the selected GameObject
+            if(Form1.ActiveHierarchyTreeView?.SelectedNode?.Tag is GameObject selectedGo)
+            {
+                foreach(var kvp in selectedGo.Components)
+                {
+                    // Using Contains allows "Collider" to match BoxColliderComponent, SphereColliderComponent, etc.
+                    if(kvp.Key.Name.Contains(fallbackComponentTypeName))
+                    {
+                        Form1.RefreshComponentInspector(kvp.Value);
+                        break;
+                    }
+                }
+            }
+        }
+
+
     }
 }

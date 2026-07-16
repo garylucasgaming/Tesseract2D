@@ -11,8 +11,6 @@ namespace Engine.Core.ECS.Systems
         {
             get; set;
         }
-        public override SystemUpdatePolicy UpdatePolicy => SystemUpdatePolicy.FrameUpdate;
-
         private readonly HashSet<TransformComponent> _hookedComponents = new HashSet<TransformComponent>();
 
         // 👇 FIX: Track specific components actively being synced to allow deep hierarchy propagation
@@ -22,6 +20,7 @@ namespace Engine.Core.ECS.Systems
         {
             RequiredComponents = Query.Has<TransformComponent>();
             UsedInEditor = true;
+            UpdatePolicy = SystemUpdatePolicy.FrameUpdate;
         }
 
         public override void Update(HashSet<GameObject> gameObjects, float deltaTime)

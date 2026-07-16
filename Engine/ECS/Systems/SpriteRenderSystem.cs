@@ -21,8 +21,7 @@ namespace Engine.Core.ECS.Systems
 
         private bool _needsSorting = true;
 
-        public override SystemUpdatePolicy UpdatePolicy => SystemUpdatePolicy.FrameUpdate;
-
+        
         private List<SpriteComponent> _hookedComponents = new List<SpriteComponent>();
 
       
@@ -32,6 +31,7 @@ namespace Engine.Core.ECS.Systems
 
             RequiredComponents = Query.Has<SpriteComponent>().And<TransformComponent>();
             UsedInEditor = true;
+            UpdatePolicy = SystemUpdatePolicy.FrameUpdate;
 
         }
 

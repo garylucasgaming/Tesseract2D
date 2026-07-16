@@ -164,7 +164,7 @@ namespace WinFormsApp1
                         //yaml serialization. 
                         var loadedScene = new GameScene();
                         loadedScene = SceneSerializer.LoadScene(targetScenePath);
-
+                        loadedScene.resetContextSceneInManagers();
                         //gism serialization
                         //GameScene loadedScene = GISMSceneSerializer.LoadScene(targetScenePath);
 
@@ -591,31 +591,92 @@ namespace WinFormsApp1
                 ActiveInspectorPanel.Controls.Add(flowLayout);
             }
 
+            int expectedCount = 1; // Start at 1 for the root GameObject Properties card
+            if(targetGo != null)
+            {
+                expectedCount += targetGo.Components.Count;
+            }
+
+            // Check if the panel is already showing this exact GameObject
+            if(flowLayout.Controls.Count == expectedCount && flowLayout.Controls.Count > 0 && flowLayout.Controls[0].Tag == targetGo)
+            {
+                RefreshAllPropertyGrids(flowLayout);
+                ActiveInspectorPanel.ResumeLayout(true);
+                return;
+            }
+
+            // --- Destructive Rebuild Area (Only hit on additions, removals, or shifting targets) ---
             flowLayout.SuspendLayout();
+
+            // 1. CAPTURE SCROLL POSITION (AutoScrollPosition returns negative values, we normalize it)
+            int previousScrollY = Math.Abs(flowLayout.AutoScrollPosition.Y);
+
+            // 2. CAPTURE SELECTION
+            object? previouslySelected = Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance;
+
+            // 3. IF TARGET CHANGED: Wipe selection completely. If same target (component added/removed), keep reference.
+            bool targetChanged = flowLayout.Controls.Count > 0 && flowLayout.Controls[0].Tag != targetGo;
+            if(targetChanged)
+            {
+                Engine.Editor.WinFormsApp1.ComponentCardFactory.ClearSelection();
+                previouslySelected = null;
+            }
+
             flowLayout.Controls.Clear();
-            Engine.Editor.WinFormsApp1.ComponentCardFactory.ClearSelection();
 
             if(targetGo != null)
             {
-                // 💡 FIX: Draw the root GameObject's card at the very top first!
-                Panel goCard = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard("GameObject Properties", targetGo, flowLayout.Width);
+                // Draw GameObject properties at the top
+                Panel goCard = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard(
+                    "GameObject Properties",
+                    targetGo,
+                    flowLayout.Width,
+                    previouslySelected
+                );
+                goCard.Tag = targetGo;
                 flowLayout.Controls.Add(goCard);
 
-                // Then loop through the ECS dictionary and build the rest of the component cards down the column
+                // Populate components
                 foreach(var kvp in targetGo.Components)
                 {
                     string name = kvp.Key.Name;
                     object instance = kvp.Value;
 
-                    Panel card = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard(name, instance, flowLayout.Width);
+                    // Pass the previous selection reference down to restore highlights
+                    Panel card = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard(
+                        name,
+                        instance,
+                        flowLayout.Width,
+                        previouslySelected
+                    );
                     flowLayout.Controls.Add(card);
                 }
             }
 
             flowLayout.ResumeLayout(true);
+
+            // 4. RESTORE SCROLL POSITION
+            flowLayout.AutoScrollPosition = new Point(0, previousScrollY);
+
             ActiveInspectorPanel.ResumeLayout(true);
         }
-
+        /// <summary>
+        /// Recursively finds and refreshes all PropertyGrid controls inside the inspector's panel.
+        /// </summary>
+        private static void RefreshAllPropertyGrids(Control parent)
+        {
+            foreach(Control child in parent.Controls)
+            {
+                if(child is PropertyGrid grid)
+                {
+                    grid.Refresh();
+                }
+                if(child.HasChildren)
+                {
+                    RefreshAllPropertyGrids(child);
+                }
+            }
+        }
         // Simple context helper mapping your Hierarchy tree to live memory references
         private GameObject? GetSelectedGameObjectFromHierarchy()
         {

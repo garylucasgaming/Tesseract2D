@@ -1,12 +1,12 @@
-﻿
-using Engine.Core.ECS.Components;
+﻿using Engine.Core.ECS.Components;
+using Engine.Core.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Engine.Core.ECS
+namespace Engine.Core.ECS.Managers
 {
     public class EntityManager
     {
@@ -63,6 +63,14 @@ namespace Engine.Core.ECS
             if(_entities.ContainsKey(entity.Id))
             {
                 entity.AddComponent<T>();
+                if(typeof(T) == typeof(PhysicsBodyComponent))
+                {
+                    Log.Warning("[Component]  Make sure to add a collider to the physics body object");
+                }
+                else if(typeof(T) == typeof(ColliderComponent))
+                {
+                    Log.Warning("[Component]  Make sure to add a physics body component to the collider object");
+                }
             }
 
 

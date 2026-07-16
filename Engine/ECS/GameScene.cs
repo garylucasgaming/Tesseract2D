@@ -1,4 +1,5 @@
 ﻿using Engine.Core.ECS.Components;
+using Engine.Core.ECS.Managers;
 using Engine.Core.Utilities;
 using System;
 using System.Collections.Generic;
@@ -23,6 +24,7 @@ namespace Engine.Core.ECS
 
         public ManagersManager Managers { get; private set; } = null!;
 
+        public PhysicsManager Physics { get; private set; }
 
         public Guid Id { get; set; } = Guid.NewGuid();
        
@@ -37,6 +39,7 @@ namespace Engine.Core.ECS
         {
             Entities = new EntityManager() { ContextScene = this };
             Systems = new SystemsManager() { ContextScene = this};
+            Physics = new PhysicsManager() { ContextScene = this };
             Managers = new ManagersManager() { ContextScene = this };
             
             InitializeManagerEvents();
@@ -144,13 +147,29 @@ namespace Engine.Core.ECS
             Systems.Update(deltaTime, playModeActive);
         }
 
-        public void TickUpdate(float fixeddeltaTime)
+        public void TickUpdate(float fixeddeltaTime, bool playModeActive = false)
         {
-           // Systems.TickUpdate(fixeddeltaTime);
+           Systems.TickUpdate(fixeddeltaTime, playModeActive);
         }
 
-            #endregion
+        #endregion
+
+        public void resetContextSceneInManagers()
+        {
+            Entities.ContextScene = this;
+            Systems.ContextScene = this;
+            Physics.ContextScene = this;
+            Managers.ContextScene = this;
+
+            foreach(var system in Systems._systemEntityCache.Keys)
+            {
+                system.ContextScene = this;
+            }
         }
+    }
+
+
+    
 
 }
 

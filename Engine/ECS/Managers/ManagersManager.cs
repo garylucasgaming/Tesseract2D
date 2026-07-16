@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Engine.Core.ECS
+namespace Engine.Core.ECS.Managers
 {
     public class ManagersManager
     {

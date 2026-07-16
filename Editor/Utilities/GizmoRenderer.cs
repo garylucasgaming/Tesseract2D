@@ -27,6 +27,23 @@ namespace Engine.Editor.Utilities
             int offset = size / 2;
             spriteBatch.Draw(_pixelTexture, new Rectangle((int) position.X - offset, (int) position.Y - offset, size, size), color);
         }
+        public static void DrawScaleGizmo(SpriteBatch spriteBatch, Vector2 position, float handleLength = 50f, int thickness = 3)
+        {
+            // 1. Draw X-Axis (Red scale line)
+            DrawLine(spriteBatch, position, position + new Vector2(handleLength, 0), Color.Red, thickness);
+
+            // 2. Draw Y-Axis (Green scale line)
+            DrawLine(spriteBatch, position, position + new Vector2(0, handleLength), Color.Green, thickness);
+
+            // 3. Draw Diagonal Uniform Scale Handle (Yellow scale line)
+            Vector2 diagonalOffset = new Vector2(handleLength * 0.7f, handleLength * 0.7f);
+            DrawLine(spriteBatch, position, position + diagonalOffset, Color.Yellow, thickness);
+
+            // Render square block endpoints to signify scale adjustments
+            DrawPoint(spriteBatch, position + new Vector2(handleLength, 0), Color.Red, 8);
+            DrawPoint(spriteBatch, position + new Vector2(0, handleLength), Color.Green, 8);
+            DrawPoint(spriteBatch, position + diagonalOffset, Color.Yellow, 8); // Corner/Uniform Box
+        }
 
         /// <summary>
         /// Draws a procedural wireframe circle outline.
