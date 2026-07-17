@@ -5,18 +5,11 @@ using nkast.Aether.Physics2D.Collision.Shapes;
 using nkast.Aether.Physics2D.Dynamics;
 using nkast.Aether.Physics2D.Dynamics.Contacts;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Engine.Core.ECS
 {
-
-
-
-    public class ColliderComponent : GameComponent
+    public abstract class ColliderComponent : GameComponent
     {
         [Browsable(false)]
         public Fixture collider;
@@ -27,7 +20,6 @@ namespace Engine.Core.ECS
         [Browsable(false)]
         public Body physicsBody;
 
-        // Backing fields for Editor / Serialization
         private Category _collisionCategory = Category.All;
         private Category _collisionMask = Category.All;
         private bool _isTrigger = false;
@@ -35,10 +27,13 @@ namespace Engine.Core.ECS
         private float _restitution = 0.0f;
         private float _density = 1.0f;
         private Vector2 _offset;
-        public Vector2 Offset {
+
+        public Vector2 Offset
+        {
             get => _offset;
             set => _offset = value;
         }
+
         public Category collisionCategory
         {
             get => collider != null ? collider.CollisionCategories : _collisionCategory;
@@ -96,7 +91,8 @@ namespace Engine.Core.ECS
 
         public float Density
         {
-            get => _density; set => _density = value;
+            get => _density;
+            set => _density = value;
         }
 
         public Action<GameObject>? OnCollisionEnterEvent;
@@ -104,26 +100,35 @@ namespace Engine.Core.ECS
         public Action<GameObject>? BeforeCollisionEvent;
         public Action<GameObject>? AfterCollisionEvent;
 
-        // Callbacks stay the same...
+        /// <summary>
+        /// Deferred shape-creation logic implemented by box, circle, or polygon sub-types.
+        /// </summary>
+        public abstract void CreateShape(float pixelsPerMeter);
 
-        public void AttachToBody(PhysicsBodyComponent bodyComp)
+        public void Initialize(Body body, float pixelsPerMeter)
         {
-            if(shape == null)
-                return; // Prevent attaching if derived collider hasn't set its shape yet
-            physicsBody = bodyComp.physicsBody;
-            collider = physicsBody.CreateFixture(shape);
-            
+            physicsBody = body;
 
-            // Apply settings configured in Editor
+            // 1. Compile the physical shape with the active scene's PPM
+            CreateShape(pixelsPerMeter);
+
+            if(shape == null)
+            {
+                Log.Error($"[Physics Error] Shape failed to generate for collider on '{gameObject?.Name}'");
+                return;
+            }
+
+            // 2. 💡 FIXED: Assign the newly created fixture back to our tracker!
+            collider = body.CreateFixture(shape);
+
+            // 3. Apply settings configured in Editor
             collider.CollisionCategories = _collisionCategory;
             collider.CollidesWith = _collisionMask;
-            
             collider.IsSensor = _isTrigger;
-
             collider.Friction = _friction;
             collider.Restitution = _restitution;
 
-            // Hook up events
+            // 4. Hook up events safely now that collider is assigned
             collider.BeforeCollision += BeforeCollision;
             collider.AfterCollision += AfterCollision;
             collider.OnCollision += OnCollisionEnter;
@@ -137,7 +142,7 @@ namespace Engine.Core.ECS
 
         private bool OnCollisionEnter(Fixture sender, Fixture other, Contact contact)
         {
-            Log.Info("collision info:" + sender.Body.FixtureList.First().Shape + " " + other.Body.Position);
+            Log.Info($"[Collision Event] {gameObject.Name} collided with body at {other.Body.Position*64}");
             OnCollisionEnterEvent?.Invoke(gameObject);
             return true;
         }
@@ -145,40 +150,12 @@ namespace Engine.Core.ECS
         private void AfterCollision(Fixture sender, Fixture other, Contact contact, ContactVelocityConstraint impulse)
         {
             AfterCollisionEvent?.Invoke(gameObject);
-            
         }
 
         private bool BeforeCollision(Fixture sender, Fixture other)
         {
             BeforeCollisionEvent?.Invoke(gameObject);
             return true;
-        }
-
-        protected void RebuildFixture()
-        {
-            // Only rebuild if we are already attached to an active physics body
-            if(physicsBody != null && collider != null)
-            {
-                // 1. Remove the old fixture from the active Aether body
-                physicsBody.Remove(collider);
-
-                // 2. Create the new fixture using the updated shape
-                collider = physicsBody.CreateFixture(shape);
-
-                // 3. Re-apply the current settings (restoring categories, triggers, etc.)
-                collider.CollisionCategories = collisionCategory;
-                collider.CollidesWith = collisionMask;
-                collider.IsSensor = isTrigger;
-                collider.Friction = friction;
-                collider.Restitution = restitution;
-                Density = Density;
-
-                // 4. Re-hook the collision event delegates
-                collider.BeforeCollision += BeforeCollision;
-                collider.AfterCollision += AfterCollision;
-                collider.OnCollision += OnCollisionEnter;
-                collider.OnSeparation += OnCollisionExit;
-            }
         }
     }
 }

@@ -16,6 +16,7 @@ namespace Engine.Core.ECS.Components
         [Browsable(true)]
         public string ScriptTypeName { get; set; }
         [Browsable(false)]
+
         public string ScriptFilePath { get; set; }
        
 

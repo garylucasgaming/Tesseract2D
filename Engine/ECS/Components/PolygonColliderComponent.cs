@@ -1,28 +1,34 @@
 ﻿using Microsoft.Xna.Framework;
 using nkast.Aether.Physics2D.Collision.Shapes;
 using nkast.Aether.Physics2D.Common;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Engine.Core.ECS.Components
 {
     public class PolygonColliderComponent : ColliderComponent
     {
+        private List<Vector2> _vertices = new List<Vector2>();
 
-        private List<Vector2> _vertices;
         public List<Vector2> Vertices
         {
             get => _vertices;
-            set
+            set => _vertices = value;
+        }
+
+        public override void CreateShape(float pixelsPerMeter)
+        {
+            if(_vertices == null || _vertices.Count == 0)
+                return;
+
+            float safePpm = pixelsPerMeter <= 0f ? 64f : pixelsPerMeter;
+
+            var scaledVertices = new Vertices(_vertices.Count);
+            foreach(var vertex in _vertices)
             {
-                _vertices = value;
-                // Create the polygon shape from the list of vertices
-                this.shape = new PolygonShape(new Vertices(_vertices), Density);
-                RebuildFixture();
+                scaledVertices.Add(vertex / safePpm);
             }
+
+            this.shape = new PolygonShape(scaledVertices, Density);
         }
     }
 }

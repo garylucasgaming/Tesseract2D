@@ -171,8 +171,6 @@ namespace Engine.Editor.MGWindow.Services
                     Vector2 baseCorner = transform.RenderTopLeft;
 
 
-                    Log.Info(CurrentMode.ToString());
-
                     // --- 1. TRANSLATE MODE INTERACTIONS ---
                     if(CurrentMode == GizmoMode.Translate)
                     {
@@ -330,16 +328,10 @@ namespace Engine.Editor.MGWindow.Services
                 return;
 
             var transform = _selectedGo.GetComponent<TransformComponent>();
-            var collider = _selectedGo.GetComponent<ColliderComponent>();
-            
             if(transform == null)
-                return;
-            if(collider == null)
                 return;
 
             Vector2 totalMouseDelta = currentMousePos - _dragStartMousePos;
-
-         
 
             switch(_activeAxis)
             {
@@ -372,7 +364,6 @@ namespace Engine.Editor.MGWindow.Services
                     break;
 
                 case SelectedAxis.ScaleCorner:
-                    // Uniform diagonal scale math
                     float scaleDelta = (totalMouseDelta.X + totalMouseDelta.Y) / 20f;
                     transform.ScaleX = Math.Max(1f, (float) Math.Round(_initialEntityScale.X + scaleDelta));
                     transform.ScaleY = Math.Max(1f, (float) Math.Round(_initialEntityScale.Y + scaleDelta));
@@ -396,59 +387,70 @@ namespace Engine.Editor.MGWindow.Services
                     OnTransformModified?.Invoke();
                     break;
 
-                // --- Collider Drag Operations ---
+                // --- Safe Collider Drag Operations (Null checked inside!) ---
                 case SelectedAxis.ColliderOffset:
-                    collider.Offset = _initialColliderOffset + (totalMouseDelta);
-                    OnColliderModified?.Invoke();
-                    break;
+                {
+                    var collider = _selectedGo.GetComponent<ColliderComponent>();
+                    if(collider != null)
+                    {
+                        collider.Offset = _initialColliderOffset + totalMouseDelta;
+                        OnColliderModified?.Invoke();
+                    }
+                }
+                break;
 
                 case SelectedAxis.ColliderBoxWidth:
-                    if(collider is BoxColliderComponent)
+                {
+                    var collider = _selectedGo.GetComponent<ColliderComponent>();
+                    if(collider is BoxColliderComponent boxW)
                     {
                         float newWidth = Math.Max(4f, _initialColliderSize.X + (totalMouseDelta.X * 2f));
-                        var boxW = collider as BoxColliderComponent;
                         boxW.Size = new Vector2((int) Math.Round(newWidth), boxW.Size.Y);
                         OnColliderModified?.Invoke();
                     }
-
-                    break;
+                }
+                break;
 
                 case SelectedAxis.ColliderBoxHeight:
-                    if(collider is BoxColliderComponent)
+                {
+                    var collider = _selectedGo.GetComponent<ColliderComponent>();
+                    if(collider is BoxColliderComponent boxH)
                     {
                         float newHeight = Math.Max(4f, _initialColliderSize.Y + (totalMouseDelta.Y * 2f));
-                        var boxH = collider as BoxColliderComponent;
                         boxH.Size = new Vector2(boxH.Size.X, (int) Math.Round(newHeight));
                         OnColliderModified?.Invoke();
                     }
-                    break;
+                }
+                break;
 
                 case SelectedAxis.ColliderCircleRadius:
-                    if(collider is CircleColliderComponent)
+                {
+                    var collider = _selectedGo.GetComponent<ColliderComponent>();
+                    if(collider is CircleColliderComponent circleR)
                     {
                         float newRadius = Math.Max(2f, _initialColliderRadius + totalMouseDelta.X);
-                        var circleR = collider as CircleColliderComponent;
                         circleR.Radius = (float) Math.Round(newRadius);
                         OnColliderModified?.Invoke();
                     }
-                    break;
+                }
+                break;
 
                 case SelectedAxis.ColliderPolyVertex:
-                    if(collider is PolygonColliderComponent && _selectedVertexIndex >= 0)
+                {
+                    var collider = _selectedGo.GetComponent<ColliderComponent>();
+                    if(collider is PolygonColliderComponent polyV && _selectedVertexIndex >= 0)
                     {
-                        var polyV = collider as PolygonColliderComponent;
                         polyV.Vertices[_selectedVertexIndex] = _initialVertexPos + totalMouseDelta;
                         OnColliderModified?.Invoke();
                     }
+                }
+                break;
+
+                default:
+                    Log.Warning("no axis selected");
                     break;
-                default: Log.Warning("no axis selected"); break;
             }
-
-          
-
-           
         }
-
         private void HandleMouseLeftUp(Vector2 mousePos)
         {
             if(_isDragging)

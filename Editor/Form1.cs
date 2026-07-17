@@ -6,6 +6,7 @@ using Engine.Core.Utilities;
 using Engine.Editor;
 using Microsoft.Xna.Framework.Content.Pipeline;
 using MonoGame.Framework.Content.Pipeline.Builder;
+using SharpDX.MediaFoundation;
 using SharpDX.WIC;
 using System;
 using System.Drawing;
@@ -42,7 +43,24 @@ namespace WinFormsApp1
             get; private set;
         }
 
-       
+        private static bool _needsToBeSaved = false;
+        private bool _isSuprressingDirtyFlag = false;
+
+        public static bool NeedsToBeSaved
+        {
+            get => _needsToBeSaved;
+            set
+            {
+                if(_needsToBeSaved != value)
+                {
+                    _needsToBeSaved = value;
+
+                    var mainForm = Application.OpenForms.OfType<Form1>().FirstOrDefault();
+                    mainForm?.UpdateSceneTextBox(EditorContextManager.ActiveLoadedScene.SceneName);
+                    mainForm?.UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
+                }
+            }
+        }
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
         private struct SHFILEINFO
@@ -122,15 +140,38 @@ namespace WinFormsApp1
 
         private void UpdateEditorTitle()
         {
+            string dirtyIndicator = NeedsToBeSaved ? " *" : "";
             if(EditorContextManager.IsProjectLoaded)
             {
                 string projectName = Path.GetFileName(EditorContextManager.CurrentProjectRoot);
-                this.Text = $"Custom 2D Game Engine Editor - Project: [{projectName}] ({EditorContextManager.CurrentProjectRoot})";
+                this.Text = $"Custom 2D Game Engine Editor - Project: [{projectName}] ({EditorContextManager.CurrentProjectRoot}{dirtyIndicator})";
             }
             else
             {
                 this.Text = "Custom 2D Game Engine Editor - No Project Active";
             }
+        }
+
+        private static void HookPropertyGridChanges(Control parent)
+        {
+            foreach(Control child in parent.Controls)
+            {
+                if(child is PropertyGrid grid)
+                {
+                    // Unsubscribe first to prevent double-subscription issues
+                    grid.PropertyValueChanged -= PropertyGrid_PropertyValueChanged;
+                    grid.PropertyValueChanged += PropertyGrid_PropertyValueChanged;
+                }
+                if(child.HasChildren)
+                {
+                    HookPropertyGridChanges(child);
+                }
+            }
+        }
+
+        private static void PropertyGrid_PropertyValueChanged(object sender, PropertyValueChangedEventArgs e)
+        {
+            NeedsToBeSaved = true;
         }
 
         private void OnProjectLoaded()
@@ -139,16 +180,18 @@ namespace WinFormsApp1
 
             if(EditorContextManager.IsProjectLoaded)
             {
-                // 1. Build the path where your default scene's  file should live
-
 
                 // TODO  set the loaded scene to the project manifests last used scene, default to first scene in scene folder if one exists, if one doesn't exist create a base scene file
+
+                string absoluteBinContentPath = Path.Combine(EditorContextManager.BinPath, "Content");
+                mgWindowControl.Editor.Content.RootDirectory = absoluteBinContentPath;
 
                 string targetScenePath = Path.Combine(EditorContextManager.ScenesPath, "Main.scene");
 
                 // 2. CHECK: If the file exists, load it! Otherwise, fall back to generating a clean slate template.
                 if(File.Exists(targetScenePath))
                 {
+                    _isSuprressingDirtyFlag = true;
                     try
                     {
                         Log.Info($"[Editor UI] Found existing workspace state file. Deserializing active layout tree...");
@@ -171,7 +214,7 @@ namespace WinFormsApp1
 
                         // Set the context and populate your UI nodes with the genuine saved data
                         EditorContextManager.ActiveLoadedScene = loadedScene;
-                        SceneNameBox.Text = EditorContextManager.ActiveLoadedScene.SceneName;
+                        UpdateSceneTextBox(EditorContextManager.ActiveLoadedScene.SceneName);
                         RunContentBuilder();
                         UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
                         PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
@@ -182,6 +225,11 @@ namespace WinFormsApp1
                         Log.Error($"[Editor UI Error] Scene file was found but failed to deserialize. Falling back to default layout. Reason: {ex.Message}");
                         LoadDefaultSandboxScene();
                     }
+                    finally 
+                    {
+                        _isSuprressingDirtyFlag = false;
+                        NeedsToBeSaved = false;
+                    }
                 }
                 else
                 {
@@ -190,6 +238,14 @@ namespace WinFormsApp1
                 }
             }
             PopulateProjectExplorerTree(ProjectFolderTreeView);
+        }
+
+        public void UpdateSceneTextBox(string sceneName)
+        {
+            string dirtyIndicator = NeedsToBeSaved ? " *" : "";
+            SceneNameBox.Clear();
+            
+            SceneNameBox.Text = sceneName + dirtyIndicator;
         }
 
 
@@ -233,7 +289,9 @@ namespace WinFormsApp1
 
         private void UpdateSceneHierarchyTitle(string sceneName)
         {
-            SceneHierarchyPanel.Text = SceneHierarchyPanel.Text + ": '" + sceneName + "'";
+            string dirtyIndicator = NeedsToBeSaved ? " *" : "";
+            SceneHierarchyPanel.ResetText();
+            SceneHierarchyPanel.Text = SceneHierarchyPanel.Text + ": '" + sceneName + dirtyIndicator + "'";
         }
 
         public static void RefreshComponentInspector(object targetComponent)
@@ -388,6 +446,7 @@ namespace WinFormsApp1
                 {
                     string targetScenePath = folderDialog.FileName;
                     UpdateEditorTitle();
+                    _isSuprressingDirtyFlag = true;
                     try
                     {
                         Log.Info($"[Editor UI] Found existing Scene file. Deserializing active layout tree...");
@@ -399,7 +458,8 @@ namespace WinFormsApp1
 
                         // Set the context and populate your UI nodes with the genuine saved data
                         EditorContextManager.ActiveLoadedScene = loadedScene;
-                        SceneNameBox.Text = EditorContextManager.ActiveLoadedScene.SceneName;
+                        UpdateSceneTextBox(EditorContextManager.ActiveLoadedScene.SceneName);
+                        EditorContextManager.ActiveLoadedScene.resetContextSceneInManagers();
                         UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
                         PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
                     }
@@ -407,6 +467,11 @@ namespace WinFormsApp1
                     {
                         Log.Error($"[Editor UI Error] Scene file was found but failed to deserialize. Falling back to default layout. Reason: {ex.Message}");
                         LoadDefaultSandboxScene();
+                    }
+                    finally
+                    {
+                        _isSuprressingDirtyFlag = false;
+                        NeedsToBeSaved = false; // Reset to clean state
                     }
                 }
             }
@@ -428,7 +493,8 @@ namespace WinFormsApp1
 
                 // Set the context and populate your UI nodes with the genuine saved data
                 EditorContextManager.ActiveLoadedScene = loadedScene;
-                SceneNameBox.Text = EditorContextManager.ActiveLoadedScene.SceneName;
+                UpdateSceneTextBox(EditorContextManager.ActiveLoadedScene.SceneName);
+                EditorContextManager.ActiveLoadedScene.resetContextSceneInManagers();
                 UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
                 PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
             }
@@ -478,6 +544,8 @@ namespace WinFormsApp1
                 SceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, targetScenePath);
 
                 Log.Info($"Project workspace and active scene layout saved successfully.");
+
+                _needsToBeSaved = false;
             }
             catch(Exception ex)
             {
@@ -657,7 +725,7 @@ namespace WinFormsApp1
 
             // 4. RESTORE SCROLL POSITION
             flowLayout.AutoScrollPosition = new Point(0, previousScrollY);
-
+            HookPropertyGridChanges(ActiveInspectorPanel);
             ActiveInspectorPanel.ResumeLayout(true);
         }
         /// <summary>
@@ -733,6 +801,7 @@ namespace WinFormsApp1
                         {
                             selectedGo.AddComponent(newComp);
                             Log.Info($"[Editor UI] Attached component '{targetType.Name}' to '{selectedGo.Name}'");
+                            NeedsToBeSaved = true;
 
                             // Rebuild and refresh the card view layout panel
                             RebuildInspectorPanel(selectedGo);
@@ -765,6 +834,7 @@ namespace WinFormsApp1
 
                     selectedGo.RemoveComponent(componentInstance);
                     Log.Info($"[Editor UI] Removed component '{componentInstance.GetType().Name}' from '{selectedGo.Name}'");
+                    NeedsToBeSaved = true;
 
                     Engine.Editor.WinFormsApp1.ComponentCardFactory.ClearSelection();
                     RebuildInspectorPanel(selectedGo);
@@ -807,6 +877,7 @@ namespace WinFormsApp1
 
                 // Optionally reload the clean scene to reset the state
                 LoadCleanScene();
+                
             }
             else
             {
@@ -830,8 +901,9 @@ namespace WinFormsApp1
                     {
                         // Silently load without prompts
                         GameScene revertedScene = SceneSerializer.LoadScene(targetScenePath);
-                        EditorContextManager.ActiveLoadedScene = revertedScene;
 
+                        EditorContextManager.ActiveLoadedScene = revertedScene;
+                        EditorContextManager.ActiveLoadedScene.resetContextSceneInManagers();
                         // Repopulate the main tree view panel UI
                         if(Form1.ActiveHierarchyTreeView != null)
                         {
@@ -936,7 +1008,17 @@ namespace WinFormsApp1
 
         private void SceneNameBox_TextChanged(object sender, EventArgs e)
         {
-            EditorContextManager.ActiveLoadedScene.SceneName = SceneNameBox.Text;
+            if(_isSuprressingDirtyFlag)
+                return;
+
+            if(EditorContextManager.ActiveLoadedScene != null)
+            {
+                if(EditorContextManager.ActiveLoadedScene.SceneName != SceneNameBox.Text)
+                {
+                    EditorContextManager.ActiveLoadedScene.SceneName = SceneNameBox.Text;
+                    NeedsToBeSaved = true;
+                }
+            }
         }
 
         private void LoadSceneButton_Click(object sender, EventArgs e)

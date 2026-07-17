@@ -33,6 +33,7 @@ namespace Engine.Core.Serialization
         
         public static string ContentPath => GetPath("Content");
 
+        public static string BinPath => GetPath(ContentPath, "Bin");
         public static string AssetsPath => GetPath("Content", "Assets");
         public static string ProjectSettingsPath => GetPath("ProjectSettings");
         public static string LibraryPath => GetPath("Library");

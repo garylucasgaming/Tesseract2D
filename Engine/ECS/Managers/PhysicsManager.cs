@@ -55,20 +55,20 @@ namespace Engine.Core.ECS.Managers
                 switch(value)
                 {
                     case GravityDirection.Up:
-                        Gravity = new Vector2(0, GravityMagnitude);
-                        break;
-                    case GravityDirection.Down:
                         Gravity = new Vector2(0, -GravityMagnitude);
                         break;
+                    case GravityDirection.Down:
+                        Gravity = new Vector2(0, GravityMagnitude);
+                        break;
                     case GravityDirection.Left:
-                        Gravity = new Vector2(-GravityMagnitude, 0);
+                        Gravity = new Vector2(GravityMagnitude, 0);
                         break;
                     case GravityDirection.Right:
-                        Gravity = new Vector2(GravityMagnitude, 0);
+                        Gravity = new Vector2(-GravityMagnitude, 0);
                         break;
                     default:
                         //gravity direction set to down
-                        Gravity = new Vector2(0, -GravityMagnitude);
+                        Gravity = new Vector2(0, GravityMagnitude);
                         break;
                 }
                 _gravityDirection = value;

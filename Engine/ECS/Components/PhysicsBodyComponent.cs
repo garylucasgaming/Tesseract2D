@@ -80,16 +80,16 @@ namespace Engine.Core.ECS.Components
        
         public void Initialize(World world, Vector2 initialPosition, float initialRotation)
         {
-            physicsBody = world.CreateBody();
-            physicsBody.Position = initialPosition;
-            physicsBody.Rotation = initialRotation;
+            
+            physicsBody = world.CreateBody(initialPosition, initialRotation, _bodyType);
 
             // Apply all the settings configured in the Editor
-            physicsBody.BodyType = _bodyType;
+           
             physicsBody.IgnoreGravity = _ignoreGravity;
             physicsBody.Enabled = _isActive;
             physicsBody.FixedRotation = _fixedRotation;
             physicsBody.Mass = _mass;
+            
         }
     }
 }

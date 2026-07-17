@@ -1,5 +1,7 @@
 ﻿using Engine.Core.ECS.Systems;
+using Engine.Core.Serialization;
 using Engine.Core.Utilities;
+using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
@@ -110,16 +112,21 @@ namespace Engine.Core.ECS.Managers
         /// <summary>
         /// Sweeps through all enabled systems and gives them an opportunity to draw via SpriteBatch.
         /// </summary>
-        public void Render(SpriteBatch spriteBatch)
+        public void Render(SpriteBatch spriteBatch, ContentManager cm)
         {
             // Directly iterate through your pre-existing warm cache dictionary!
             foreach(var kvp in _systemEntityCache)
             {
-                GameSystem system = kvp.Key;
+                var system = kvp.Key;
                 HashSet<GameObject> cachedEntities = kvp.Value;
 
                 if(!system.IsEnabled || !system.shouldUpdate)
                     continue;
+
+                if(system is SpriteRenderSystem srs && EditorContextManager.IsProjectLoaded)
+                {
+                    srs.LoadSprites(cm);
+                }
 
                 // Call the generic render pass safely (Render always runs so editor previews display)
                 system.Render(cachedEntities, spriteBatch);
@@ -129,6 +136,7 @@ namespace Engine.Core.ECS.Managers
         /// Runs TickUpdate systems on your locked, rigid simulation step ticker.
         public void TickUpdate(float fixedDeltaTime, bool playModeActive)
         {
+           
             ExecuteSystemBucket(SystemUpdatePolicy.TickUpdate, fixedDeltaTime, playModeActive);
         }
 

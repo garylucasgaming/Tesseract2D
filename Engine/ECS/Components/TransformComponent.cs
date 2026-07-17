@@ -183,7 +183,7 @@ namespace Engine.Core.ECS.Components
 
         // IGNORE COMPOUND PROPERTIES: These generate completely fresh MonoGame Vector2 structs. 
         // Deserializing into these properties would crash or double-assign values over your raw scalar floats.
-        [GISMIgnore]
+     
         public Vector2 WorldPosition
         {
             get => new Vector2(_x, _y);
@@ -195,7 +195,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [GISMIgnore]
+     
         public Vector2 LocalPosition
         {
             get => new Vector2(_xOFF, _yOFF);
@@ -215,7 +215,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [GISMIgnore]
+        
         public Vector2 Size
         {
             get => new Vector2(_sizeX, _sizeY);
@@ -227,7 +227,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [GISMIgnore]
+        
         public Vector2 Scale
         {
             get => new Vector2(_scaleX, _scaleY);
@@ -275,7 +275,7 @@ namespace Engine.Core.ECS.Components
                     y = _sizeY;
                     break;
             }
-            return new Vector2(x, y);
+            return new Vector2(x, y) * Scale;
         }
 
         // IGNORE READ-ONLY VALUE PROPERTIES

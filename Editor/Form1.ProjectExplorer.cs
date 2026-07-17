@@ -81,14 +81,99 @@ namespace WinFormsApp1
             ProjectFolderTreeView.AllowDrop = true;
             ProjectFolderTreeView.DragEnter += ProjectFolderTreeView_DragEnter;
             ProjectFolderTreeView.DragDrop += ProjectFolderTreeView_DragDrop;
+            ProjectFolderTreeView.ItemDrag += ProjectFolderTreeView_ItemDrag;
+            ProjectFolderTreeView.DragOver += ProjectFolderTreeView_DragOver;
+        }
+
+        private void ProjectFolderTreeView_ItemDrag(object sender, ItemDragEventArgs e)
+        {
+            if(e.Item is TreeNode dragNode && dragNode.Tag is string dragPath)
+            {
+                // Don't allow dragging the root directory folder node
+                if(dragPath.Equals(EditorContextManager.CurrentProjectRoot, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                // Begin the WinForms DragDrop loop passing the TreeNode as the payload
+                DoDragDrop(dragNode, DragDropEffects.Move);
+            }
+        }
+
+        private void ProjectFolderTreeView_DragOver(object sender, DragEventArgs e)
+        {
+            // Check if the payload is an internal TreeNode structure
+            if(e.Data.GetDataPresent(typeof(TreeNode)))
+            {
+                System.Drawing.Point clientPoint = ProjectFolderTreeView.PointToClient(new System.Drawing.Point(e.X, e.Y));
+                TreeNode targetNode = ProjectFolderTreeView.GetNodeAt(clientPoint);
+                TreeNode dragNode = (TreeNode) e.Data.GetData(typeof(TreeNode));
+
+                if(dragNode != null)
+                {
+                    string sourcePath = dragNode.Tag as string;
+                    if(!string.IsNullOrEmpty(sourcePath))
+                    {
+                        if(targetNode != null)
+                        {
+                            string targetPath = targetNode.Tag as string;
+                            if(!string.IsNullOrEmpty(targetPath))
+                            {
+                                // 1. Guard: Cannot drop an asset onto itself
+                                if(dragNode == targetNode)
+                                {
+                                    e.Effect = DragDropEffects.None;
+                                    return;
+                                }
+
+                                // 2. Guard: Cannot drop a folder into itself or its own nested directories
+                                if(Directory.Exists(sourcePath))
+                                {
+                                    string sourceDirWithSlash = sourcePath.EndsWith(Path.DirectorySeparatorChar.ToString())
+                                        ? sourcePath
+                                        : sourcePath + Path.DirectorySeparatorChar;
+
+                                    string targetDirWithSlash = targetPath.EndsWith(Path.DirectorySeparatorChar.ToString())
+                                        ? targetPath
+                                        : targetPath + Path.DirectorySeparatorChar;
+
+                                    if(targetDirWithSlash.StartsWith(sourceDirWithSlash, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        e.Effect = DragDropEffects.None;
+                                        return;
+                                    }
+                                }
+
+                                // Provide active feedback by highlighting the folder target candidate
+                                ProjectFolderTreeView.SelectedNode = targetNode;
+                                e.Effect = DragDropEffects.Move;
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            // If hovering over empty tree space, fallback to dropping into the Project Root directory
+                            if(EditorContextManager.IsProjectLoaded)
+                            {
+                                e.Effect = DragDropEffects.Move;
+                                return;
+                            }
+                        }
+                    }
+                }
+                e.Effect = DragDropEffects.None;
+            }
         }
 
         private void ProjectFolderTreeView_DragEnter(object sender, DragEventArgs e)
         {
-            // Verify if the dragged data contains actual OS file drops
+            // External OS file drop -> Copy Action
             if(e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                e.Effect = DragDropEffects.Copy; // Changes the cursor to show a plus/copy sign
+                e.Effect = DragDropEffects.Copy;
+            }
+            // Internal TreeView Node drop -> Move Action
+            else if(e.Data.GetDataPresent(typeof(TreeNode)))
+            {
+                e.Effect = DragDropEffects.Move;
             }
             else
             {
@@ -98,22 +183,12 @@ namespace WinFormsApp1
 
         private void ProjectFolderTreeView_DragDrop(object sender, DragEventArgs e)
         {
-            // Ensure data contains files
-            if(!e.Data.GetDataPresent(DataFormats.FileDrop))
-                return;
-
-            // Extract the string array of absolute file paths dropped onto the control
-            string[] droppedFiles = (string[]) e.Data.GetData(DataFormats.FileDrop);
-            if(droppedFiles == null || droppedFiles.Length == 0)
-                return;
-
-            // Find where the cursor was exactly dropped relative to the TreeView coordinates
+            // Find target coordinates relative to the TreeView bounds
             System.Drawing.Point clientPoint = ProjectFolderTreeView.PointToClient(new System.Drawing.Point(e.X, e.Y));
             TreeNode targetNode = ProjectFolderTreeView.GetNodeAt(clientPoint);
-
             string destinationDirectory = null;
 
-            // Determine target path layout context
+            // Determine target path directory structure
             if(targetNode != null)
             {
                 string targetPath = targetNode.Tag as string;
@@ -126,7 +201,6 @@ namespace WinFormsApp1
             }
             else
             {
-                // Fallback option: If dropped in the empty space of the tree, default to the Project Root folder
                 if(EditorContextManager.IsProjectLoaded)
                 {
                     destinationDirectory = EditorContextManager.CurrentProjectRoot;
@@ -139,59 +213,125 @@ namespace WinFormsApp1
                 return;
             }
 
-            try
+            // --- 1. HANDLE INTERNAL MOVES (TreeNode Drag) ---
+            if(e.Data.GetDataPresent(typeof(TreeNode)))
             {
-                bool treeNeedsRefresh = false;
+                TreeNode dragNode = (TreeNode) e.Data.GetData(typeof(TreeNode));
+                if(dragNode == null || !(dragNode.Tag is string sourcePath))
+                    return;
 
-                foreach(string sourceFilePath in droppedFiles)
+                string currentDirectory = Path.GetDirectoryName(sourcePath);
+                if(destinationDirectory.Equals(currentDirectory, StringComparison.OrdinalIgnoreCase))
                 {
-                    // Support copying whole folders or individual files
-                    if(File.Exists(sourceFilePath))
-                    {
-                        string fileName = Path.GetFileName(sourceFilePath);
-                        string destFilePath = Path.Combine(destinationDirectory, fileName);
+                    return; // Already in this directory, do nothing
+                }
 
-                        if(File.Exists(destFilePath))
+                string itemName = Path.GetFileName(sourcePath);
+                string destPath = Path.Combine(destinationDirectory, itemName);
+
+                try
+                {
+                    if(File.Exists(sourcePath))
+                    {
+                        if(File.Exists(destPath))
                         {
                             var result = MessageBox.Show(
-                                $"An asset named '{fileName}' already exists in this folder. Overwrite it?",
+                                $"An asset named '{itemName}' already exists in this folder. Overwrite it?",
                                 "Asset Conflict",
                                 MessageBoxButtons.YesNo,
                                 MessageBoxIcon.Question
                             );
 
                             if(result == DialogResult.No)
-                                continue;
+                                return;
+
+                            File.Delete(destPath);
                         }
 
-                        File.Copy(sourceFilePath, destFilePath, overwrite: true);
-                        Log.Info($"[Content Pipeline] Drag-Imported file: {fileName}");
-                        treeNeedsRefresh = true;
+                        File.Move(sourcePath, destPath);
+                        Log.Info($"[Content Pipeline] Moved asset file: '{itemName}' to '{destinationDirectory}'");
                     }
-                    else if(Directory.Exists(sourceFilePath))
+                    else if(Directory.Exists(sourcePath))
                     {
-                        // Handle directory drops gracefully by copying directories recursively
-                        string dirName = Path.GetFileName(sourceFilePath);
-                        string destDirPath = Path.Combine(destinationDirectory, dirName);
+                        if(Directory.Exists(destPath))
+                        {
+                            MessageBox.Show($"A folder named '{itemName}' already exists in this location.", "Folder Conflict", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            return;
+                        }
 
-                        CopyDirectoryRecursively(sourceFilePath, destDirPath);
-                        Log.Info($"[Content Pipeline] Drag-Imported directory: {dirName}");
-                        treeNeedsRefresh = true;
+                        Directory.Move(sourcePath, destPath);
+                        Log.Info($"[Content Pipeline] Moved folder: '{itemName}' to '{destinationDirectory}'");
                     }
-                }
 
-                if(treeNeedsRefresh)
-                {
+                    // Refresh the explorer hierarchy and expand the targeted destination node
                     PopulateProjectExplorerTree(ProjectFolderTreeView, destinationDirectory);
                 }
+                catch(Exception ex)
+                {
+                    Log.Error($"[Project Explorer Error] Failed moving asset: {ex.Message}");
+                    MessageBox.Show($"Failed to move item: {ex.Message}", "Move Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                return; // Break execution early, internal drop succeeded
             }
-            catch(Exception ex)
+
+            // --- 2. HANDLE EXTERNAL IMPORTS (OS File Drop) ---
+            if(e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                Log.Error($"[Drag & Drop Import Error] Failed processing external drag data: {ex.Message}");
-                MessageBox.Show($"Failed to drag-import items: {ex.Message}", "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                string[] droppedFiles = (string[]) e.Data.GetData(DataFormats.FileDrop);
+                if(droppedFiles == null || droppedFiles.Length == 0)
+                    return;
+
+                try
+                {
+                    bool treeNeedsRefresh = false;
+
+                    foreach(string sourceFilePath in droppedFiles)
+                    {
+                        if(File.Exists(sourceFilePath))
+                        {
+                            string fileName = Path.GetFileName(sourceFilePath);
+                            string destFilePath = Path.Combine(destinationDirectory, fileName);
+
+                            if(File.Exists(destFilePath))
+                            {
+                                var result = MessageBox.Show(
+                                    $"An asset named '{fileName}' already exists in this folder. Overwrite it?",
+                                    "Asset Conflict",
+                                    MessageBoxButtons.YesNo,
+                                    MessageBoxIcon.Question
+                                );
+
+                                if(result == DialogResult.No)
+                                    continue;
+                            }
+
+                            File.Copy(sourceFilePath, destFilePath, overwrite: true);
+                            Log.Info($"[Content Pipeline] Drag-Imported file: {fileName}");
+                            treeNeedsRefresh = true;
+                        }
+                        else if(Directory.Exists(sourceFilePath))
+                        {
+                            string dirName = Path.GetFileName(sourceFilePath);
+                            string destDirPath = Path.Combine(destinationDirectory, dirName);
+
+                            CopyDirectoryRecursively(sourceFilePath, destDirPath);
+                            Log.Info($"[Content Pipeline] Drag-Imported directory: {dirName}");
+                            treeNeedsRefresh = true;
+                        }
+                    }
+
+                    if(treeNeedsRefresh)
+                    {
+                        PopulateProjectExplorerTree(ProjectFolderTreeView, destinationDirectory);
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Log.Error($"[Drag & Drop Import Error] Failed processing external drag data: {ex.Message}");
+                    MessageBox.Show($"Failed to drag-import items: {ex.Message}", "Import Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
-
         // Helper method to support dropping whole directory folders from Windows File Explorer
         private void CopyDirectoryRecursively(string sourceDir, string destDir)
         {

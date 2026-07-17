@@ -33,7 +33,7 @@ namespace Editor
         protected override void Initialize()
         {
             GizmoRenderer.Initialize(Editor.GraphicsDevice);
-
+            
             _inputManager = new InputManager();
             _inputService = new EditorInputService(_inputManager);
             _renderService = new EditorRenderService();
@@ -66,6 +66,7 @@ namespace Editor
                 object selectedComponent = Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance;
                 _inputService.SetContext(_activeScene, selectedGo);
                 _inputService.Update();
+                
                 // 1. Cap deltaTime to 0.25s (prevents massive physics spikes/crashes when dragging window/debugging)
                 float clampedDelta = Math.Min(deltaTime, 0.25f);
 
@@ -107,8 +108,8 @@ namespace Editor
 
             Editor.spriteBatch.Begin();
 
-            _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo,  Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance, _inputService.CurrentMode);
-            _activeScene.Systems.Render(Editor.spriteBatch);
+            _activeScene.Systems.Render(Editor.spriteBatch, Editor.Content);
+            _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo, Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance, _inputService.CurrentMode);
 
             Editor.spriteBatch.End();
         }
@@ -124,6 +125,7 @@ namespace Editor
             {
                 // Reset the accumulator to fresh 0.0s before the simulation starts
                 _physicsAccumulator = 0.0f;
+                _activeScene.Systems.physicsSystem.ResetPhysicsTransforms();
                 SimulationRunning = true;
                 SimulationPaused = false;
                 Log.Info("[Simulation] Simulation started.");
@@ -146,6 +148,7 @@ namespace Editor
                 SimulationRunning = false;
                 SimulationPaused = false;
                 _physicsAccumulator = 0.0f; // Flush buffer
+                
                 Log.Info("[Simulation] Simulation stopped.");
             }
         }
@@ -158,6 +161,8 @@ namespace Editor
             }
             return null;
         }
+
+     
 
         private void RefreshInspector(string fallbackComponentTypeName)
         {

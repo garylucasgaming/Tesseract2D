@@ -4,7 +4,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using GISM.Core.Serializer;
 using GISM.Core.Attributes;
-using System.Reflection; // Added for [GISMIgnore]
+using System.Reflection;
+using Engine.Core.Utilities;
+using Microsoft.Xna.Framework.Content; // Added for [GISMIgnore]
 
 namespace Engine.Core.ECS.Components
 {
@@ -22,23 +24,34 @@ namespace Engine.Core.ECS.Components
     public class SpriteComponent : GameComponent
     {
 
-
+        private string _texturePath;
         private Color _colour = Color.White;
 
         // TRAP: Texture2D is a volatile GPU resource. Trying to serialize it deep-scans 
         // XNA internal graphics state and breaks. We ignore this completely and rely 
         // on TexturePath to reconstruct it during asset loading.
         [Browsable(false)]
-        [GISMIgnore]
+        
         public Texture2D? Texture
         {
             get; set;
         }
 
+        [Browsable(true)]
+        [TypeConverter(typeof(TexturePathConverter))]
         public string? TexturePath
         {
-            get; set;
+            get => _texturePath;
+            set
+            {
+                _texturePath = value;
+                isSpriteLoaded = false;
+            }
         }
+
+        [Browsable(false)]
+        [IgnoreAttribute]
+        public bool isSpriteLoaded { get; set; } = false;
 
         // The serializer naturally skips MulticastDelegates, but explicitly tagging it keeps intent clear.
         
@@ -87,10 +100,18 @@ namespace Engine.Core.ECS.Components
         [Browsable(true)]
         public Vector2 SprteOrigin { get; set; } = Vector2.Zero;
 
-       
-        public SpriteComponent()
-        {
 
+        public void LoadSprite(ContentManager cm)
+        {
+            if(TexturePath != null)
+            {
+                // Resolve the clean, relative content path (e.g., "Assets/Textures/Enemies/goblin")
+                string relativePath = AssetManager.GetContentRelativePath(TexturePath, AssetType.Texture);
+
+                // MonoGame handles appending the .xnb extension and finding the file[cite: 18]
+                Texture = cm.Load<Texture2D>(relativePath);
+                isSpriteLoaded = true;
+            }
         }
     }
 }
