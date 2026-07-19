@@ -89,6 +89,7 @@
             panel1 = new Panel();
             panel2 = new Panel();
             panel3 = new Panel();
+            databaseViewerToolStripMenuItem = new ToolStripMenuItem();
             menuStrip1.SuspendLayout();
             SceneHierarchyPanel.SuspendLayout();
             tabControl3.SuspendLayout();
@@ -127,40 +128,40 @@
             // newProjectToolStripMenuItem
             // 
             newProjectToolStripMenuItem.Name = "newProjectToolStripMenuItem";
-            newProjectToolStripMenuItem.Size = new Size(154, 22);
+            newProjectToolStripMenuItem.Size = new Size(180, 22);
             newProjectToolStripMenuItem.Text = "New Project";
             newProjectToolStripMenuItem.Click += onCreateProjectToolStripMenuItem_Click;
             // 
             // loadProjectToolStripMenuItem
             // 
             loadProjectToolStripMenuItem.Name = "loadProjectToolStripMenuItem";
-            loadProjectToolStripMenuItem.Size = new Size(154, 22);
+            loadProjectToolStripMenuItem.Size = new Size(180, 22);
             loadProjectToolStripMenuItem.Text = "Load Project";
             loadProjectToolStripMenuItem.Click += onLoadProjectToolStripMenuItem_Click;
             // 
             // saveProjectToolStripMenuItem
             // 
             saveProjectToolStripMenuItem.Name = "saveProjectToolStripMenuItem";
-            saveProjectToolStripMenuItem.Size = new Size(154, 22);
+            saveProjectToolStripMenuItem.Size = new Size(180, 22);
             saveProjectToolStripMenuItem.Text = "Save Project";
             saveProjectToolStripMenuItem.Click += onSaveProjectToolStripMenuItem_Click;
             // 
             // saveProjectAsToolStripMenuItem
             // 
             saveProjectAsToolStripMenuItem.Name = "saveProjectAsToolStripMenuItem";
-            saveProjectAsToolStripMenuItem.Size = new Size(154, 22);
+            saveProjectAsToolStripMenuItem.Size = new Size(180, 22);
             saveProjectAsToolStripMenuItem.Text = "Save Project As";
             // 
             // exitToolStripMenuItem
             // 
             exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            exitToolStripMenuItem.Size = new Size(154, 22);
+            exitToolStripMenuItem.Size = new Size(180, 22);
             exitToolStripMenuItem.Text = "Exit";
             // 
             // fileToolStripMenuItem
             // 
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
-            fileToolStripMenuItem.Size = new Size(154, 22);
+            fileToolStripMenuItem.Size = new Size(180, 22);
             fileToolStripMenuItem.Text = "Build Game";
             // 
             // editToolStripMenuItem
@@ -224,39 +225,39 @@
             // 
             // toolsToolStripMenuItem
             // 
-            toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { spriteEditorToolStripMenuItem1, tileMapEditorToolStripMenuItem, animatorToolStripMenuItem, uICanvasToolStripMenuItem, audioMixerToolStripMenuItem });
+            toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { spriteEditorToolStripMenuItem1, tileMapEditorToolStripMenuItem, animatorToolStripMenuItem, uICanvasToolStripMenuItem, audioMixerToolStripMenuItem, databaseViewerToolStripMenuItem });
             toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
-            toolsToolStripMenuItem.Size = new Size(101, 22);
+            toolsToolStripMenuItem.Size = new Size(180, 22);
             toolsToolStripMenuItem.Text = "Tools";
             // 
             // spriteEditorToolStripMenuItem1
             // 
             spriteEditorToolStripMenuItem1.Name = "spriteEditorToolStripMenuItem1";
-            spriteEditorToolStripMenuItem1.Size = new Size(150, 22);
+            spriteEditorToolStripMenuItem1.Size = new Size(180, 22);
             spriteEditorToolStripMenuItem1.Text = "Sprite Editor";
             // 
             // tileMapEditorToolStripMenuItem
             // 
             tileMapEditorToolStripMenuItem.Name = "tileMapEditorToolStripMenuItem";
-            tileMapEditorToolStripMenuItem.Size = new Size(150, 22);
+            tileMapEditorToolStripMenuItem.Size = new Size(180, 22);
             tileMapEditorToolStripMenuItem.Text = "TileMap Editor";
             // 
             // animatorToolStripMenuItem
             // 
             animatorToolStripMenuItem.Name = "animatorToolStripMenuItem";
-            animatorToolStripMenuItem.Size = new Size(150, 22);
+            animatorToolStripMenuItem.Size = new Size(180, 22);
             animatorToolStripMenuItem.Text = "Animator";
             // 
             // uICanvasToolStripMenuItem
             // 
             uICanvasToolStripMenuItem.Name = "uICanvasToolStripMenuItem";
-            uICanvasToolStripMenuItem.Size = new Size(150, 22);
+            uICanvasToolStripMenuItem.Size = new Size(180, 22);
             uICanvasToolStripMenuItem.Text = "UI Canvas";
             // 
             // audioMixerToolStripMenuItem
             // 
             audioMixerToolStripMenuItem.Name = "audioMixerToolStripMenuItem";
-            audioMixerToolStripMenuItem.Size = new Size(150, 22);
+            audioMixerToolStripMenuItem.Size = new Size(180, 22);
             audioMixerToolStripMenuItem.Text = "Audio Mixer";
             // 
             // helpToolStripMenuItem
@@ -627,6 +628,13 @@
             panel3.Size = new Size(265, 681);
             panel3.TabIndex = 6;
             // 
+            // databaseViewerToolStripMenuItem
+            // 
+            databaseViewerToolStripMenuItem.Name = "databaseViewerToolStripMenuItem";
+            databaseViewerToolStripMenuItem.Size = new Size(180, 22);
+            databaseViewerToolStripMenuItem.Text = "Database Viewer";
+            databaseViewerToolStripMenuItem.Click += databaseViewerToolStripMenuItem_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -734,5 +742,6 @@
         private ToolStripProgressBar progressBar;
         private ToolStripTextBox progressBarTextBox;
         private ToolStripTextBox SceneNameBox;
+        private ToolStripMenuItem databaseViewerToolStripMenuItem;
     }
 }

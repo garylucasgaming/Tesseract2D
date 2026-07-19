@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Xna.Framework;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,44 +7,36 @@ using System.Threading.Tasks;
 
 namespace Engine.Core.ECS.Components
 {
-    public abstract class TileDataComponent : DataComponent
+
+    public enum TileType
     {
+        Water, Air, Grass, Stone
 
-        public List<string> TileTypeID
+    }
+    public class TileDataComponent : DataComponent
+    {
+       
+        public override string DisplayName
         {
             get;
             set;
-        } = new List<string>();
-
-        public List<string> TileGroupID
-        {
-            get;
-            set;
-        } = new List<string>();
-
-
-        public int GridX { get; set; }
-        public int GridY { get; set; }
-
-        public virtual void OnTileDestroy()
-        {
         }
 
 
-        public virtual void OnTileUpdate()
+        public int TileSize
         {
+            get;set;
         }
 
-        public virtual void OnTileInteract()
+        public string SpritePath
         {
+            get; set;
         }
 
-        public virtual void OnTileAwake()
-        {
+        public TileType TileType {
+            get; set;
         }
 
-        
-
-
+        public bool hasCollider { get; set; }
     }
 }

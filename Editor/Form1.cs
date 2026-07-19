@@ -118,7 +118,7 @@ namespace WinFormsApp1
                 MessageBox.Show("No Project is Selected. Cannot load or Create new scenes");
                 return;
             }
-                
+
             string sceneName = PromptUserForSceneName();
             var newScene = new GameScene();
             newScene.SceneName = sceneName;
@@ -127,12 +127,16 @@ namespace WinFormsApp1
 
             SceneSerializer.SaveScene(newScene, scenePath);
             LoadScene(newScene, scenePath);
-            ProjectFolderTreeView.Refresh();
+            PopulateProjectExplorerTree(ProjectFolderTreeView);
 
-           
+
         }
 
+        public void RefreshProjectFolderView()
+        {
 
+            PopulateProjectExplorerTree(ProjectFolderTreeView);
+        }
         public static void SetTreeViewTheme(IntPtr treeHandle)
         {
             SetWindowTheme(treeHandle, "explorer", null);
@@ -218,14 +222,14 @@ namespace WinFormsApp1
                         RunContentBuilder();
                         UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
                         PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
-                        
+
                     }
                     catch(Exception ex)
                     {
                         Log.Error($"[Editor UI Error] Scene file was found but failed to deserialize. Falling back to default layout. Reason: {ex.Message}");
                         LoadDefaultSandboxScene();
                     }
-                    finally 
+                    finally
                     {
                         _isSuprressingDirtyFlag = false;
                         NeedsToBeSaved = false;
@@ -244,7 +248,7 @@ namespace WinFormsApp1
         {
             string dirtyIndicator = NeedsToBeSaved ? " *" : "";
             SceneNameBox.Clear();
-            
+
             SceneNameBox.Text = sceneName + dirtyIndicator;
         }
 
@@ -258,7 +262,7 @@ namespace WinFormsApp1
                 {
                     Log.Info("[Content Builder] Running Content Builder");
                     var builder = new DynamicBuilder();
-                    builder.Logger = new  EngineContentLogger();
+                    builder.Logger = new EngineContentLogger();
                     var args = new ContentBuilderParams
                     {
                         Mode = ContentBuilderMode.Builder,
@@ -266,13 +270,14 @@ namespace WinFormsApp1
                         SourceDirectory = EditorContextManager.AssetsPath,
                         OutputDirectory = Path.Combine(EditorContextManager.ContentPath, "Bin"),
                         Platform = TargetPlatform.DesktopGL
-                        
+
                     };
 
                     builder.Run(args);
 
                     // Invoke back to the UI thread if you need to update a status bar or "Ready" icon
-                    this.Invoke(new Action(() => {
+                    this.Invoke(new Action(() =>
+                    {
                         Log.Info("[Content Builder] Content build complete.");
                         // Update UI status here
                         ProjectFolderTreeView.Refresh();
@@ -285,7 +290,7 @@ namespace WinFormsApp1
             });
 
         }
-        
+
 
         private void UpdateSceneHierarchyTitle(string sceneName)
         {
@@ -479,8 +484,8 @@ namespace WinFormsApp1
 
         private void LoadScene(GameScene sceneToLoad, string targetScenePath)
         {
-           
-                  
+
+
             UpdateEditorTitle();
             try
             {
@@ -503,8 +508,8 @@ namespace WinFormsApp1
                 Log.Error($"[Editor UI Error] Scene file was found but failed to deserialize. Falling back to default layout. Reason: {ex.Message}");
                 LoadDefaultSandboxScene();
             }
-                
-            
+
+
         }
 
         public static void SaveScene()
@@ -518,7 +523,7 @@ namespace WinFormsApp1
             if(EditorContextManager.ActiveLoadedScene == null)
             {
                 MessageBox.Show("No Scene Loaded. Cannot Save Scene.");
-                 return;
+                return;
             }
 
             try
@@ -560,7 +565,7 @@ namespace WinFormsApp1
 
         public void onSaveProjectToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            
+
 
             try
             {
@@ -877,7 +882,7 @@ namespace WinFormsApp1
 
                 // Optionally reload the clean scene to reset the state
                 LoadCleanScene();
-                
+
             }
             else
             {
@@ -1029,6 +1034,12 @@ namespace WinFormsApp1
         private void CreateNewSceneButton_Click(object sender, EventArgs e)
         {
             CreateNewScene();
+        }
+
+        private void databaseViewerToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var viewer = new DatabaseViewer();
+            viewer.Show(this);
         }
     }
 }

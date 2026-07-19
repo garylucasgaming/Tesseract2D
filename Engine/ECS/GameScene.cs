@@ -1,5 +1,6 @@
 ﻿using Engine.Core.ECS.Components;
 using Engine.Core.ECS.Managers;
+using Engine.Core.Runtime;
 using Engine.Core.Utilities;
 using System;
 using System.Collections.Generic;
@@ -24,7 +25,11 @@ namespace Engine.Core.ECS
 
         public ManagersManager Managers { get; private set; } = null!;
 
-        public PhysicsManager Physics { get; private set; }
+        public PhysicsManager Physics { get; private set; } = null!;
+
+        public DatabaseManager Database
+        {
+            get; private set; } = null!;
 
         public Guid Id { get; set; } = Guid.NewGuid();
        
@@ -41,7 +46,8 @@ namespace Engine.Core.ECS
             Systems = new SystemsManager() { ContextScene = this};
             Physics = new PhysicsManager() { ContextScene = this };
             Managers = new ManagersManager() { ContextScene = this };
-            
+            Database = new DatabaseManager() { ContextScene = this };
+
             InitializeManagerEvents();
 
         }
