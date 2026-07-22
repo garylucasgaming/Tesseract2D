@@ -91,7 +91,7 @@ namespace Engine.Core.Serialization
                 var idToEntityMap = new Dictionary<Guid, GameObject>();
                 var entityList = new List<GameObject>();
 
-                // Pass 1: Instantiate GameObjects
+                // Pass 1: Instantiate GameObjects & Load Primitives
                 foreach(var entityDto in sceneDto.Entities)
                 {
                     var entity = GameObjectSerializer.ImportGameObject(entityDto);
@@ -113,6 +113,28 @@ namespace Engine.Core.Serialization
                 foreach(var entity in entityList)
                 {
                     scene.AddGameObject(entity);
+                }
+
+                // Pass 4: Resolve Component GameObject & Component References
+                foreach(var entityDto in sceneDto.Entities)
+                {
+                    if(Guid.TryParse(entityDto.Id, out Guid goId) && idToEntityMap.TryGetValue(goId, out var entity))
+                    {
+                        foreach(var compKvp in entityDto.Components)
+                        {
+                            string typeName = compKvp.Key;
+
+                            // Match component by type on live GameObject instance
+                            foreach(var liveCompKvp in entity.Components)
+                            {
+                                if(liveCompKvp.Key.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    ComponentSerializer.ResolveComponentReferences(liveCompKvp.Value, compKvp.Value, idToEntityMap);
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
 
                 return scene;

@@ -246,10 +246,10 @@ namespace WinFormsApp1
 
         public void UpdateSceneTextBox(string sceneName)
         {
-            string dirtyIndicator = NeedsToBeSaved ? " *" : "";
+           
             SceneNameBox.Clear();
 
-            SceneNameBox.Text = sceneName + dirtyIndicator;
+            SceneNameBox.Text = sceneName;
         }
 
 
@@ -294,9 +294,9 @@ namespace WinFormsApp1
 
         private void UpdateSceneHierarchyTitle(string sceneName)
         {
-            string dirtyIndicator = NeedsToBeSaved ? " *" : "";
+            string dirtyIndicator = NeedsToBeSaved ? " * " : "";
             SceneHierarchyPanel.ResetText();
-            SceneHierarchyPanel.Text = SceneHierarchyPanel.Text + ": '" + sceneName + dirtyIndicator + "'";
+            SceneHierarchyPanel.Text = SceneHierarchyPanel.Text + ": '" + sceneName + dirtyIndicator + "  '";
         }
 
         public static void RefreshComponentInspector(object targetComponent)

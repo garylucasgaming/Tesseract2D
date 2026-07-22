@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Engine.Core.ECS;
-using Microsoft.Xna.Framework; // Reference MonoGame's Vector2
+using Microsoft.Xna.Framework;
+using GameComponent = Engine.Core.ECS.GameComponent; // Reference MonoGame's Vector2
 
 namespace Engine.Core.Serialization
 {
@@ -10,9 +13,6 @@ namespace Engine.Core.Serialization
     {
         private const BindingFlags Flags = BindingFlags.Public | BindingFlags.Instance;
 
-        /// <summary>
-        /// Checks if a member is decorated with [GISMIgnore] (or any standard Ignore attribute).
-        /// </summary>
         private static bool ShouldIgnore(MemberInfo member)
         {
             foreach(var attr in member.GetCustomAttributes(true))
@@ -26,16 +26,9 @@ namespace Engine.Core.Serialization
             return false;
         }
 
-        /// <summary>
-        /// Identifies types we natively support exporting.
-        /// </summary>
-        private static bool IsSupportedType(Type type)
-        {
-            return type.IsPrimitive ||
-                   type == typeof(string) ||
-                   type.IsEnum ||
-                   type == typeof(Vector2);
-        }
+        // ====================================================
+        // 1. EXPORT PASS
+        // ====================================================
 
         public static Dictionary<string, object> ExportComponent(ECS.GameComponent component)
         {
@@ -49,21 +42,11 @@ namespace Engine.Core.Serialization
                     continue;
 
                 var value = field.GetValue(component);
-                if(value != null && IsSupportedType(field.FieldType))
+                if(value != null)
                 {
-                    if(field.FieldType.IsEnum)
-                    {
-                        data[field.Name] = value.ToString();
-                    }
-                    else if(field.FieldType == typeof(Vector2))
-                    {
-                        var vec = (Vector2) value;
-                        data[field.Name] = new Dictionary<string, float> { { "X", vec.X }, { "Y", vec.Y } };
-                    }
-                    else
-                    {
-                        data[field.Name] = value;
-                    }
+                    var exported = ExportValue(value);
+                    if(exported != null)
+                        data[field.Name] = exported;
                 }
             }
 
@@ -74,26 +57,77 @@ namespace Engine.Core.Serialization
                     continue;
 
                 var value = prop.GetValue(component);
-                if(value != null && IsSupportedType(prop.PropertyType))
+                if(value != null)
                 {
-                    if(prop.PropertyType.IsEnum)
-                    {
-                        data[prop.Name] = value.ToString();
-                    }
-                    else if(prop.PropertyType == typeof(Vector2))
-                    {
-                        var vec = (Vector2) value;
-                        data[prop.Name] = new Dictionary<string, float> { { "X", vec.X }, { "Y", vec.Y } };
-                    }
-                    else
-                    {
-                        data[prop.Name] = value;
-                    }
+                    var exported = ExportValue(value);
+                    if(exported != null)
+                        data[prop.Name] = exported;
                 }
             }
 
             return data;
         }
+
+        private static object ExportValue(object value)
+        {
+            if(value == null)
+                return null;
+
+            Type valType = value.GetType();
+
+            // Primitives & Value Types
+            if(valType.IsEnum)
+                return value.ToString();
+            if(valType == typeof(Vector2))
+            {
+                var vec = (Vector2) value;
+                return new Dictionary<string, float> { { "X", vec.X }, { "Y", vec.Y } };
+            }
+            if(valType.IsPrimitive || valType == typeof(string))
+                return value;
+
+            // Single GameObject Reference -> Store Guid metadata
+            if(value is GameObject go)
+            {
+                return new Dictionary<string, string>
+                {
+                    { "$ref", "GameObject" },
+                    { "Id", go.Id.ToString() }
+                };
+            }
+
+            // Single GameComponent Reference -> Store Owning GameObject Guid + Component Type Name
+            if(value is GameComponent comp)
+            {
+                string goId = comp.gameObject != null ? comp.gameObject.Id.ToString() : Guid.Empty.ToString();
+                return new Dictionary<string, string>
+                {
+                    { "$ref", "Component" },
+                    { "GameObjectId", goId },
+                    { "ComponentType", comp.GetType().Name }
+                };
+            }
+
+            // Lists & Arrays of References or Values
+            if(value is IList list)
+            {
+                var exportList = new List<object>();
+                foreach(var item in list)
+                {
+                    var exportedItem = ExportValue(item);
+                    if(exportedItem != null)
+                        exportList.Add(exportedItem);
+                }
+                return exportList;
+            }
+
+            return null;
+        }
+
+        // ====================================================
+        // 2. IMPORT PASS 1 (Primitives, Enums & Vector2s)
+        // UNTOUCHED - Preserves exact existing behavior!
+        // ====================================================
 
         public static void ImportComponent(ECS.GameComponent component, Dictionary<string, object> state)
         {
@@ -146,14 +180,127 @@ namespace Engine.Core.Serialization
                 }
                 catch
                 {
-                    // Suppress or log structural mismatches smoothly
+                    // Reference dictionaries are ignored gracefully during primitive pass
                 }
             }
         }
 
-        /// <summary>
-        /// Robust helper to extract a MonoGame Vector2 from serialized dictionary shapes or inline strings.
-        /// </summary>
+        // ====================================================
+        // 3. IMPORT PASS 2 (Late-Binding Reference Resolver)
+        // ====================================================
+
+        public static void ResolveComponentReferences(ECS.GameComponent component, Dictionary<string, object> state, Dictionary<Guid, GameObject> idToEntityMap)
+        {
+            if(state == null || component == null || idToEntityMap == null)
+                return;
+
+            var type = component.GetType();
+
+            foreach(var kvp in state)
+            {
+                if(kvp.Value == null)
+                    continue;
+
+                var field = type.GetField(kvp.Key, Flags);
+                var prop = type.GetProperty(kvp.Key, Flags);
+
+                if(field == null && prop == null)
+                    continue;
+                if(field != null && ShouldIgnore(field))
+                    continue;
+                if(prop != null && ShouldIgnore(prop))
+                    continue;
+
+                Type memberType = field != null ? field.FieldType : prop.PropertyType;
+
+                object resolvedValue = ResolveValue(kvp.Value, memberType, idToEntityMap);
+                if(resolvedValue != null)
+                {
+                    if(field != null)
+                        field.SetValue(component, resolvedValue);
+                    else if(prop != null && prop.CanWrite)
+                        prop.SetValue(component, resolvedValue, null);
+                }
+            }
+        }
+
+        private static object ResolveValue(object rawValue, Type targetType, Dictionary<Guid, GameObject> idToEntityMap)
+        {
+            // 1. Single Reference Payload
+            if(rawValue is IDictionary dict)
+            {
+                string refType = GetDictString(dict, "$ref");
+                if(refType == "GameObject")
+                {
+                    string idStr = GetDictString(dict, "Id");
+                    if(Guid.TryParse(idStr, out Guid goId) && idToEntityMap.TryGetValue(goId, out var targetGo))
+                    {
+                        return targetGo;
+                    }
+                }
+                else if(refType == "Component")
+                {
+                    string goIdStr = GetDictString(dict, "GameObjectId");
+                    string compTypeName = GetDictString(dict, "ComponentType");
+
+                    if(Guid.TryParse(goIdStr, out Guid goId) && idToEntityMap.TryGetValue(goId, out var targetGo))
+                    {
+                        if(targetGo.Components != null)
+                        {
+                            foreach(var compKvp in targetGo.Components)
+                            {
+                                if(compKvp.Key.Name.Equals(compTypeName, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    return compKvp.Value;
+                                }
+                            }
+                        }
+                    }
+                }
+                return null;
+            }
+
+            // 2. Collection / List of References
+            if(rawValue is IList rawList && typeof(IList).IsAssignableFrom(targetType))
+            {
+                Type elementType = targetType.IsArray
+                    ? targetType.GetElementType()
+                    : targetType.GetGenericArguments().FirstOrDefault();
+
+                if(elementType == null)
+                    return null;
+
+                var targetList = (IList) Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType));
+
+                foreach(var item in rawList)
+                {
+                    object resolvedItem = ResolveValue(item, elementType, idToEntityMap);
+                    if(resolvedItem != null)
+                    {
+                        targetList.Add(resolvedItem);
+                    }
+                }
+
+                if(targetType.IsArray)
+                {
+                    Array array = Array.CreateInstance(elementType, targetList.Count);
+                    targetList.CopyTo(array, 0);
+                    return array;
+                }
+
+                return targetList;
+            }
+
+            return null;
+        }
+
+        private static string GetDictString(IDictionary dict, string key)
+        {
+            if(dict.Contains(key))
+                return dict[key]?.ToString();
+            return null;
+        }
+
         private static Vector2 ParseVector2(object value)
         {
             if(value is Vector2 directVec)
@@ -161,8 +308,7 @@ namespace Engine.Core.Serialization
                 return directVec;
             }
 
-            // Handles standard deserialized maps: Dictionary<object, object> or Dictionary<string, object>
-            if(value is System.Collections.IDictionary dict)
+            if(value is IDictionary dict)
             {
                 float x = 0f;
                 float y = 0f;
@@ -175,7 +321,6 @@ namespace Engine.Core.Serialization
                 return new Vector2(x, y);
             }
 
-            // Fallback parser if your YAML engine loads inline string formats like "16, 16" or "{X:16 Y:16}"
             if(value is string str)
             {
                 str = str.Trim('{', '}', ' ');

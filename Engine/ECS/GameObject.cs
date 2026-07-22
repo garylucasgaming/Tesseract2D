@@ -59,7 +59,7 @@ namespace Engine.Core.ECS
         public Guid ParentId { get; set; } = Guid.Empty;
 
 
-        [GISMIgnore]
+        [Browsable(false)]
         public List<GameObject> Children { get; set; } = new List<GameObject>();
 
 

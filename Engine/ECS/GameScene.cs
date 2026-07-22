@@ -13,6 +13,10 @@ namespace Engine.Core.ECS
 {
     public class GameScene : Object
     {
+
+
+        private int _loadOrder;
+
         // Identification properties for the Editor UI to read
         public string SceneName { get; set; } = "Untitled Scene";
 
@@ -26,6 +30,13 @@ namespace Engine.Core.ECS
         public ManagersManager Managers { get; private set; } = null!;
 
         public PhysicsManager Physics { get; private set; } = null!;
+
+
+
+        public int LoadOrder {
+            get => _loadOrder;
+            set => _loadOrder = value;
+        }
 
         public DatabaseManager Database
         {

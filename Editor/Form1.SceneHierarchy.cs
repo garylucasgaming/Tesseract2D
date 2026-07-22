@@ -1,14 +1,15 @@
-﻿using System;
-using System.Linq;
-using System.Windows.Forms;
-using System.Collections.Generic;
-using Engine.Core.ECS;
+﻿using Engine.Core.ECS;
+using Engine.Core.ECS.Components;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using Engine.Editor.WinFormsApp1;
-using Engine.Core.ECS.Components;
 using SharpDX.WIC;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
+using System.Windows.Forms;
+using static System.ComponentModel.Design.ObjectSelectorEditor;
 
 namespace WinFormsApp1
 {
@@ -52,8 +53,7 @@ namespace WinFormsApp1
             SceneHierarchyTreeView.MouseUp += SceneHierarchyTreeView_MouseUp;
             SceneHierarchyTreeView.AfterLabelEdit += SceneHierarchyTreeView_AfterLabelEdit;
             SceneHierarchyTreeView.AfterSelect += SceneHierarchyTreeView_AfterSelect;
-            SceneHierarchyTreeView.AfterLabelEdit += SceneHierarchyTreeView_AfterLabelEdit;
-            SceneHierarchyTreeView.AfterSelect += SceneHierarchyTreeView_AfterSelect;
+          
             sceneHierarchySearchBar.SearchTextChanged += (s, searchText) =>
             {
                 PerformHierarchySearch(searchText);
@@ -278,28 +278,48 @@ namespace WinFormsApp1
             }
         }
 
-        private void SceneHierarchyTreeView_AfterLabelEdit(object sender, NodeLabelEditEventArgs e)
-        {
-            if(e.Label == null)
-                return;
-            if(string.IsNullOrWhiteSpace(e.Label))
-            {
-                MessageBox.Show("GameObject names cannot be blank.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                e.CancelEdit = true;
-                return;
-            }
-
-            if(e.Node.Tag is GameObject targetEntity)
-            {
-                targetEntity.Name = e.Label.Trim();
-                Log.Info($"[Hierarchy] Inline rename committed for GUID '{targetEntity.Id}': {targetEntity.Name}");
-            }
-        }
+       
 
         private void RenameGameObject_Click()
         {
-            SceneHierarchyTreeView.SelectedNode?.BeginEdit();
+            if(SceneHierarchyTreeView.SelectedNode != null)
+            {
+                // Puts the selected node's label into inline editing mode
+                SceneHierarchyTreeView.SelectedNode.BeginEdit();
+            }
         }
+
+        private void SceneHierarchyTreeView_AfterLabelEdit(object sender, NodeLabelEditEventArgs e)
+        {
+            // 1. If e.Label is null, the user canceled the edit (e.g., pressed Escape or clicked away without changing)
+            if(e.Label == null)
+                return;
+
+            string newName = e.Label.Trim();
+
+            // 2. Validation: Prevent empty or whitespace-only names
+            if(string.IsNullOrWhiteSpace(newName))
+            {
+                e.CancelEdit = true; // Reverts the UI node text back to its original name
+                Log.Warning("GameObject names cannot be blank.");
+                return;
+            }
+
+            // 3. Extract the underlying entity from the edited node's Tag
+            if(e.Node.Tag is GameObject targetEntity)
+            {
+                // Update the actual engine object's name!
+                targetEntity.Name = newName;
+
+                // Rebuild or refresh the inspector so the new name reflects everywhere immediately
+                RebuildInspectorPanel(targetEntity);
+            }
+            else
+            {
+                e.CancelEdit = true;
+            }
+        }
+
 
         private void DestroyGameObject_Click()
         {

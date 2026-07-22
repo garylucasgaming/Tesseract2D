@@ -42,13 +42,15 @@ namespace Engine.Editor.WinFormsApp1
 
             if(value is IList list)
             {
-                // 1. Add a virtual "Size" property descriptor at the top
-                properties.Add(new CollectionSizeDescriptor(context.PropertyDescriptor, list));
+                // 1. Pass the top-level parent object context (context.Instance) down to the size field 
+                // so it can trigger a full UI layout repaint when rows are added or removed.
+                object owner = context?.Instance;
+                properties.Add(new CollectionSizeDescriptor(context?.PropertyDescriptor, list, owner));
 
-                // 2. Add a virtual property descriptor for every single active item slot
+                // 2. Build the alphanumeric virtual index slots
                 for(int i = 0; i < list.Count; i++)
                 {
-                    properties.Add(new CollectionIndexDescriptor(context.PropertyDescriptor, list, i));
+                    properties.Add(new CollectionIndexDescriptor(context?.PropertyDescriptor, list, i));
                 }
             }
 
@@ -73,16 +75,19 @@ namespace Engine.Editor.WinFormsApp1
     {
         private readonly IList _list;
         private readonly PropertyDescriptor _parentProp;
+        private readonly object _owner;
 
-        public CollectionSizeDescriptor(PropertyDescriptor parentProp, IList list)
-            : base("Size", new Attribute[] { new CategoryAttribute("Collection Layout") })
+        // Added BrowsableAttribute(true) to survive PropertyGrid selection passes
+        public CollectionSizeDescriptor(PropertyDescriptor parentProp, IList list, object owner)
+            : base("Size", new Attribute[] { new CategoryAttribute("Collection Layout"), new BrowsableAttribute(true) })
         {
             _parentProp = parentProp;
             _list = list;
+            _owner = owner;
         }
 
         public override Type ComponentType => typeof(IList);
-        public override bool IsReadOnly => _list.IsFixedSize && !_list.GetType().IsArray; // True for raw fixed arrays without resizing hooks
+        public override bool IsReadOnly => _list.IsFixedSize && !_list.GetType().IsArray;
         public override Type PropertyType => typeof(int);
 
         public override object GetValue(object component) => _list.Count;
@@ -95,21 +100,18 @@ namespace Engine.Editor.WinFormsApp1
 
             Type listType = _list.GetType();
 
-            // Handle standard C# Arrays (T[])
             if(listType.IsArray)
             {
                 Type elementType = listType.GetElementType();
                 Array newArray = Array.CreateInstance(elementType, newSize);
-
-                // Copy over old items up to the boundary limit
                 int copyCount = Math.Min(_list.Count, newSize);
                 Array.Copy((Array) _list, newArray, copyCount);
 
-                // Find the parent Component/Object instance to reassign the brand new array handle via reflection
-                var owner = context_Bypass_Owner(component);
-                _parentProp.SetValue(owner, newArray);
+                if(_parentProp != null && _owner != null)
+                {
+                    _parentProp.SetValue(_owner, newArray);
+                }
             }
-            // Handle Generic System.Collections.Generic.List<T>
             else
             {
                 while(_list.Count > newSize)
@@ -124,10 +126,16 @@ namespace Engine.Editor.WinFormsApp1
                 }
             }
 
-            TypeDescriptor.Refresh(component);
+            // Tell the master object inspector to completely rebuild its visual card tree
+            if(_owner != null)
+            {
+                TypeDescriptor.Refresh(_owner);
+            }
+            else
+            {
+                TypeDescriptor.Refresh(component);
+            }
         }
-
-        private object context_Bypass_Owner(object comp) => comp is FilteredPropertyWrapper wrapper ? wrapper.GetPropertyOwner(null) : comp;
 
         public override bool CanResetValue(object component) => false;
         public override void ResetValue(object component)
@@ -137,19 +145,24 @@ namespace Engine.Editor.WinFormsApp1
     }
 
     // ====================================================
-    // VIRTUAL PROPERTY FOR INDIVIDUAL SLOTS (Element [0], Element [1]...)
+    // VIRTUAL PROPERTY FOR INDIVIDUAL SLOTS (Element [0]...)
     // ====================================================
     public class CollectionIndexDescriptor : PropertyDescriptor
     {
         private readonly IList _list;
         private readonly int _index;
+        private TypeConverter _customConverter;
 
+        // FIX: Pass a safe internal identifier "Element_X" to the base layout engine
         public CollectionIndexDescriptor(PropertyDescriptor parentProp, IList list, int index)
-            : base($"Element [{index}]", new Attribute[] { new CategoryAttribute("Elements") })
+            : base($"Element_{index}", new Attribute[] { new CategoryAttribute("Elements"), new BrowsableAttribute(true) })
         {
             _list = list;
             _index = index;
         }
+
+        // FIX: Override DisplayName so humans see the clean Unity-style bracket layout!
+        public override string DisplayName => $"Element [{_index}]";
 
         public override Type ComponentType => typeof(IList);
         public override bool IsReadOnly => false;
@@ -166,13 +179,41 @@ namespace Engine.Editor.WinFormsApp1
             }
         }
 
+        // FIX: Inject your custom dropdown converters into your collection element rows!
+        public override TypeConverter Converter
+        {
+            get
+            {
+                if(_customConverter == null)
+                {
+                    Type propType = this.PropertyType;
+
+                    if(propType.IsClass && propType != typeof(string) && !typeof(System.Collections.IEnumerable).IsAssignableFrom(propType))
+                    {
+                        if(typeof(DataComponent).IsAssignableFrom(propType))
+                            _customConverter = new DataComponentReferenceConverter();
+                        else if(propType.Name == "GameObject" || propType.Name.Contains("GameObject"))
+                            _customConverter = new GameObjectReferenceConverter();
+                        else if(propType.Name.EndsWith("Component"))
+                            _customConverter = new ComponentReferenceConverter();
+                        else
+                            _customConverter = new EngineObjectReferenceConverter();
+                    }
+                    else if(typeof(System.Collections.IList).IsAssignableFrom(propType))
+                    {
+                        _customConverter = new InlineCollectionConverter(); // Nested collection arrays support!
+                    }
+                }
+                return _customConverter ?? base.Converter;
+            }
+        }
+
         public override bool CanResetValue(object component) => false;
         public override void ResetValue(object component)
         {
         }
         public override bool ShouldSerializeValue(object component) => false;
     }
-
     public class DataComponentReferenceConverter : TypeConverter
     {
         public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
@@ -180,10 +221,9 @@ namespace Engine.Editor.WinFormsApp1
 
         public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
         {
-            if(context?.PropertyDescriptor == null)
-                return null;
 
-            Type targetType = context.PropertyDescriptor.PropertyType; // e.g. SwordDataComponent
+            Type targetType = context?.PropertyDescriptor?.PropertyType ?? typeof(DataComponent);
+            
             List<DataComponent> choices = new List<DataComponent> { null }; // Allow assigning "None"
 
             // Scrape your loaded database manager for entries matching this exact derived sub-class type
@@ -243,14 +283,31 @@ namespace Engine.Editor.WinFormsApp1
         public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
         public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true;
 
+        // 👇 ADD THIS: Tells WinForms that this converter accepts string inputs from the dropdown!
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+        {
+            if(sourceType == typeof(string))
+                return true;
+            return base.CanConvertFrom(context, sourceType);
+        }
+
         public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
         {
-            List<GameObject> sceneObjects = new List<GameObject> { null };
+            List<object> sceneObjects = new List<object> { null };
 
-            // Hook this into wherever your active editing world/scene tracks its live object matrix!
             if(EditorContextManager.ActiveLoadedScene != null)
             {
-                sceneObjects.AddRange(EditorContextManager.ActiveLoadedScene.Entities.GetSerializableEntities());
+                var entities = EditorContextManager.ActiveLoadedScene.Entities.GetSerializableEntities();
+                if(entities != null)
+                {
+                    foreach(var entity in entities)
+                    {
+                        if(entity != null)
+                        {
+                            sceneObjects.Add(entity);
+                        }
+                    }
+                }
             }
 
             return new StandardValuesCollection(sceneObjects);
@@ -260,10 +317,30 @@ namespace Engine.Editor.WinFormsApp1
         {
             if(destinationType == typeof(string))
             {
+                if(value == null)
+                    return "None (GameObject)";
+
+                if(value is string str)
+                    return str;
+
                 if(value is GameObject go)
-                    return $"{go.Name} (ID: {go.Id.ToString().Substring(0, 5)})";
-                return "None (GameObject)";
+                {
+                    return string.IsNullOrWhiteSpace(go.Name)
+                        ? $"Unnamed GameObject ({value.GetType().Name})"
+                        : go.Name;
+                }
+
+                var nameProp = value.GetType().GetProperty("Name");
+                if(nameProp != null)
+                {
+                    string nameVal = nameProp.GetValue(value)?.ToString();
+                    if(!string.IsNullOrWhiteSpace(nameVal))
+                        return nameVal;
+                }
+
+                return $"Unnamed {value.GetType().Name}";
             }
+
             return base.ConvertTo(context, culture, value, destinationType);
         }
 
@@ -271,17 +348,28 @@ namespace Engine.Editor.WinFormsApp1
         {
             if(value is string str)
             {
-                foreach(GameObject go in GetStandardValues(context))
+                if(str == "None (GameObject)")
+                    return null;
+
+                var standardValues = GetStandardValues(context);
+                if(standardValues != null)
                 {
-                    if(go == null && str == "None (GameObject)")
-                        return null;
-                    if(go != null && $"{go.Name} (ID: {go.Id.ToString().Substring(0, 5)})" == str)
-                        return go;
+                    foreach(object choice in standardValues)
+                    {
+                        if(choice == null)
+                            continue;
+
+                        string choiceDisplayName = ConvertTo(context, culture, choice, typeof(string)) as string;
+                        if(choiceDisplayName == str)
+                            return choice; // Returns the actual live GameObject instance!
+                    }
                 }
             }
+
             return base.ConvertFrom(context, culture, value);
         }
     }
+
 
     // ==========================================
     // 3. COMPONENT DROPDOWN CONVERTER (Cross-Component Links)
@@ -291,24 +379,41 @@ namespace Engine.Editor.WinFormsApp1
         public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
         public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true;
 
+        // 1. Tell WinForms this converter accepts string inputs from the dropdown selection
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+        {
+            if(sourceType == typeof(string))
+                return true;
+            return base.CanConvertFrom(context, sourceType);
+        }
+
         public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
         {
-            if(context?.PropertyDescriptor == null)
-                return null;
-            Type targetComponentType = context.PropertyDescriptor.PropertyType; // e.g. SpriteRendererComponent
+            List<object> validComponents = new List<object> { null }; // Default to 'None' option
 
-            List<object> validComponents = new List<object> { null };
+            Type targetComponentType = context?.PropertyDescriptor?.PropertyType ?? typeof(object);
 
-            // Scrape the active scene to find components that inherit from or match the target field type
             if(EditorContextManager.ActiveLoadedScene != null)
             {
-                foreach(var go in EditorContextManager.ActiveLoadedScene.Entities.GetSerializableEntities())
+                var entities = EditorContextManager.ActiveLoadedScene.Entities.GetSerializableEntities();
+                if(entities != null)
                 {
-                    foreach(var comp in go.Components)
+                    foreach(var go in entities)
                     {
-                        if(targetComponentType.IsAssignableFrom(comp.GetType()))
+                        if(go?.Components == null)
+                            continue;
+
+                        // 👇 Iterate directly over the Dictionary Values to get the GameComponent instances
+                        foreach(var comp in go.Components.Values)
                         {
-                            validComponents.Add(comp);
+                            if(comp == null)
+                                continue;
+
+                            // Check if the actual component instance matches the property type
+                            if(targetComponentType == typeof(object) || targetComponentType.IsAssignableFrom(comp.GetType()))
+                            {
+                                validComponents.Add(comp); // Adds the actual GameComponent instance!
+                            }
                         }
                     }
                 }
@@ -316,20 +421,62 @@ namespace Engine.Editor.WinFormsApp1
 
             return new StandardValuesCollection(validComponents);
         }
-
         public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
         {
             if(destinationType == typeof(string))
             {
-                if(value != null)
+                if(value == null)
+                    return "None (Component)";
+
+                // If value is ALREADY a string, return it untouched so WinForms doesn't break
+                if(value is string str)
+                    return str;
+
+                string ownerName = "Detached";
+                Type compType = value.GetType();
+
+                // 1. Try retrieving the owner from a FIELD (e.g. public GameObject gameObject;)
+                var ownerField = compType.GetField("gameObject", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase)
+                              ?? compType.GetField("owner", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase)
+                              ?? compType.GetField("entity", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
+
+                object ownerObj = ownerField?.GetValue(value);
+
+                // 2. Fallback to checking a PROPERTY (in case some components use { get; set; })
+                if(ownerObj == null)
                 {
-                    // If your component has an owner back-pointer, show which GameObject houses it!
-                    var ownerProp = value.GetType().GetProperty("Owner");
-                    string ownerName = ownerProp != null && ownerProp.GetValue(value) is GameObject go ? go.Name : "Detached";
-                    return $"{ownerName} -> {value.GetType().Name}";
+                    var ownerProp = compType.GetProperty("gameObject", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase)
+                                 ?? compType.GetProperty("owner", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase)
+                                 ?? compType.GetProperty("entity", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
+
+                    ownerObj = ownerProp?.GetValue(value);
                 }
-                return "None (Component)";
+
+                // 3. Extract the owner GameObject's Name
+                if(ownerObj is GameObject go)
+                {
+                    ownerName = string.IsNullOrWhiteSpace(go.Name) ? "Unnamed GameObject" : go.Name;
+                }
+                else if(ownerObj != null)
+                {
+                    var nameProp = ownerObj.GetType().GetProperty("Name", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
+                    string nameVal = nameProp?.GetValue(ownerObj)?.ToString();
+                    if(!string.IsNullOrWhiteSpace(nameVal))
+                    {
+                        ownerName = nameVal;
+                    }
+                }
+
+                // 👇 Clean the component type name (e.g. "TransformComponent" -> "Transform")
+                string cleanCompName = compType.Name;
+                if(cleanCompName.EndsWith("Component"))
+                {
+                    cleanCompName = cleanCompName.Substring(0, cleanCompName.Length - "Component".Length);
+                }
+
+                return $"{ownerName} -> {cleanCompName}";
             }
+
             return base.ConvertTo(context, culture, value, destinationType);
         }
 
@@ -337,25 +484,29 @@ namespace Engine.Editor.WinFormsApp1
         {
             if(value is string str)
             {
-                foreach(var comp in GetStandardValues(context))
+                if(str == "None (Component)")
+                    return null;
+
+                var choices = GetStandardValues(context);
+                if(choices != null)
                 {
-                    if(comp == null && str == "None (Component)")
-                        return null;
-                    if(comp != null)
+                    foreach(object comp in choices)
                     {
-                        var ownerProp = comp.GetType().GetProperty("Owner");
-                        string ownerName = ownerProp != null && ownerProp.GetValue(comp) is GameObject go ? go.Name : "Detached";
-                        if($"{ownerName} -> {comp.GetType().Name}" == str)
-                            return comp;
+                        if(comp == null)
+                            continue;
+
+                        string choiceDisplayName = ConvertTo(context, culture, comp, typeof(string)) as string;
+                        if(choiceDisplayName == str)
+                            return comp; // Successfully returns the live component reference!
                     }
                 }
             }
+
             return base.ConvertFrom(context, culture, value);
         }
     }
 
-
-public class FilteredPropertyWrapper : CustomTypeDescriptor, ICustomTypeDescriptor
+    public class FilteredPropertyWrapper : CustomTypeDescriptor, ICustomTypeDescriptor
     {
         private readonly object _target;
 
@@ -432,14 +583,14 @@ public class FilteredPropertyWrapper : CustomTypeDescriptor, ICustomTypeDescript
             _baseDescriptor = baseDescriptor;
             _targetComponent = targetComponent;
 
-            // 👇 If it's an engine reference, attach our safe converter to choke off recursion loops
+            // If it's an engine reference, attach our safe converter to choke off recursion loops
             Type propType = baseDescriptor.PropertyType;
-            // 👇 NEW: Detect if this property is a valid List or Array collection container
+            //  Detect if this property is a valid List or Array collection container
             if(typeof(System.Collections.IList).IsAssignableFrom(propType))
             {
                 _customConverter = new InlineCollectionConverter();
             }
-            // Your existing engine reference detection logic continues safely below...
+            
             else if(propType.IsClass && propType != typeof(string))
             {
                 if(typeof(DataComponent).IsAssignableFrom(propType))
@@ -463,7 +614,7 @@ public class FilteredPropertyWrapper : CustomTypeDescriptor, ICustomTypeDescript
 
         public override TypeConverter Converter => _customConverter ?? base.Converter;
 
-        // 👇 FIX: Route the component argument straight to the target for all structural methods
+        //  Route the component argument straight to the target for all structural methods
         public override bool CanResetValue(object component) => _baseDescriptor.CanResetValue(_targetComponent);
         public override object GetValue(object component) => _baseDescriptor.GetValue(_targetComponent);
         public override void ResetValue(object component) => _baseDescriptor.ResetValue(_targetComponent);
@@ -478,7 +629,6 @@ public class FilteredPropertyWrapper : CustomTypeDescriptor, ICustomTypeDescript
             if(_targetComponent == null)
                 return;
 
-            // Force a direct Reflection call to bypass WinForms optimization checks
             Type targetType = _targetComponent.GetType();
             var propInfo = targetType.GetProperty(this.Name,
                 System.Reflection.BindingFlags.Public |
@@ -489,23 +639,27 @@ public class FilteredPropertyWrapper : CustomTypeDescriptor, ICustomTypeDescript
             {
                 object convertedValue;
 
-                // 👇 FIX: Bypasses simple conversion for arrays/lists
-                if(propInfo.PropertyType.IsClass && propInfo.PropertyType != typeof(string))
+                // 1. If value is a string and we have a custom converter, convert the string to the real object reference!
+                if(value is string strValue && Converter != null && Converter.CanConvertFrom(typeof(string)))
                 {
-                    convertedValue = value; // Keep reference intact
+                    convertedValue = Converter.ConvertFrom(strValue);
                 }
+                // 2. Direct reference assignment for class objects (GameObjects, Components, DataAssets)
+                else if(propInfo.PropertyType.IsClass && propInfo.PropertyType != typeof(string))
+                {
+                    convertedValue = value;
+                }
+                // 3. Primitive value types (int, float, bool, etc.)
                 else
                 {
                     convertedValue = Convert.ChangeType(value, propInfo.PropertyType);
                 }
 
-                Log.Info($"[Wrapper Success] Successfully invoked setter for '{propInfo.Name}' via Reflection.");
                 propInfo.SetValue(_targetComponent, convertedValue, null);
                 TypeDescriptor.Refresh(_targetComponent);
             }
             else
             {
-                // Fallback using the exact target component metadata mapping context
                 _baseDescriptor.SetValue(_targetComponent, value);
             }
         }

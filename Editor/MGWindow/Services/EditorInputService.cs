@@ -88,6 +88,42 @@ namespace Engine.Editor.MGWindow.Services
             _inputManager.OnMouseLeftDown += HandleMouseLeftDown;
             _inputManager.OnMouseLeftUp += HandleMouseLeftUp;
             _inputManager.OnMouseMoved += HandleMouseMoved;
+            _inputManager.OnKeyPressUp += HandleKeyReleased;
+            _inputManager.OnKeyPressDown += HandleKeyPressed;
+            _inputManager.OnKeyHeld += HandleKeyHeld;
+        }
+
+        private void HandleKeyHeld(Keys keys)
+        {
+            
+        }
+
+        private void HandleKeyPressed(Keys key)
+        {
+
+
+
+            switch(key)
+            {
+                case Keys.A:
+
+                    break;
+                case Keys.S: 
+
+                    break;
+                case Keys.D: 
+
+                    break;
+                case Keys.W:
+
+                    break;
+                        
+            }
+        }
+
+        private void HandleKeyReleased(Keys keys)
+        {
+            
         }
 
         private GameScene _activeScene;
