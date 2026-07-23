@@ -1,6 +1,7 @@
 ﻿using Engine.Core.ECS.Components;
 using Engine.Core.ECS.Managers;
 using Engine.Core.Runtime;
+using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using System;
 using System.Collections.Generic;
@@ -58,8 +59,9 @@ namespace Engine.Core.ECS
             Physics = new PhysicsManager() { ContextScene = this };
             Managers = new ManagersManager() { ContextScene = this };
             Database = new DatabaseManager() { ContextScene = this };
-
+            
             InitializeManagerEvents();
+            Database.LoadAllDatabasesFromFolder(EditorContextManager.DatabasePath);
 
         }
 

@@ -6,6 +6,7 @@ using Engine.Editor.MGWindow.Services.Engine.Editor.MGWindow.Services;
 using Engine.Editor.Utilities;
 using Engine.Editor.WinFormsApp1;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.ComponentModel;
@@ -49,6 +50,10 @@ namespace Engine.Editor.MGWindow.Services
     public class EditorInputService
     {
         private readonly InputManager _inputManager;
+        public Camera2D Camera { get; private set; }
+        public Viewport CurrentViewport { get; private set; }
+
+        private int _previousScrollWheelValue = 0;
 
         private bool _isDragging = false;
         private SelectedAxis _activeAxis = SelectedAxis.None;
@@ -67,6 +72,8 @@ namespace Engine.Editor.MGWindow.Services
 
         private const float HandleLength = 50f;
         private const float ClickTolerance = 8f;
+        private GameScene _activeScene;
+        private GameObject _selectedGo;
 
         // Current Active Gizmo Mode - defaults to Translate (Q)
         public GizmoMode CurrentMode { get; set; } = GizmoMode.Translate;
@@ -82,15 +89,23 @@ namespace Engine.Editor.MGWindow.Services
             get; set;
         }
 
-        public EditorInputService(InputManager inputManager)
+        public EditorInputService(InputManager inputManager, Camera2D camera)
         {
             _inputManager = inputManager;
+            Camera = camera;
             _inputManager.OnMouseLeftDown += HandleMouseLeftDown;
             _inputManager.OnMouseLeftUp += HandleMouseLeftUp;
             _inputManager.OnMouseMoved += HandleMouseMoved;
             _inputManager.OnKeyPressUp += HandleKeyReleased;
             _inputManager.OnKeyPressDown += HandleKeyPressed;
             _inputManager.OnKeyHeld += HandleKeyHeld;
+        }
+
+        public void SetContext(GameScene activeScene, GameObject selectedGo, Viewport viewport)
+        {
+            _activeScene = activeScene;
+            _selectedGo = selectedGo;
+            CurrentViewport = viewport;
         }
 
         private void HandleKeyHeld(Keys keys)
@@ -106,16 +121,16 @@ namespace Engine.Editor.MGWindow.Services
             switch(key)
             {
                 case Keys.A:
-
+                   
                     break;
-                case Keys.S: 
-
+                case Keys.S:
+                   
                     break;
-                case Keys.D: 
-
+                case Keys.D:
+                    
                     break;
                 case Keys.W:
-
+                   
                     break;
                         
             }
@@ -126,20 +141,12 @@ namespace Engine.Editor.MGWindow.Services
             
         }
 
-        private GameScene _activeScene;
-        private GameObject _selectedGo;
-
-        public void SetContext(GameScene activeScene, GameObject selectedGo)
-        {
-            _activeScene = activeScene;
-            _selectedGo = selectedGo;
-        }
-
         /// <summary>
         /// Call this in your MGWindowControl's Update loop to handle hotkey switches!
         /// </summary>
-        public void Update()
+        public void Update(float deltaTime)
         {
+            HandleCameraControls(deltaTime);
             if(_selectedGo == null)
                 return;
 
@@ -161,37 +168,104 @@ namespace Engine.Editor.MGWindow.Services
             }
             else if(selectedComponent is TransformComponent)
             {
-                // 3. Fallback: Transform or other component is active. Listen to Q, W, E hotkeys.
+                // 3. Fallback: Transform or other component is active. Listen to 123 hotkeys.
 
              
 
                 KeyboardState currentKeyboardState = Keyboard.GetState();
                 
                 // Check for key down transitions (on key press, not hold)
-                if(currentKeyboardState.IsKeyDown(Keys.Q) && !_prevKeyboardState.IsKeyDown(Keys.Q) && CurrentMode != GizmoMode.Translate)
+                if(currentKeyboardState.IsKeyDown(Keys.D1) && !_prevKeyboardState.IsKeyDown(Keys.Q) && CurrentMode != GizmoMode.Translate)
                 {
                     CurrentMode = GizmoMode.Translate;
-                    Log.Info("[Editor] Gizmo Mode changed to: Translate (Q)");
+                    Log.Info("[Editor] Gizmo Mode changed to: Translate (1)");
                 }
-                else if(currentKeyboardState.IsKeyDown(Keys.W) && !_prevKeyboardState.IsKeyDown(Keys.W) && CurrentMode != GizmoMode.Scale)
+                else if(currentKeyboardState.IsKeyDown(Keys.D2) && !_prevKeyboardState.IsKeyDown(Keys.W) && CurrentMode != GizmoMode.Scale)
                 {
                     CurrentMode = GizmoMode.Scale;
-                    Log.Info("[Editor] Gizmo Mode changed to: Scale (W)");
+                    Log.Info("[Editor] Gizmo Mode changed to: Scale (2)");
                 }
-                else if(currentKeyboardState.IsKeyDown(Keys.E) && !_prevKeyboardState.IsKeyDown(Keys.E) && CurrentMode != GizmoMode.Size)
+                else if(currentKeyboardState.IsKeyDown(Keys.D3) && !_prevKeyboardState.IsKeyDown(Keys.E) && CurrentMode != GizmoMode.Size)
                 {
                     CurrentMode = GizmoMode.Size;
-                    Log.Info("[Editor] Gizmo Mode changed to: Size (E)");
+                    Log.Info("[Editor] Gizmo Mode changed to: Size (3)");
                 }
 
                 _prevKeyboardState = currentKeyboardState;
             }
         }
 
-        private void HandleMouseLeftDown(Vector2 mousePos)
+        private void HandleCameraControls(float deltaTime)
+        {
+            KeyboardState keyState = Keyboard.GetState();
+            MouseState mouseState = Mouse.GetState();
+
+            // --- 1. CAMERA PANNING (Hold Right-Click + WASD or Arrow Keys) ---
+            bool isRightMouseHeld = mouseState.RightButton == Microsoft.Xna.Framework.Input.ButtonState.Pressed;
+            Vector2 panInput = Vector2.Zero;
+
+            // --- FOCUS HOTKEY ('F' Key) ---
+            if(keyState.IsKeyDown(Keys.F) && !_prevKeyboardState.IsKeyDown(Keys.F))
+            {
+                FocusOnSelected();
+            }
+
+            if(isRightMouseHeld)
+            {
+                if(keyState.IsKeyDown(Keys.W))
+                    panInput.Y -= 1;
+                if(keyState.IsKeyDown(Keys.S))
+                    panInput.Y += 1;
+                if(keyState.IsKeyDown(Keys.A))
+                    panInput.X -= 1;
+                if(keyState.IsKeyDown(Keys.D))
+                    panInput.X += 1;
+            }
+
+            // Fallback Arrow Keys panning without right click
+            if(keyState.IsKeyDown(Keys.Up))
+                panInput.Y -= 1;
+            if(keyState.IsKeyDown(Keys.Down))
+                panInput.Y += 1;
+            if(keyState.IsKeyDown(Keys.Left))
+                panInput.X -= 1;
+            if(keyState.IsKeyDown(Keys.Right))
+                panInput.X += 1;
+
+            if(panInput != Vector2.Zero)
+            {
+                panInput.Normalize();
+                float basePanSpeed = 600f;
+                // Adjust speed inversely with zoom so zooming out doesn't feel sluggish
+                Camera.Position += panInput * (basePanSpeed / Camera.Zoom) * deltaTime;
+            }
+
+            // --- 2. CAMERA ZOOMING (+ / - Keys) ---
+            if(keyState.IsKeyDown(Keys.OemPlus) || keyState.IsKeyDown(Keys.Add))
+            {
+                Camera.Zoom = MathHelper.Clamp(Camera.Zoom + (2f * deltaTime), Camera.MinZoom, Camera.MaxZoom);
+            }
+            if(keyState.IsKeyDown(Keys.OemMinus) || keyState.IsKeyDown(Keys.Subtract))
+            {
+                Camera.Zoom = MathHelper.Clamp(Camera.Zoom - (2f * deltaTime), Camera.MinZoom, Camera.MaxZoom);
+            }
+
+            // --- 3. CAMERA ZOOMING (Mouse Wheel) ---
+            int scrollDelta = mouseState.ScrollWheelValue - _previousScrollWheelValue;
+            if(scrollDelta != 0)
+            {
+                float zoomStep = scrollDelta > 0 ? 0.15f : -0.15f;
+                Camera.Zoom = MathHelper.Clamp(Camera.Zoom + zoomStep, Camera.MinZoom, Camera.MaxZoom);
+            }
+            _previousScrollWheelValue = mouseState.ScrollWheelValue;
+        }
+
+        private void HandleMouseLeftDown(Vector2 screenMousePos)
         {
             if(_activeScene == null)
                 return;
+
+            Vector2 worldMousePos = Camera.ScreenToWorld(screenMousePos, CurrentViewport);
 
             if(_selectedGo != null)
             {
@@ -210,19 +284,19 @@ namespace Engine.Editor.MGWindow.Services
                     // --- 1. TRANSLATE MODE INTERACTIONS ---
                     if(CurrentMode == GizmoMode.Translate)
                     {
-                        if(GizmoRenderer.HitTestPoint(mousePos, pivotPos + new Vector2(HandleLength, 0), ClickTolerance))
+                        if(GizmoRenderer.HitTestPoint(worldMousePos, pivotPos + new Vector2(HandleLength, 0), ClickTolerance))
                         {
-                            StartDrag(SelectedAxis.TranslateX, mousePos, transform);
+                            StartDrag(SelectedAxis.TranslateX, worldMousePos, transform);
                             return;
                         }
-                        if(GizmoRenderer.HitTestPoint(mousePos, pivotPos + new Vector2(0, HandleLength), ClickTolerance))
+                        if(GizmoRenderer.HitTestPoint(worldMousePos, pivotPos + new Vector2(0, HandleLength), ClickTolerance))
                         {
-                            StartDrag(SelectedAxis.TranslateY, mousePos, transform);
+                            StartDrag(SelectedAxis.TranslateY, worldMousePos, transform);
                             return;
                         }
-                        if(GizmoRenderer.HitTestPoint(mousePos, pivotPos, 12f))
+                        if(GizmoRenderer.HitTestPoint(worldMousePos, pivotPos, 12f))
                         {
-                            StartDrag(SelectedAxis.Center, mousePos, transform);
+                            StartDrag(SelectedAxis.Center, worldMousePos, transform);
                             return;
                         }
                     }
@@ -232,24 +306,24 @@ namespace Engine.Editor.MGWindow.Services
                     {
                         // Hit-test diagonal uniform scale box first
                         Vector2 diagonalHandle = pivotPos + new Vector2(HandleLength * 0.7f, HandleLength * 0.7f);
-                        if(GizmoRenderer.HitTestPoint(mousePos, diagonalHandle, ClickTolerance))
+                        if(GizmoRenderer.HitTestPoint(worldMousePos, diagonalHandle, ClickTolerance))
                         {
-                            StartDrag(SelectedAxis.ScaleCorner, mousePos, transform);
+                            StartDrag(SelectedAxis.ScaleCorner, worldMousePos, transform);
                             return;
                         }
-                        if(GizmoRenderer.HitTestPoint(mousePos, pivotPos + new Vector2(HandleLength, 0), ClickTolerance))
+                        if(GizmoRenderer.HitTestPoint(worldMousePos, pivotPos + new Vector2(HandleLength, 0), ClickTolerance))
                         {
-                            StartDrag(SelectedAxis.ScaleX, mousePos, transform);
+                            StartDrag(SelectedAxis.ScaleX, worldMousePos, transform);
                             return;
                         }
-                        if(GizmoRenderer.HitTestPoint(mousePos, pivotPos + new Vector2(0, HandleLength), ClickTolerance))
+                        if(GizmoRenderer.HitTestPoint(worldMousePos, pivotPos + new Vector2(0, HandleLength), ClickTolerance))
                         {
-                            StartDrag(SelectedAxis.ScaleY, mousePos, transform);
+                            StartDrag(SelectedAxis.ScaleY, worldMousePos, transform);
                             return;
                         }
-                        if(GizmoRenderer.HitTestPoint(mousePos, pivotPos, 12f))
+                        if(GizmoRenderer.HitTestPoint(worldMousePos, pivotPos, 12f))
                         {
-                            StartDrag(SelectedAxis.Center, mousePos, transform);
+                            StartDrag(SelectedAxis.Center, worldMousePos, transform);
                             return;
                         }
                     }
@@ -257,19 +331,19 @@ namespace Engine.Editor.MGWindow.Services
                     // --- 3. SIZE MODE INTERACTIONS ---
                     else if(CurrentMode == GizmoMode.Size)
                     {
-                        if(GizmoRenderer.HitTestPoint(mousePos, baseCorner + new Vector2(currentWidth, currentHeight * 0.5f), ClickTolerance))
+                        if(GizmoRenderer.HitTestPoint(worldMousePos, baseCorner + new Vector2(currentWidth, currentHeight * 0.5f), ClickTolerance))
                         {
-                            StartDrag(SelectedAxis.SizeWidth, mousePos, transform);
+                            StartDrag(SelectedAxis.SizeWidth, worldMousePos, transform);
                             return;
                         }
-                        if(GizmoRenderer.HitTestPoint(mousePos, baseCorner + new Vector2(currentWidth * 0.5f, currentHeight), ClickTolerance))
+                        if(GizmoRenderer.HitTestPoint(worldMousePos, baseCorner + new Vector2(currentWidth * 0.5f, currentHeight), ClickTolerance))
                         {
-                            StartDrag(SelectedAxis.SizeHeight, mousePos, transform);
+                            StartDrag(SelectedAxis.SizeHeight, worldMousePos, transform);
                             return;
                         }
-                        if(GizmoRenderer.HitTestPoint(mousePos, baseCorner + new Vector2(currentWidth, currentHeight), ClickTolerance))
+                        if(GizmoRenderer.HitTestPoint(worldMousePos, baseCorner + new Vector2(currentWidth, currentHeight), ClickTolerance))
                         {
-                            StartDrag(SelectedAxis.SizeCorner, mousePos, transform);
+                            StartDrag(SelectedAxis.SizeCorner, worldMousePos, transform);
                             return;
                         }
                     }
@@ -283,20 +357,20 @@ namespace Engine.Editor.MGWindow.Services
                             Vector2 center = pivotPos + box.Offset;
                             Vector2 halfSize = box.Size * 0.5f;
 
-                            if(GizmoRenderer.HitTestPoint(mousePos, center, ClickTolerance))
+                            if(GizmoRenderer.HitTestPoint(worldMousePos, center, ClickTolerance))
                             {
-                                StartColliderDrag(SelectedAxis.ColliderOffset, mousePos, box.Offset);
+                                StartColliderDrag(SelectedAxis.ColliderOffset, worldMousePos, box.Offset);
                                 return;
                             }
-                            if(GizmoRenderer.HitTestPoint(mousePos, center + new Vector2(halfSize.X, 0), ClickTolerance))
+                            if(GizmoRenderer.HitTestPoint(worldMousePos, center + new Vector2(halfSize.X, 0), ClickTolerance))
                             {
-                                StartColliderDrag(SelectedAxis.ColliderBoxWidth, mousePos, box.Offset);
+                                StartColliderDrag(SelectedAxis.ColliderBoxWidth, worldMousePos, box.Offset);
                                 _initialColliderSize = box.Size;
                                 return;
                             }
-                            if(GizmoRenderer.HitTestPoint(mousePos, center + new Vector2(0, halfSize.Y), ClickTolerance))
+                            if(GizmoRenderer.HitTestPoint(worldMousePos, center + new Vector2(0, halfSize.Y), ClickTolerance))
                             {
-                                StartColliderDrag(SelectedAxis.ColliderBoxHeight, mousePos, box.Offset);
+                                StartColliderDrag(SelectedAxis.ColliderBoxHeight, worldMousePos, box.Offset);
                                 _initialColliderSize = box.Size;
                                 return;
                             }
@@ -311,14 +385,14 @@ namespace Engine.Editor.MGWindow.Services
                         {
                             Vector2 center = pivotPos + circle.Offset;
 
-                            if(GizmoRenderer.HitTestPoint(mousePos, center, ClickTolerance))
+                            if(GizmoRenderer.HitTestPoint(worldMousePos, center, ClickTolerance))
                             {
-                                StartColliderDrag(SelectedAxis.ColliderOffset, mousePos, circle.Offset);
+                                StartColliderDrag(SelectedAxis.ColliderOffset, worldMousePos, circle.Offset);
                                 return;
                             }
-                            if(GizmoRenderer.HitTestPoint(mousePos, center + new Vector2(circle.Radius, 0), ClickTolerance))
+                            if(GizmoRenderer.HitTestPoint(worldMousePos, center + new Vector2(circle.Radius, 0), ClickTolerance))
                             {
-                                StartColliderDrag(SelectedAxis.ColliderCircleRadius, mousePos, circle.Offset);
+                                StartColliderDrag(SelectedAxis.ColliderCircleRadius, worldMousePos, circle.Offset);
                                 _initialColliderRadius = circle.Radius;
                                 return;
                             }
@@ -333,18 +407,18 @@ namespace Engine.Editor.MGWindow.Services
                         {
                             Vector2 center = pivotPos + poly.Offset;
 
-                            if(GizmoRenderer.HitTestPoint(mousePos, center, ClickTolerance))
+                            if(GizmoRenderer.HitTestPoint(worldMousePos, center, ClickTolerance))
                             {
-                                StartColliderDrag(SelectedAxis.ColliderOffset, mousePos, poly.Offset);
+                                StartColliderDrag(SelectedAxis.ColliderOffset, worldMousePos, poly.Offset);
                                 return;
                             }
 
                             for(int i = 0; i < poly.Vertices.Count; i++)
                             {
                                 Vector2 worldVertex = center + poly.Vertices[i];
-                                if(GizmoRenderer.HitTestPoint(mousePos, worldVertex, ClickTolerance))
+                                if(GizmoRenderer.HitTestPoint(worldMousePos, worldVertex, ClickTolerance))
                                 {
-                                    StartColliderDrag(SelectedAxis.ColliderPolyVertex, mousePos, poly.Offset);
+                                    StartColliderDrag(SelectedAxis.ColliderPolyVertex, worldMousePos, poly.Offset);
                                     _selectedVertexIndex = i;
                                     _initialVertexPos = poly.Vertices[i];
                                     return;
@@ -358,10 +432,38 @@ namespace Engine.Editor.MGWindow.Services
             
         }
 
+
+        /// <summary>
+        /// Instantly centers the camera on the currently selected GameObject.
+        /// </summary>
+        public void FocusOnSelected()
+        {
+            if(_selectedGo == null)
+                return;
+
+            var transform = _selectedGo.GetComponent<TransformComponent>();
+            if(transform != null)
+            {
+                // Center camera directly on the object's world position
+                // (If using a centered pivot, use WorldPosition. Otherwise offset by half size)
+                Vector2 targetPos = transform.WorldPosition;
+
+                // Optional: If object has dimensions, center on its visual bounding box center
+                if(transform.Size != Vector2.Zero)
+                {
+                    targetPos = transform.RenderTopLeft + (transform.Size * transform.Scale * 0.5f);
+                }
+
+                Camera.Position = targetPos;
+            }
+        }
+
         private void HandleMouseMoved(Vector2 currentMousePos, Vector2 mouseDelta)
         {
             if(!_isDragging || _selectedGo == null)
                 return;
+            Vector2 currentWorldMousePos = Camera.ScreenToWorld(currentMousePos, CurrentViewport);
+            Vector2 totalWorldMouseDelta = currentWorldMousePos - _dragStartMousePos;
 
             var transform = _selectedGo.GetComponent<TransformComponent>();
             if(transform == null)
@@ -373,34 +475,34 @@ namespace Engine.Editor.MGWindow.Services
             {
                 // Move/Translate operations
                 case SelectedAxis.Center:
-                    transform.X = _initialEntityPos.X + totalMouseDelta.X;
-                    transform.Y = _initialEntityPos.Y + totalMouseDelta.Y;
+                    transform.X = _initialEntityPos.X + totalWorldMouseDelta.X;
+                    transform.Y = _initialEntityPos.Y + totalWorldMouseDelta.Y;
                     OnTransformModified?.Invoke();
                     break;
 
                 case SelectedAxis.TranslateX:
-                    transform.X = _initialEntityPos.X + totalMouseDelta.X;
+                    transform.X = _initialEntityPos.X + totalWorldMouseDelta.X;
                     OnTransformModified?.Invoke();
                     break;
 
                 case SelectedAxis.TranslateY:
-                    transform.Y = _initialEntityPos.Y + totalMouseDelta.Y;
+                    transform.Y = _initialEntityPos.Y + totalWorldMouseDelta.Y;
                     OnTransformModified?.Invoke();
                     break;
 
                 // Scale operations
                 case SelectedAxis.ScaleX:
-                    transform.ScaleX = (float) Math.Round(_initialEntityScale.X + (totalMouseDelta.X / 10f));
+                    transform.ScaleX = (float) Math.Round(_initialEntityScale.X + (totalWorldMouseDelta.X / 10f));
                     OnTransformModified?.Invoke();
                     break;
 
                 case SelectedAxis.ScaleY:
-                    transform.ScaleY = (float) Math.Round(_initialEntityScale.Y + (totalMouseDelta.Y / 10f));
+                    transform.ScaleY = (float) Math.Round(_initialEntityScale.Y + (totalWorldMouseDelta.Y / 10f));
                     OnTransformModified?.Invoke();
                     break;
 
                 case SelectedAxis.ScaleCorner:
-                    float scaleDelta = (totalMouseDelta.X + totalMouseDelta.Y) / 20f;
+                    float scaleDelta = (totalWorldMouseDelta.X + totalWorldMouseDelta.Y) / 20f;
                     transform.ScaleX = Math.Max(1f, (float) Math.Round(_initialEntityScale.X + scaleDelta));
                     transform.ScaleY = Math.Max(1f, (float) Math.Round(_initialEntityScale.Y + scaleDelta));
                     OnTransformModified?.Invoke();
@@ -408,18 +510,18 @@ namespace Engine.Editor.MGWindow.Services
 
                 // Dimension Size operations
                 case SelectedAxis.SizeWidth:
-                    transform.SizeX = (int) Math.Round(_initialEntitySize.X + ((totalMouseDelta.X) / transform.ScaleX));
+                    transform.SizeX = (int) Math.Round(_initialEntitySize.X + ((totalWorldMouseDelta.X) / transform.ScaleX));
                     OnTransformModified?.Invoke();
                     break;
 
                 case SelectedAxis.SizeHeight:
-                    transform.SizeY = (int) Math.Round(_initialEntitySize.Y + ((totalMouseDelta.Y) / transform.ScaleY));
+                    transform.SizeY = (int) Math.Round(_initialEntitySize.Y + ((totalWorldMouseDelta.Y) / transform.ScaleY));
                     OnTransformModified?.Invoke();
                     break;
 
                 case SelectedAxis.SizeCorner:
-                    transform.SizeX = (int) Math.Round(_initialEntitySize.X + ((totalMouseDelta.X) / transform.ScaleX));
-                    transform.SizeY = (int) Math.Round(_initialEntitySize.Y + ((totalMouseDelta.Y) / transform.ScaleY));
+                    transform.SizeX = (int) Math.Round(_initialEntitySize.X + ((totalWorldMouseDelta.X) / transform.ScaleX));
+                    transform.SizeY = (int) Math.Round(_initialEntitySize.Y + ((totalWorldMouseDelta.Y) / transform.ScaleY));
                     OnTransformModified?.Invoke();
                     break;
 
@@ -429,7 +531,7 @@ namespace Engine.Editor.MGWindow.Services
                     var collider = _selectedGo.GetComponent<ColliderComponent>();
                     if(collider != null)
                     {
-                        collider.Offset = _initialColliderOffset + totalMouseDelta;
+                        collider.Offset = _initialColliderOffset + totalWorldMouseDelta;
                         OnColliderModified?.Invoke();
                     }
                 }
@@ -440,7 +542,7 @@ namespace Engine.Editor.MGWindow.Services
                     var collider = _selectedGo.GetComponent<ColliderComponent>();
                     if(collider is BoxColliderComponent boxW)
                     {
-                        float newWidth = Math.Max(4f, _initialColliderSize.X + (totalMouseDelta.X * 2f));
+                        float newWidth = Math.Max(4f, _initialColliderSize.X + (totalWorldMouseDelta.X * 2f));
                         boxW.Size = new Vector2((int) Math.Round(newWidth), boxW.Size.Y);
                         OnColliderModified?.Invoke();
                     }
@@ -452,7 +554,7 @@ namespace Engine.Editor.MGWindow.Services
                     var collider = _selectedGo.GetComponent<ColliderComponent>();
                     if(collider is BoxColliderComponent boxH)
                     {
-                        float newHeight = Math.Max(4f, _initialColliderSize.Y + (totalMouseDelta.Y * 2f));
+                        float newHeight = Math.Max(4f, _initialColliderSize.Y + (totalWorldMouseDelta.Y * 2f));
                         boxH.Size = new Vector2(boxH.Size.X, (int) Math.Round(newHeight));
                         OnColliderModified?.Invoke();
                     }
@@ -464,7 +566,7 @@ namespace Engine.Editor.MGWindow.Services
                     var collider = _selectedGo.GetComponent<ColliderComponent>();
                     if(collider is CircleColliderComponent circleR)
                     {
-                        float newRadius = Math.Max(2f, _initialColliderRadius + totalMouseDelta.X);
+                        float newRadius = Math.Max(2f, _initialColliderRadius + totalWorldMouseDelta.X);
                         circleR.Radius = (float) Math.Round(newRadius);
                         OnColliderModified?.Invoke();
                     }
@@ -476,7 +578,7 @@ namespace Engine.Editor.MGWindow.Services
                     var collider = _selectedGo.GetComponent<ColliderComponent>();
                     if(collider is PolygonColliderComponent polyV && _selectedVertexIndex >= 0)
                     {
-                        polyV.Vertices[_selectedVertexIndex] = _initialVertexPos + totalMouseDelta;
+                        polyV.Vertices[_selectedVertexIndex] = _initialVertexPos + totalWorldMouseDelta;
                         OnColliderModified?.Invoke();
                     }
                 }

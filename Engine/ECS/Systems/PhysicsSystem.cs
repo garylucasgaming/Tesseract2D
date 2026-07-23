@@ -31,6 +31,7 @@ namespace Engine.Core.ECS.Systems
         private World physicsSpace;
         public PhysicsSystem()
         {
+         
 
             RequiredComponents = Query
                 .Has<PhysicsBodyComponent>()

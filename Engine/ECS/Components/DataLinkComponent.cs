@@ -11,6 +11,7 @@ namespace Engine.Core.ECS.Components
     public class DataLinkComponent : GameComponent
     {
 
+        [Browsable(false)]
         public Guid AssetID
         {
             get;

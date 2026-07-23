@@ -5,6 +5,7 @@ using System.Drawing;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using System.Runtime.InteropServices;
+using System.Diagnostics;
 
 namespace WinFormsApp1
 {
@@ -14,6 +15,12 @@ namespace WinFormsApp1
 
         private void InitializeProjectExplorerMenus()
         {
+            ToolStripMenuItem openItem = new ToolStripMenuItem("Open");
+            openItem.Click += OpenItem_Click;
+
+            ToolStripMenuItem showInExplorerItem = new ToolStripMenuItem("Show in Explorer");
+            showInExplorerItem.Click += ShowInExplorerItem_Click;
+
             ToolStripMenuItem newFolderItem = new ToolStripMenuItem("New Folder");
             newFolderItem.Click += NewFolderItem_Click;
 
@@ -61,6 +68,9 @@ namespace WinFormsApp1
             ToolStripLabel cSharpStripLabel = new ToolStripLabel("C#");
             ToolStripLabel luaStripLabel = new ToolStripLabel("Lua");
 
+            _folderContextMenu.Items.Add(openItem);
+            _folderContextMenu.Items.Add(showInExplorerItem);
+            _folderContextMenu.Items.Add(new ToolStripSeparator());
             _folderContextMenu.Items.Add(newFolderItem);
             _folderContextMenu.Items.Add(new ToolStripSeparator());
             _folderContextMenu.Items.Add(addItem);
@@ -75,6 +85,7 @@ namespace WinFormsApp1
 
 
             ProjectFolderTreeView.MouseUp += ProjectFolderTreeView_MouseUp;
+            ProjectFolderTreeView.NodeMouseDoubleClick += ProjectFolderTreeView_NodeMouseDoubleClick;
             ProjectFolderTreeView.LabelEdit = false; // Using prompt fallback for disk operations
 
             // 💡 NEW: Initialize Drag & Drop Settings and Hooks
@@ -178,6 +189,96 @@ namespace WinFormsApp1
             else
             {
                 e.Effect = DragDropEffects.None;
+            }
+        }
+        private void ProjectFolderTreeView_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            if(e.Node?.Tag is string path)
+            {
+                OpenFile(path);
+            }
+        }
+
+        private void OpenItem_Click(object sender, EventArgs e)
+        {
+            TreeNode selectedNode = ProjectFolderTreeView.SelectedNode;
+            if(selectedNode?.Tag is string path)
+            {
+                OpenFile(path);
+            }
+        }
+
+        private void ShowInExplorerItem_Click(object sender, EventArgs e)
+        {
+            TreeNode selectedNode = ProjectFolderTreeView.SelectedNode;
+            if(selectedNode?.Tag is string path)
+            {
+                ShowInExplorer(path);
+            }
+        }
+
+        private void OpenFile(string path)
+        {
+            if(string.IsNullOrEmpty(path))
+                return;
+
+            // Ignore double clicks on folders (TreeView expands/collapses them natively)
+            if(Directory.Exists(path))
+                return;
+
+            if(!File.Exists(path))
+            {
+                Log.Warning($"[Project Explorer] Cannot open file. Path does not exist: '{path}'");
+                return;
+            }
+
+            try
+            {
+                string extension = Path.GetExtension(path).ToLower();
+
+                // 💡 Option to handle internal engine formats directly
+                if(extension == ".scene")
+                {
+                    // Example: EditorContextManager.LoadScene(path);
+                    Log.Info($"[Project Explorer] Opening scene file: {Path.GetFileName(path)}");
+                    return;
+                }
+
+                // Default: Open file using Windows default associated application
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true
+                });
+            }
+            catch(Exception ex)
+            {
+                Log.Error($"[Project Explorer Error] Failed to open file '{path}': {ex.Message}");
+                MessageBox.Show($"Unable to open file:\n{ex.Message}", "Error Opening File", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void ShowInExplorer(string path)
+        {
+            if(string.IsNullOrEmpty(path))
+                return;
+
+            try
+            {
+                if(File.Exists(path))
+                {
+                    // Opens Explorer with the file selected/highlighted
+                    Process.Start("explorer.exe", $"/select,\"{path}\"");
+                }
+                else if(Directory.Exists(path))
+                {
+                    // Opens the folder directly in Explorer
+                    Process.Start("explorer.exe", $"\"{path}\"");
+                }
+            }
+            catch(Exception ex)
+            {
+                Log.Error($"[Project Explorer Error] Failed to reveal in File Explorer: {ex.Message}");
             }
         }
 

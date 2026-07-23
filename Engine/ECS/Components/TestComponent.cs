@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Engine.Core.Collections;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -11,6 +12,7 @@ namespace Engine.Core.ECS.Components
     {
         private GameObject _object;
         private GameComponent _component;
+        private DataLinkComponent _tile;
         
         public GameObject objectReference
         {
@@ -18,7 +20,11 @@ namespace Engine.Core.ECS.Components
             set => _object = value;
         }
 
-        
+        public DataLinkComponent tileData
+        {
+            get => _tile;
+            set => _tile = value;
+        }
         
         public GameComponent componentReference
         {

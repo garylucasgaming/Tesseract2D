@@ -38,5 +38,9 @@ namespace Engine.Core.ECS.Components
         }
 
         public bool hasCollider { get; set; }
+
+       
+
+        
     }
 }

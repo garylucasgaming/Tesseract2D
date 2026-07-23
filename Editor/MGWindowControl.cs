@@ -12,6 +12,7 @@ using Engine.Core.Utilities;
 using Engine.Core.ECS.Components;
 using Engine.Core.ECS.Systems;
 using System;
+using MonoGame.Forms.NET.Services;
 
 namespace Editor
 {
@@ -22,6 +23,7 @@ namespace Editor
         private InputManager _inputManager;
         private float deltaTime;
         private GameScene _activeScene;
+       
 
         // --- Timestep Accumulator Variables ---
         private const float TargetTickTime = 1f / 60f; // 60 Ticks per second (~0.01667s)
@@ -29,15 +31,18 @@ namespace Editor
 
         public bool SimulationRunning { get; set; } = false;
         public bool SimulationPaused { get; set; } = false;
-
+        public Camera2D EditorCamera
+        {
+            get; private set;
+        } = new Camera2D();
         protected override void Initialize()
         {
             GizmoRenderer.Initialize(Editor.GraphicsDevice);
             
             _inputManager = new InputManager();
-            _inputService = new EditorInputService(_inputManager);
+            _inputService = new EditorInputService(_inputManager, EditorCamera);
             _renderService = new EditorRenderService();
-
+            Editor.FPSCounter.Visible = false;
             _inputService.OnTransformModified = () =>
             {
                 RefreshInspector("TransformComponent");
@@ -59,13 +64,13 @@ namespace Editor
 
             if(_activeScene != null)
             {
-                
+               
                 bool playModeActive = SimulationRunning && !SimulationPaused;
                 
                 GameObject selectedGo = GetSelectedGameObject();
                 object selectedComponent = Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance;
-                _inputService.SetContext(_activeScene, selectedGo);
-                _inputService.Update();
+                _inputService.SetContext(_activeScene, selectedGo, Editor.GraphicsDevice.Viewport);
+                _inputService.Update(deltaTime);
                 
                 // 1. Cap deltaTime to 0.25s (prevents massive physics spikes/crashes when dragging window/debugging)
                 float clampedDelta = Math.Min(deltaTime, 0.25f);
@@ -92,13 +97,12 @@ namespace Editor
                 // Note: Ensure your Scene's Update handles passing this parameter down to Systems.Update()
                 _activeScene.Update(clampedDelta, playModeActive);
 
-               
             }
         }
 
         protected override void Draw()
         {
-            Editor.GraphicsDevice.Clear(new Color(33, 33, 33));
+            Editor.GraphicsDevice.Clear(Color.Black);
 
             _activeScene = EditorContextManager.ActiveLoadedScene;
             if(_activeScene == null)
@@ -106,7 +110,8 @@ namespace Editor
 
             GameObject selectedGo = GetSelectedGameObject();
 
-            Editor.spriteBatch.Begin();
+            Matrix viewMatrix = EditorCamera.GetViewMatrix(Editor.GraphicsDevice.Viewport);
+            Editor.spriteBatch.Begin(transformMatrix: viewMatrix);
 
             _activeScene.Systems.Render(Editor.spriteBatch, Editor.Content);
             _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo, Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance, _inputService.CurrentMode);

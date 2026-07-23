@@ -1,4 +1,5 @@
-﻿using Engine.Core.ECS;
+﻿using Engine.Core.Collections;
+using Engine.Core.ECS;
 using Engine.Core.ECS.Components;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
@@ -506,9 +507,192 @@ namespace Engine.Editor.WinFormsApp1
         }
     }
 
+
+    public class DatabaseReferenceConverter : TypeConverter
+    {
+        public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
+        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true;
+
+        public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
+        {
+            List<object> options = new List<object> { null }; // "None" choice
+
+            object realTarget = GetRealInstance(context);
+            Type? componentType = realTarget?.GetType();
+
+            if(EditorContextManager.ActiveLoadedScene?.Database != null)
+            {
+                var dbManager = EditorContextManager.ActiveLoadedScene.Database;
+                foreach(var db in dbManager.Databases)
+                {
+                    bool isMatch = false;
+
+                    if(componentType != null)
+                    {
+                        // 1. Check if database explicitly matches this type name
+                        if(!string.IsNullOrEmpty(db.DatabaseType) &&
+                            (db.DatabaseType.Equals(componentType.Name, StringComparison.OrdinalIgnoreCase) ||
+                             db.DatabaseType.Equals(componentType.FullName, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            isMatch = true;
+                        }
+                        // 2. Or check if database holds items assignable to this component type
+                        else if(db.ComponentDatabase.Values.Any(comp => comp != null && componentType.IsAssignableFrom(comp.GetType())))
+                        {
+                            isMatch = true;
+                        }
+                    }
+
+                    if(isMatch || string.IsNullOrEmpty(db.DatabaseType))
+                    {
+                        if(!options.Contains(db))
+                        {
+                            options.Add(db);
+                        }
+                    }
+                }
+            }
+
+            return new StandardValuesCollection(options);
+        }
+
+        private object GetRealInstance(ITypeDescriptorContext context)
+        {
+            object instance = context?.Instance;
+            if(instance is FilteredPropertyWrapper wrapper)
+                return wrapper.Target;
+            return instance;
+        }
+
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+            => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+
+        public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
+            => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+
+        public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
+        {
+            if(destinationType == typeof(string))
+            {
+                if(value is Database db)
+                {
+                    return string.IsNullOrWhiteSpace(db.Name) ? $"Database ({db.ID})" : db.Name;
+                }
+                return "None (Database)";
+            }
+            return base.ConvertTo(context, culture, value, destinationType);
+        }
+
+        public override object ConvertFrom(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value)
+        {
+            if(value is string str)
+            {
+                if(str == "None (Database)" || str == "None")
+                    return null;
+
+                var choices = GetStandardValues(context);
+                foreach(object choice in choices)
+                {
+                    if(choice is Database db)
+                    {
+                        string dbName = string.IsNullOrWhiteSpace(db.Name) ? $"Database ({db.ID})" : db.Name;
+                        if(dbName == str || db.Name == str)
+                            return db;
+                    }
+                }
+            }
+            return base.ConvertFrom(context, culture, value);
+        }
+    }
+    public class DataReferenceDropdownConverter : TypeConverter
+    {
+        public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
+        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true;
+
+        public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
+        {
+            List<DataComponent> choices = new List<DataComponent> { null };
+
+            object realTarget = GetRealInstance(context);
+            Database targetDb = null;
+
+            // Retrieve the live Database instance directly from the target component
+            if(realTarget is DataComponent dataComp)
+            {
+                targetDb = dataComp.DatabaseReference;
+            }
+
+            if(targetDb != null)
+            {
+                Type targetType = realTarget?.GetType() ?? typeof(DataComponent);
+
+                foreach(var entry in targetDb.ComponentDatabase.Values)
+                {
+                    if(entry != null && targetType.IsAssignableFrom(entry.GetType()))
+                    {
+                        choices.Add(entry);
+                    }
+                }
+            }
+
+            return new StandardValuesCollection(choices);
+        }
+
+        private object GetRealInstance(ITypeDescriptorContext context)
+        {
+            object instance = context?.Instance;
+            if(instance is FilteredPropertyWrapper wrapper)
+                return wrapper.Target;
+            return instance;
+        }
+
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
+            => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+
+        public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
+            => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+
+        public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
+        {
+            if(destinationType == typeof(string))
+            {
+                if(value is DataComponent comp)
+                {
+                    return string.IsNullOrWhiteSpace(comp.DisplayName)
+                        ? $"Unnamed {comp.GetType().Name}"
+                        : comp.DisplayName;
+                }
+                return "None (DataAsset)";
+            }
+            return base.ConvertTo(context, culture, value, destinationType);
+        }
+
+        public override object ConvertFrom(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value)
+        {
+            if(value is string str)
+            {
+                if(str == "None (DataAsset)" || str == "None")
+                    return null;
+
+                var choices = GetStandardValues(context);
+                foreach(DataComponent choice in choices)
+                {
+                    if(choice == null)
+                        continue;
+
+                    string choiceDisplayName = ConvertTo(context, culture, choice, typeof(string)) as string;
+                    if(choiceDisplayName == str || choice.DisplayName == str)
+                        return choice;
+                }
+            }
+            return base.ConvertFrom(context, culture, value);
+        }
+    }
     public class FilteredPropertyWrapper : CustomTypeDescriptor, ICustomTypeDescriptor
     {
         private readonly object _target;
+
+        public object Target => _target;
 
         public FilteredPropertyWrapper(object target)
         {
@@ -520,16 +704,9 @@ namespace Engine.Editor.WinFormsApp1
             var baseProperties = TypeDescriptor.GetProperties(_target, attributes, true);
             var filteredProperties = new PropertyDescriptorCollection(null);
 
-            string[] systemBlacklist = {
-         
-    };
-
             foreach(PropertyDescriptor prop in baseProperties)
             {
-                if(prop.IsReadOnly || systemBlacklist.Contains(prop.Name))
-                    continue;
-
-                if(!prop.IsBrowsable)
+                if(prop.IsReadOnly || !prop.IsBrowsable)
                     continue;
 
                 Type propType = prop.PropertyType;
@@ -538,39 +715,28 @@ namespace Engine.Editor.WinFormsApp1
                 {
                     bool isCollection = typeof(System.Collections.IEnumerable).IsAssignableFrom(propType);
 
-                    // 👇 NEW: Detect custom engine references (GameObjects, Components, etc.)
-                    bool isEngineObject = typeof(Engine.Core.ECS.GameObject).IsAssignableFrom(propType) ||
+                    // 💡 ALLOW DATABASES: Explicitly allow Database types and DatabaseReference properties through
+                    bool isEngineObject = typeof(GameObject).IsAssignableFrom(propType) ||
+                                          typeof(Database).IsAssignableFrom(propType) ||
+                                          typeof(DataComponent).IsAssignableFrom(propType) ||
                                           propType.Name == "GameObject" ||
-                                          propType.Name.EndsWith("Component");
+                                          propType.Name.EndsWith("Component") ||
+                                          propType.Name.EndsWith("Database") ||
+                                          prop.Name.Equals("DatabaseReference", StringComparison.OrdinalIgnoreCase);
 
-                    if(isEngineObject)
-                    {
-                        // Let it through! We want to show the reference box.
-                        // We will override how it displays below so it doesn't cause a recursion loop.
-                    }
-                    else if(!isCollection)
-                    {
-                        // It's an unhandled external class object, skip to avoid loops
+                    if(!isEngineObject && !isCollection)
                         continue;
-                    }
                 }
 
-                // Wrap the original property in our custom router descriptor
                 filteredProperties.Add(new FilteredPropertyDescriptor(prop, _target));
             }
 
             return filteredProperties;
         }
-        public override PropertyDescriptorCollection GetProperties() => GetProperties(null);
 
-        // 👇 FIX: Return the actual target. This tells the PropertyGrid that the 
-        // underlying instance owning the properties is your real live Component.
+        public override PropertyDescriptorCollection GetProperties() => GetProperties(null);
         public override object GetPropertyOwner(PropertyDescriptor pd) => _target;
     }
-
-    /// <summary>
-    /// Custom descriptor that intercepts UI edits and pushes them straight into live engine memory.
-    /// </summary>
     public class FilteredPropertyDescriptor : PropertyDescriptor
     {
         private readonly PropertyDescriptor _baseDescriptor;
@@ -583,38 +749,38 @@ namespace Engine.Editor.WinFormsApp1
             _baseDescriptor = baseDescriptor;
             _targetComponent = targetComponent;
 
-            // If it's an engine reference, attach our safe converter to choke off recursion loops
             Type propType = baseDescriptor.PropertyType;
-            //  Detect if this property is a valid List or Array collection container
-            if(typeof(System.Collections.IList).IsAssignableFrom(propType))
+
+            // 💡 DYNAMIC INTERCEPTION FOR DATA LINKING PROPERTIES
+            if(baseDescriptor.Name.Equals("DatabaseReference", StringComparison.OrdinalIgnoreCase) ||
+                typeof(Engine.Core.Collections.Database).IsAssignableFrom(propType))
+            {
+                _customConverter = new DatabaseReferenceConverter();
+            }
+            else if(baseDescriptor.Name.Equals("DataReference", StringComparison.OrdinalIgnoreCase))
+            {
+                _customConverter = new DataReferenceDropdownConverter();
+            }
+            // Fallback to default engine property converters
+            else if(typeof(System.Collections.IList).IsAssignableFrom(propType))
             {
                 _customConverter = new InlineCollectionConverter();
             }
-            
             else if(propType.IsClass && propType != typeof(string))
             {
                 if(typeof(DataComponent).IsAssignableFrom(propType))
-                {
                     _customConverter = new DataComponentReferenceConverter();
-                }
                 else if(typeof(GameObject).IsAssignableFrom(propType) || propType.Name == "GameObject")
-                {
                     _customConverter = new GameObjectReferenceConverter();
-                }
-                else if(propType.Name.EndsWith("Component") || typeof(Component).IsAssignableFrom(propType))
-                {
+                else if(propType.Name.EndsWith("Component") || typeof(Engine.Core.ECS.GameComponent).IsAssignableFrom(propType))
                     _customConverter = new ComponentReferenceConverter();
-                }
                 else
-                {
                     _customConverter = new EngineObjectReferenceConverter();
-                }
             }
         }
 
         public override TypeConverter Converter => _customConverter ?? base.Converter;
 
-        //  Route the component argument straight to the target for all structural methods
         public override bool CanResetValue(object component) => _baseDescriptor.CanResetValue(_targetComponent);
         public override object GetValue(object component) => _baseDescriptor.GetValue(_targetComponent);
         public override void ResetValue(object component) => _baseDescriptor.ResetValue(_targetComponent);
@@ -639,23 +805,28 @@ namespace Engine.Editor.WinFormsApp1
             {
                 object convertedValue;
 
-                // 1. If value is a string and we have a custom converter, convert the string to the real object reference!
                 if(value is string strValue && Converter != null && Converter.CanConvertFrom(typeof(string)))
                 {
                     convertedValue = Converter.ConvertFrom(strValue);
                 }
-                // 2. Direct reference assignment for class objects (GameObjects, Components, DataAssets)
                 else if(propInfo.PropertyType.IsClass && propInfo.PropertyType != typeof(string))
                 {
                     convertedValue = value;
                 }
-                // 3. Primitive value types (int, float, bool, etc.)
                 else
                 {
                     convertedValue = Convert.ChangeType(value, propInfo.PropertyType);
                 }
 
                 propInfo.SetValue(_targetComponent, convertedValue, null);
+
+                // Clear DataReference if DatabaseReference changes
+                if(this.Name.Equals("DatabaseReference", StringComparison.OrdinalIgnoreCase))
+                {
+                    var dataRefProp = targetType.GetProperty("DataReference");
+                    dataRefProp?.SetValue(_targetComponent, null);
+                }
+
                 TypeDescriptor.Refresh(_targetComponent);
             }
             else
