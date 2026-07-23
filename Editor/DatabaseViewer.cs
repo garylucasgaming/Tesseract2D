@@ -3,45 +3,53 @@ using Engine.Core.ECS.Components;
 using Engine.Core.Runtime;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
+using Engine.Editor.WinFormsApp1;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WinFormsApp1;
 
-
-
 namespace Engine.Editor
 {
     public partial class DatabaseViewer : Form
     {
-
         private DatabaseManager _dbManager = new DatabaseManager();
         private Database _activeDatabase;
         private System.Collections.IList _gridBindingList;
+        private Type _activeComponentType;
 
-    
+        // Store a permanent reference to the sidebar container
+        private Control _inspectorContainer;
+
         public DatabaseViewer()
         {
             InitializeComponent();
             DatabaseGridView.AllowUserToDeleteRows = false;
             DatabaseGridView.AllowUserToAddRows = false;
-            
+
+            // Cache the parent container panel before clearing any design-time controls
+            _inspectorContainer = DatabasePropertyGrid?.Parent;
+
             SetupViewerEvents();
             RefreshDatabaseLookups();
         }
 
-
         private void SetupViewerEvents()
         {
-            // Wire up the control triggers
             DatabaseGridView.SelectionChanged += DataGridView1_SelectionChanged;
             DatabaseToolStripComboBox.SelectedIndexChanged += CmbDatabases_SelectedIndexChanged;
+
+            // Ensure cell edits in the grid refresh the sidebar card view
+            DatabaseGridView.CellValueChanged += (s, e) => UpdatePropertyInspector();
         }
 
         private void btnRemoveRow_Click(object sender, EventArgs e)
@@ -49,27 +57,22 @@ namespace Engine.Editor
             if(_activeDatabase == null || _gridBindingList == null)
                 return;
 
-            // 1. Extract the raw object reference from the currently highlighted row
             if(DatabaseGridView.CurrentRow?.DataBoundItem is DataComponent componentToDelete)
             {
-                // 2. Friendly confirmation check to prevent accidental keystroke deletions
                 string confirmMsg = $"Are you sure you want to delete '{componentToDelete.DisplayName}'?\nThis cannot be undone.";
                 var result = MessageBox.Show(confirmMsg, "Confirm Deletion", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
                 if(result == DialogResult.Yes)
                 {
-                    // 3. CRITICAL: Sever the data link before altering memory arrays
                     DatabaseGridView.DataSource = null;
 
-                    // 4. Purge from both the file serialization dictionary and the UI tracking list
                     _activeDatabase.ComponentDatabase.Remove(componentToDelete.AssetID);
                     _gridBindingList.Remove(componentToDelete);
 
-                    // 5. Reattach data source to cleanly draw the remaining collection
                     DatabaseGridView.DataSource = _gridBindingList;
+                    ConfigureGridViewColumns(_activeComponentType);
 
-                    // 6. Reset the property sidebar so it isn't pointing at a deleted asset pointer
-                    DatabasePropertyGrid.SelectedObject = null;
+                    UpdatePropertyInspector();
                 }
             }
             else
@@ -82,11 +85,9 @@ namespace Engine.Editor
         {
             DatabaseToolStripComboBox.Items.Clear();
 
-            // 1. Ask Editor Context where files live, load them into manager tracking memory
             string dbFolder = EditorContextManager.DatabasePath;
             _dbManager.LoadAllDatabasesFromFolder(dbFolder);
 
-            // 2. Load tracked databases straight into dropdown select option list
             foreach(var db in _dbManager.Databases)
             {
                 DatabaseToolStripComboBox.Items.Add(db.Name);
@@ -125,56 +126,170 @@ namespace Engine.Editor
                     return;
                 }
 
-                // 2. Dynamically create a concrete List<YourDerivedType> via reflection
+                _activeComponentType = compType;
+
                 Type rawListType = typeof(List<>).MakeGenericType(compType);
                 System.Collections.IList internalList = (System.Collections.IList) Activator.CreateInstance(rawListType);
-                // 3. Populate it with our existing components
+
                 foreach(var component in _activeDatabase.ComponentDatabase.Values)
                 {
                     internalList.Add(component);
                 }
 
-                // 4. Wrap that list inside a dynamic BindingList<YourDerivedType> 
                 Type bindingListType = typeof(BindingList<>).MakeGenericType(compType);
                 _gridBindingList = (System.Collections.IList) Activator.CreateInstance(bindingListType, internalList);
 
-                // 5. Force the DataGridView to completely clear old columns and regenerate new ones
                 DatabaseGridView.DataSource = null;
                 DatabaseGridView.DataSource = _gridBindingList;
 
-               
+                ConfigureGridViewColumns(_activeComponentType);
+
                 DatabaseToolstripLabel.Text = _activeDatabase.Name;
+
+                // Initial inspector render on database switch
+                UpdatePropertyInspector();
             }
         }
 
         private void DataGridView1_SelectionChanged(object sender, EventArgs e)
         {
-            // If the user highlights a row on the spreadsheet, bind its raw reference to the property sidebar
+            UpdatePropertyInspector();
+        }
+
+        /// <summary>
+        /// Updates the property inspector panel with a ComponentCard matching the currently selected row.
+        /// </summary>
+        private void UpdatePropertyInspector()
+        {
+            if(_inspectorContainer == null)
+                return;
+
+            if(_inspectorContainer is ScrollableControl scrollable)
+            {
+                scrollable.AutoScroll = true;
+            }
+
+            _inspectorContainer.Controls.Clear();
+
             if(DatabaseGridView.CurrentRow?.DataBoundItem is DataComponent componentRow)
             {
-                DatabasePropertyGrid.SelectedObject = componentRow;
+                int cardWidth = _inspectorContainer.ClientSize.Width - 10;
+                if(cardWidth < 120)
+                    cardWidth = 200;
+
+                Panel card = ComponentCardFactory.CreateCard(
+                    componentRow.GetType().Name,
+                    componentRow,
+                    cardWidth,
+                    ComponentCardFactory.SelectedComponentInstance
+                );
+
+                card.Dock = DockStyle.Top;
+
+                // Hook property edits inside the card so the DataGridView cells refresh automatically
+                HookCardPropertyGridEvents(card);
+
+                _inspectorContainer.Controls.Add(card);
             }
+        }
+
+        /// <summary>
+        /// Wire up PropertyGrid value changes inside the card to repaint the DataGridView row.
+        /// </summary>
+        private void HookCardPropertyGridEvents(Control parent)
+        {
+            foreach(Control child in parent.Controls)
+            {
+                if(child is PropertyGrid propGrid)
+                {
+                    propGrid.PropertyValueChanged += (s, e) =>
+                    {
+                        DatabaseGridView.Refresh();
+                    };
+                }
+                if(child.HasChildren)
+                {
+                    HookCardPropertyGridEvents(child);
+                }
+            }
+        }
+
+        private void ConfigureGridViewColumns(Type compType)
+        {
+            if(DatabaseGridView.Columns.Count == 0 || compType == null)
+                return;
+
+            DatabaseGridView.SuspendLayout();
+
+            var columnsToProcess = DatabaseGridView.Columns.Cast<DataGridViewColumn>().ToList();
+
+            foreach(var col in columnsToProcess)
+            {
+                if(string.IsNullOrEmpty(col.DataPropertyName))
+                    continue;
+
+                PropertyInfo prop = compType.GetProperty(col.DataPropertyName);
+                if(prop == null)
+                    continue;
+
+                // 💡 HIDE properties decorated with [DatabaseIgnore]
+                if(Attribute.IsDefined(prop, typeof(DatabaseIgnoreAttribute)))
+                {
+                    col.Visible = false;
+                    continue;
+                }
+
+                Type propType = prop.PropertyType;
+                Type underlyingType = Nullable.GetUnderlyingType(propType) ?? propType;
+
+                col.HeaderText = $"{prop.Name} ({underlyingType.Name})";
+
+                if(underlyingType.IsEnum)
+                {
+                    int colIndex = col.Index;
+                    string dataPropName = col.DataPropertyName;
+                    string headerText = col.HeaderText;
+
+                    DatabaseGridView.Columns.Remove(col);
+
+                    var comboCol = new DataGridViewComboBoxColumn
+                    {
+                        DataPropertyName = dataPropName,
+                        HeaderText = headerText,
+                        ValueType = propType,
+                        DataSource = Enum.GetValues(underlyingType),
+                        DisplayStyle = DataGridViewComboBoxDisplayStyle.ComboBox,
+                        FlatStyle = FlatStyle.Flat
+                    };
+
+                    DatabaseGridView.Columns.Insert(colIndex, comboCol);
+                }
+            }
+
+            DatabaseGridView.ResumeLayout();
         }
 
         private void btnAddRow_Click(object sender, EventArgs e)
         {
-            // 1. Force the grid to finalize any lingering user cell focus
             DatabaseGridView.EndEdit();
 
             if(_activeDatabase == null || _gridBindingList == null)
                 return;
 
-            // Resolve target system class runtime description out of metadata strings
             string typeName = _activeDatabase.DatabaseType;
-            Type compType = Type.GetType($"Engine.Core.ECS.Components.{typeName}, Engine.Core");
+            Type compType = _activeComponentType;
 
             if(compType == null)
             {
-                foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                compType = Type.GetType($"Engine.Core.ECS.Components.{typeName}, Engine.Core");
+                if(compType == null)
                 {
-                    compType = assembly.GetType(typeName) ?? assembly.GetType($"Game.Scripts.{typeName}");
-                    if(compType != null)
-                        break;
+                    foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                    {
+                        compType = assembly.GetType(typeName) ?? assembly.GetType($"Game.Scripts.{typeName}");
+                        if(compType != null)
+                            break;
+                    }
                 }
             }
 
@@ -182,21 +297,20 @@ namespace Engine.Editor
             {
                 newAsset.DisplayName = $"New {typeName} Entry";
 
-                // 2. CRITICAL: Sever the UI link to safely mutate memory without a currency manager conflict
                 DatabaseGridView.DataSource = null;
 
-                // 3. Append to your database core dictionary and runtime list layout
                 _activeDatabase.ComponentDatabase.Add(newAsset.AssetID, newAsset);
                 _gridBindingList.Add(newAsset);
 
-                // 4. Re-link the data source. WinForms will cleanly build the new row from scratch
                 DatabaseGridView.DataSource = _gridBindingList;
+                ConfigureGridViewColumns(_activeComponentType);
 
-                // 5. UX Polish: Automatically scroll to highlight your newly injected row
                 if(DatabaseGridView.Rows.Count > 0)
                 {
                     DatabaseGridView.CurrentCell = DatabaseGridView.Rows[DatabaseGridView.Rows.Count - 1].Cells[0];
                 }
+
+                UpdatePropertyInspector();
             }
         }
 
@@ -205,7 +319,6 @@ namespace Engine.Editor
             if(_activeDatabase == null)
                 return;
 
-            // Construct proper save context destination path using its type signature
             string destinationFile = Path.Combine(EditorContextManager.DatabasePath, $"{_activeDatabase.Name}.database");
             _dbManager.SaveDatabase(_activeDatabase, destinationFile);
 
@@ -214,7 +327,6 @@ namespace Engine.Editor
 
         private void btnNewDatabase_Click(object sender, EventArgs e)
         {
-            // Locate concrete custom component properties inside game assemblies
             List<Type> availableComponents = new List<Type>();
             foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
@@ -236,7 +348,6 @@ namespace Engine.Editor
                         return;
                     }
 
-                    // 1. Create instance tracking structures
                     Database newDb = new Database
                     {
                         ID = Guid.NewGuid(),
@@ -244,27 +355,17 @@ namespace Engine.Editor
                         Name = dialog.DatabaseFileName
                     };
 
-                    // 2. Instantly save structural stub layout file out on local disk
                     string targetPath = Path.Combine(EditorContextManager.DatabasePath, $"{dialog.DatabaseFileName}.database");
                     _dbManager.SaveDatabase(newDb, targetPath);
 
-                    // 3. Re-scan directory contents to smoothly reload view entries inside dropdown list options
                     RefreshDatabaseLookups();
                     DatabaseToolStripComboBox.SelectedItem = newDb.DatabaseType;
                     if(this.Owner is Form1 mainForm)
                     {
-                        
                         mainForm.RefreshProjectFolderView();
                     }
                 }
             }
-
-            
-
-
         }
-
-       
-
     }
 }

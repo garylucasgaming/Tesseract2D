@@ -30,6 +30,7 @@ namespace Engine.Core.ECS.Components
 
         
         [DisplayName("Database Reference")]
+        [DatabaseIgnore]
         public Database DatabaseReference
         {
             get;
@@ -38,6 +39,7 @@ namespace Engine.Core.ECS.Components
 
        
         [DisplayName("Data Reference")]
+        [DatabaseIgnore]
         public DataComponent? DataReference
         {
             get; set;

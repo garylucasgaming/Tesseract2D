@@ -215,27 +215,27 @@ namespace Engine.Editor.WinFormsApp1
         }
         public override bool ShouldSerializeValue(object component) => false;
     }
+    // 1. DATA COMPONENT REFERENCE CONVERTER
     public class DataComponentReferenceConverter : TypeConverter
     {
         public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
-        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true; // Forces dropdown-only selection
+        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => false; // Allow cell editing
 
         public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
         {
-
             Type targetType = context?.PropertyDescriptor?.PropertyType ?? typeof(DataComponent);
-            
-            List<DataComponent> choices = new List<DataComponent> { null }; // Allow assigning "None"
+            List<DataComponent> choices = new List<DataComponent> { null };
 
-            // Scrape your loaded database manager for entries matching this exact derived sub-class type
-            // (Assumes you have a global point of access to your loaded editor databases)
-            foreach(var db in EditorContextManager.ActiveLoadedScene.Database.Databases)
+            if(EditorContextManager.ActiveLoadedScene?.Database?.Databases != null)
             {
-                foreach(var component in db.ComponentDatabase.Values)
+                foreach(var db in EditorContextManager.ActiveLoadedScene.Database.Databases)
                 {
-                    if(targetType.IsAssignableFrom(component.GetType()))
+                    foreach(var component in db.ComponentDatabase.Values)
                     {
-                        choices.Add(component);
+                        if(targetType.IsAssignableFrom(component.GetType()))
+                        {
+                            choices.Add(component);
+                        }
                     }
                 }
             }
@@ -262,35 +262,46 @@ namespace Engine.Editor.WinFormsApp1
         {
             if(value is string str)
             {
-                // Match the picked text name back to its true memory reference instance pointer
-                var values = GetStandardValues(context);
-                foreach(DataComponent choice in values)
+                str = str.Trim();
+                if(string.IsNullOrEmpty(str) || str.StartsWith("None", StringComparison.OrdinalIgnoreCase))
+                    return null;
+
+                var choices = GetStandardValues(context);
+                if(choices != null)
                 {
-                    if(choice == null && str == "None (DataAsset)")
-                        return null;
-                    if(choice != null && choice.DisplayName == str)
-                        return choice;
+                    // 1. Exact match
+                    foreach(DataComponent choice in choices)
+                    {
+                        if(choice == null)
+                            continue;
+                        if(choice.DisplayName != null && choice.DisplayName.Equals(str, StringComparison.OrdinalIgnoreCase))
+                            return choice;
+                    }
+
+                    // 2. Partial match
+                    foreach(DataComponent choice in choices)
+                    {
+                        if(choice == null)
+                            continue;
+                        if(choice.DisplayName != null && choice.DisplayName.Contains(str, StringComparison.OrdinalIgnoreCase))
+                            return choice;
+                    }
                 }
+
+                // 💡 Safe Fallback: Unrecognized string safely reverts to null (None) instead of throwing an exception!
+                return null;
             }
-            return base.ConvertFrom(context, culture, value);
+            return null;
         }
     }
 
-    // ==========================================
-    // 2. GAME OBJECT DROPDOWN CONVERTER (Scene Picker)
-    // ==========================================
+    // 2. GAME OBJECT REFERENCE CONVERTER
     public class GameObjectReferenceConverter : TypeConverter
     {
         public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
-        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true;
+        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => false;
 
-        // 👇 ADD THIS: Tells WinForms that this converter accepts string inputs from the dropdown!
-        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
-        {
-            if(sourceType == typeof(string))
-                return true;
-            return base.CanConvertFrom(context, sourceType);
-        }
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
 
         public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
         {
@@ -349,49 +360,52 @@ namespace Engine.Editor.WinFormsApp1
         {
             if(value is string str)
             {
-                if(str == "None (GameObject)")
+                str = str.Trim();
+                if(string.IsNullOrEmpty(str) || str.StartsWith("None", StringComparison.OrdinalIgnoreCase))
                     return null;
 
-                var standardValues = GetStandardValues(context);
-                if(standardValues != null)
+                var choices = GetStandardValues(context);
+                if(choices != null)
                 {
-                    foreach(object choice in standardValues)
+                    // 1. Exact match
+                    foreach(object choice in choices)
                     {
                         if(choice == null)
                             continue;
-
                         string choiceDisplayName = ConvertTo(context, culture, choice, typeof(string)) as string;
-                        if(choiceDisplayName == str)
-                            return choice; // Returns the actual live GameObject instance!
+                        if(choiceDisplayName != null && choiceDisplayName.Equals(str, StringComparison.OrdinalIgnoreCase))
+                            return choice;
+                    }
+
+                    // 2. Partial match
+                    foreach(object choice in choices)
+                    {
+                        if(choice == null)
+                            continue;
+                        string choiceDisplayName = ConvertTo(context, culture, choice, typeof(string)) as string;
+                        if(choiceDisplayName != null && choiceDisplayName.Contains(str, StringComparison.OrdinalIgnoreCase))
+                            return choice;
                     }
                 }
+
+                return null; // Fallback safely to None
             }
 
-            return base.ConvertFrom(context, culture, value);
+            return null;
         }
     }
 
-
-    // ==========================================
-    // 3. COMPONENT DROPDOWN CONVERTER (Cross-Component Links)
-    // ==========================================
+    // 3. COMPONENT REFERENCE CONVERTER
     public class ComponentReferenceConverter : TypeConverter
     {
         public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
-        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true;
+        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => false;
 
-        // 1. Tell WinForms this converter accepts string inputs from the dropdown selection
-        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
-        {
-            if(sourceType == typeof(string))
-                return true;
-            return base.CanConvertFrom(context, sourceType);
-        }
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
 
         public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
         {
-            List<object> validComponents = new List<object> { null }; // Default to 'None' option
-
+            List<object> validComponents = new List<object> { null };
             Type targetComponentType = context?.PropertyDescriptor?.PropertyType ?? typeof(object);
 
             if(EditorContextManager.ActiveLoadedScene != null)
@@ -404,16 +418,14 @@ namespace Engine.Editor.WinFormsApp1
                         if(go?.Components == null)
                             continue;
 
-                        // 👇 Iterate directly over the Dictionary Values to get the GameComponent instances
                         foreach(var comp in go.Components.Values)
                         {
                             if(comp == null)
                                 continue;
 
-                            // Check if the actual component instance matches the property type
                             if(targetComponentType == typeof(object) || targetComponentType.IsAssignableFrom(comp.GetType()))
                             {
-                                validComponents.Add(comp); // Adds the actual GameComponent instance!
+                                validComponents.Add(comp);
                             }
                         }
                     }
@@ -422,6 +434,7 @@ namespace Engine.Editor.WinFormsApp1
 
             return new StandardValuesCollection(validComponents);
         }
+
         public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
         {
             if(destinationType == typeof(string))
@@ -429,21 +442,18 @@ namespace Engine.Editor.WinFormsApp1
                 if(value == null)
                     return "None (Component)";
 
-                // If value is ALREADY a string, return it untouched so WinForms doesn't break
                 if(value is string str)
                     return str;
 
                 string ownerName = "Detached";
                 Type compType = value.GetType();
 
-                // 1. Try retrieving the owner from a FIELD (e.g. public GameObject gameObject;)
                 var ownerField = compType.GetField("gameObject", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase)
                               ?? compType.GetField("owner", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase)
                               ?? compType.GetField("entity", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase);
 
                 object ownerObj = ownerField?.GetValue(value);
 
-                // 2. Fallback to checking a PROPERTY (in case some components use { get; set; })
                 if(ownerObj == null)
                 {
                     var ownerProp = compType.GetProperty("gameObject", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.IgnoreCase)
@@ -453,7 +463,6 @@ namespace Engine.Editor.WinFormsApp1
                     ownerObj = ownerProp?.GetValue(value);
                 }
 
-                // 3. Extract the owner GameObject's Name
                 if(ownerObj is GameObject go)
                 {
                     ownerName = string.IsNullOrWhiteSpace(go.Name) ? "Unnamed GameObject" : go.Name;
@@ -468,7 +477,6 @@ namespace Engine.Editor.WinFormsApp1
                     }
                 }
 
-                // 👇 Clean the component type name (e.g. "TransformComponent" -> "Transform")
                 string cleanCompName = compType.Name;
                 if(cleanCompName.EndsWith("Component"))
                 {
@@ -485,37 +493,50 @@ namespace Engine.Editor.WinFormsApp1
         {
             if(value is string str)
             {
-                if(str == "None (Component)")
+                str = str.Trim();
+                if(string.IsNullOrEmpty(str) || str.StartsWith("None", StringComparison.OrdinalIgnoreCase))
                     return null;
 
                 var choices = GetStandardValues(context);
                 if(choices != null)
                 {
+                    // 1. Exact match
                     foreach(object comp in choices)
                     {
                         if(comp == null)
                             continue;
-
                         string choiceDisplayName = ConvertTo(context, culture, comp, typeof(string)) as string;
-                        if(choiceDisplayName == str)
-                            return comp; // Successfully returns the live component reference!
+                        if(choiceDisplayName != null && choiceDisplayName.Equals(str, StringComparison.OrdinalIgnoreCase))
+                            return comp;
+                    }
+
+                    // 2. Partial match
+                    foreach(object comp in choices)
+                    {
+                        if(comp == null)
+                            continue;
+                        string choiceDisplayName = ConvertTo(context, culture, comp, typeof(string)) as string;
+                        if(choiceDisplayName != null && choiceDisplayName.Contains(str, StringComparison.OrdinalIgnoreCase))
+                            return comp;
                     }
                 }
+
+                return null; // Fallback safely to None
             }
 
-            return base.ConvertFrom(context, culture, value);
+            return null;
         }
     }
 
-
+    // 4. DATABASE REFERENCE CONVERTER
     public class DatabaseReferenceConverter : TypeConverter
     {
         public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
-        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true;
+        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => false;
 
         public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
         {
-            List<object> options = new List<object> { null }; // "None" choice
+            List<object> options = new List<object> { null };
 
             object realTarget = GetRealInstance(context);
             Type? componentType = realTarget?.GetType();
@@ -529,14 +550,12 @@ namespace Engine.Editor.WinFormsApp1
 
                     if(componentType != null)
                     {
-                        // 1. Check if database explicitly matches this type name
                         if(!string.IsNullOrEmpty(db.DatabaseType) &&
                             (db.DatabaseType.Equals(componentType.Name, StringComparison.OrdinalIgnoreCase) ||
                              db.DatabaseType.Equals(componentType.FullName, StringComparison.OrdinalIgnoreCase)))
                         {
                             isMatch = true;
                         }
-                        // 2. Or check if database holds items assignable to this component type
                         else if(db.ComponentDatabase.Values.Any(comp => comp != null && componentType.IsAssignableFrom(comp.GetType())))
                         {
                             isMatch = true;
@@ -564,11 +583,8 @@ namespace Engine.Editor.WinFormsApp1
             return instance;
         }
 
-        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
-            => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
-
-        public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
-            => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+        public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType) => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
 
         public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
         {
@@ -587,7 +603,8 @@ namespace Engine.Editor.WinFormsApp1
         {
             if(value is string str)
             {
-                if(str == "None (Database)" || str == "None")
+                str = str.Trim();
+                if(string.IsNullOrEmpty(str) || str.StartsWith("None", StringComparison.OrdinalIgnoreCase))
                     return null;
 
                 var choices = GetStandardValues(context);
@@ -596,18 +613,22 @@ namespace Engine.Editor.WinFormsApp1
                     if(choice is Database db)
                     {
                         string dbName = string.IsNullOrWhiteSpace(db.Name) ? $"Database ({db.ID})" : db.Name;
-                        if(dbName == str || db.Name == str)
+                        if(dbName.Equals(str, StringComparison.OrdinalIgnoreCase) || (db.Name != null && db.Name.Contains(str, StringComparison.OrdinalIgnoreCase)))
                             return db;
                     }
                 }
+
+                return null;
             }
-            return base.ConvertFrom(context, culture, value);
+            return null;
         }
     }
+
+    // 5. DATA REFERENCE DROPDOWN CONVERTER
     public class DataReferenceDropdownConverter : TypeConverter
     {
         public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
-        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true;
+        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => false;
 
         public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
         {
@@ -616,7 +637,6 @@ namespace Engine.Editor.WinFormsApp1
             object realTarget = GetRealInstance(context);
             Database targetDb = null;
 
-            // Retrieve the live Database instance directly from the target component
             if(realTarget is DataComponent dataComp)
             {
                 targetDb = dataComp.DatabaseReference;
@@ -646,11 +666,8 @@ namespace Engine.Editor.WinFormsApp1
             return instance;
         }
 
-        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType)
-            => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
-
-        public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType)
-            => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+        public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType) => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
 
         public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
         {
@@ -671,7 +688,8 @@ namespace Engine.Editor.WinFormsApp1
         {
             if(value is string str)
             {
-                if(str == "None (DataAsset)" || str == "None")
+                str = str.Trim();
+                if(string.IsNullOrEmpty(str) || str.StartsWith("None", StringComparison.OrdinalIgnoreCase))
                     return null;
 
                 var choices = GetStandardValues(context);
@@ -681,11 +699,13 @@ namespace Engine.Editor.WinFormsApp1
                         continue;
 
                     string choiceDisplayName = ConvertTo(context, culture, choice, typeof(string)) as string;
-                    if(choiceDisplayName == str || choice.DisplayName == str)
+                    if(choiceDisplayName != null && (choiceDisplayName.Equals(str, StringComparison.OrdinalIgnoreCase) || choiceDisplayName.Contains(str, StringComparison.OrdinalIgnoreCase)))
                         return choice;
                 }
+
+                return null;
             }
-            return base.ConvertFrom(context, culture, value);
+            return null;
         }
     }
     public class FilteredPropertyWrapper : CustomTypeDescriptor, ICustomTypeDescriptor

@@ -661,6 +661,22 @@ namespace WinFormsApp1
                     WrapContents = false,
                     AutoScroll = true
                 };
+
+                // 💡 Automatically stretch cards to fill width when the Inspector panel is resized
+                flowLayout.Resize += (s, e) =>
+                {
+                    flowLayout.SuspendLayout();
+                    int cardWidth = flowLayout.ClientSize.Width - flowLayout.Margin.Horizontal - 10;
+                    if(cardWidth > 50)
+                    {
+                        foreach(Control c in flowLayout.Controls)
+                        {
+                            c.Width = cardWidth;
+                        }
+                    }
+                    flowLayout.ResumeLayout(false);
+                };
+
                 ActiveInspectorPanel.Controls.Add(flowLayout);
             }
 
@@ -681,13 +697,13 @@ namespace WinFormsApp1
             // --- Destructive Rebuild Area (Only hit on additions, removals, or shifting targets) ---
             flowLayout.SuspendLayout();
 
-            // 1. CAPTURE SCROLL POSITION (AutoScrollPosition returns negative values, we normalize it)
+            // 1. CAPTURE SCROLL POSITION
             int previousScrollY = Math.Abs(flowLayout.AutoScrollPosition.Y);
 
             // 2. CAPTURE SELECTION
             object? previouslySelected = Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance;
 
-            // 3. IF TARGET CHANGED: Wipe selection completely. If same target (component added/removed), keep reference.
+            // 3. IF TARGET CHANGED: Wipe selection completely. If same target, keep reference.
             bool targetChanged = flowLayout.Controls.Count > 0 && flowLayout.Controls[0].Tag != targetGo;
             if(targetChanged)
             {
@@ -699,11 +715,18 @@ namespace WinFormsApp1
 
             if(targetGo != null)
             {
+                // Calculate actual usable client width inside the flow panel
+                int cardWidth = flowLayout.ClientSize.Width - 10;
+                if(cardWidth < 120)
+                    cardWidth = flowLayout.Width - 10;
+                if(cardWidth < 120)
+                    cardWidth = 200;
+
                 // Draw GameObject properties at the top
                 Panel goCard = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard(
                     "GameObject Properties",
                     targetGo,
-                    flowLayout.Width,
+                    cardWidth,
                     previouslySelected
                 );
                 goCard.Tag = targetGo;
@@ -715,11 +738,10 @@ namespace WinFormsApp1
                     string name = kvp.Key.Name;
                     object instance = kvp.Value;
 
-                    // Pass the previous selection reference down to restore highlights
                     Panel card = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard(
                         name,
                         instance,
-                        flowLayout.Width,
+                        cardWidth,
                         previouslySelected
                     );
                     flowLayout.Controls.Add(card);
