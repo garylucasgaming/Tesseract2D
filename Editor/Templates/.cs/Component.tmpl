@@ -1,0 +1,32 @@
+using Engine.Core.ECS;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+
+    public class {ClassName} : GameComponent
+    {
+
+        // gameObject is an accessible field to find the parent object of the component. 
+        // parent is an accessible field to find the parent game object of the attached gameObject. 
+
+
+        //for better ecs, it is best practice that components tend not to hold methods and are strictly data containers. 
+        // however, helper methods can be useful, but the larger the component file is, the more space in ram it takes up. 
+        //which is relatively insignificant, but if performance is an issue it is something to consider. 
+
+
+        //for serialization purposes, the engines prefers Public Properties with private backing fields.
+        //as only the private backing fields are serialized to prevent infinite recursion issues. so if you find data isn't being
+        //saved or loaded, that is the first thing to check. 
+
+        //use [Browsable(false)] to hide things from the inspector. 
+
+        //if you want to create your own custom versions of already in engine components,
+        //simply extend those instead of GameComponent
+
+
+    }
+

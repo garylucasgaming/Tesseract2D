@@ -1,6 +1,12 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Engine.Core.ECS;
+using Engine.Core.Utilities;
+using Engine.Gameplay;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using System;
+using System.Linq;
+using System.Reflection;
 
 namespace Engine.Desktop
 {
@@ -12,7 +18,7 @@ namespace Engine.Desktop
         public Game1()
         {
             _graphics = new GraphicsDeviceManager(this);
-            Content.RootDirectory = "Content";
+            
             IsMouseVisible = true;
         }
 
@@ -21,7 +27,9 @@ namespace Engine.Desktop
             // TODO: Add your initialization logic here
 
             base.Initialize();
+
         }
+
 
         protected override void LoadContent()
         {

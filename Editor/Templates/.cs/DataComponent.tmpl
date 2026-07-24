@@ -1,0 +1,56 @@
+using Engine.Core.ECS;
+using Engine.Core.ECS.Components;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+
+    public class {ClassName} : DataComponent
+    {
+
+        // gameObject is an accessible field to find the parent object of the component. 
+        // parent is an accessible field to find the parent game object of the attached gameObject. 
+
+
+        //Datacomponents are strictly for use inside databases. if you need to hold strict data on a gameobject, 
+        // datacomponents are the most efficient way to create various types of the same datatype.
+        // for example, Tile data, Weapon data, Character Needs, Character Stats etc. once you create a datacomponent, 
+        // you can create a database, based on that type inside the database viewer. the database is serialized, and loaded
+        //in memory at runtime. it acts as a single source of truth for all data. 
+
+        //all datacomponents have accessible fields called DatabaseReference, and DataReference. these fields are meant
+        //to be used inside the inspector, to link your specific datacomponent on a gameobject, to a reference in the database. 
+
+
+        //for example you create  a sword Data, that may have a damage, a reach, a material type etc. 
+        //you create a SwordData database in the database viewer. you can populate it, with all the different swords in your game
+        //then, simply attach a SwordData component to whichever gameobject you want to have a sword, select your database reference, 
+        //then your data reference from the dropdowns in the inspector. and now your datacomponent has a reference to a specific 
+        //serialized datacomponent. which can be referenced at runtime. 
+
+
+
+
+        //for serialization purposes, the engines prefers Public Properties with private backing fields.
+        //as only the private backing fields are serialized to prevent infinite recursion issues. so if you find data isn't being
+        //saved or loaded, that is the first thing to check. 
+
+        //use [Browsable(false)] to hide things from the inspector. use [DatabaseIgnore], for the database to ignore it in the viewer
+
+        //if you want to create your own custom versions of already in engine components,
+        //simply extend those instead of GameComponent
+
+
+       
+        /// display name MUST be used. it is the specific name of the data you are creating. for example, you create a sword data. 
+        /// this specific components displayName could be Iron_Sword. or whatever you choose. 
+        
+        public override string DisplayName
+        {
+            get;
+            set;
+        }
+    }
+

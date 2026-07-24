@@ -6,6 +6,8 @@ using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
+using Engine.Editor.Utilities;
+using System.Runtime.CompilerServices;
 
 namespace WinFormsApp1
 {
@@ -84,6 +86,12 @@ namespace WinFormsApp1
             _folderContextMenu.Items.Add(luaBlock);
 
 
+            baseComponent.Click += (s, e) => CreateTemplateAndRefresh("Component");
+            dataComponent.Click += (s, e) => CreateTemplateAndRefresh("DataComponent");
+            createNewSystem.Click += (s, e) => CreateTemplateAndRefresh("System");
+            createNewManager.Click += (s, e) => CreateTemplateAndRefresh("Manager");
+            createNewCSharpScript.Click += (s, e) => CreateTemplateAndRefresh("Script");
+
             ProjectFolderTreeView.MouseUp += ProjectFolderTreeView_MouseUp;
             ProjectFolderTreeView.NodeMouseDoubleClick += ProjectFolderTreeView_NodeMouseDoubleClick;
             ProjectFolderTreeView.LabelEdit = false; // Using prompt fallback for disk operations
@@ -94,6 +102,70 @@ namespace WinFormsApp1
             ProjectFolderTreeView.DragDrop += ProjectFolderTreeView_DragDrop;
             ProjectFolderTreeView.ItemDrag += ProjectFolderTreeView_ItemDrag;
             ProjectFolderTreeView.DragOver += ProjectFolderTreeView_DragOver;
+        }
+
+        private string PromptForClassNameDialog()
+        {
+            using(Form prompt = new Form())
+            {
+                prompt.Width = 350;
+                prompt.Height = 150;
+                prompt.FormBorderStyle = FormBorderStyle.FixedDialog;
+                prompt.Text = "New C# Item Name";
+                prompt.StartPosition = FormStartPosition.CenterScreen;
+                prompt.MaximizeBox = false;
+                prompt.MinimizeBox = false;
+
+                Label textLabel = new Label() { Left = 20, Top = 20, Text = "Enter class or script name:", Width = 280 };
+                TextBox textBox = new TextBox() { Left = 20, Top = 50, Width = 280 };
+                Button confirmationButton = new Button() { Text = "Create", Left = 210, Width = 90, Top = 80, DialogResult = DialogResult.OK };
+
+                confirmationButton.Click += (sender, e) => { prompt.Close(); };
+
+                prompt.Controls.Add(textLabel);
+                prompt.Controls.Add(textBox);
+                prompt.Controls.Add(confirmationButton);
+                prompt.AcceptButton = confirmationButton;
+
+                // Show the prompt modally and return the text if OK was clicked
+                return prompt.ShowDialog() == DialogResult.OK ? textBox.Text.Trim() : string.Empty; 
+            }
+
+        }
+
+
+        public TreeNode GetSelectedProjectNode()
+        {
+            return ProjectFolderTreeView.SelectedNode;
+        }
+
+        private void CreateTemplateAndRefresh(string templateType)
+        {
+            TreeNode selectedNode = ProjectFolderTreeView.SelectedNode;
+            if(selectedNode == null)
+                return;
+
+            string targetPath = selectedNode.Tag as string;
+            if(string.IsNullOrEmpty(targetPath))
+                return;
+
+            // Resolve directory whether they clicked a folder or a file inside a folder
+            string destinationDirectory = Directory.Exists(targetPath)
+                ? targetPath
+                : Path.GetDirectoryName(targetPath);
+
+            if(string.IsNullOrEmpty(destinationDirectory) || !Directory.Exists(destinationDirectory))
+                return;
+
+            string className = PromptForClassNameDialog();
+            if(string.IsNullOrWhiteSpace(className))
+                return;
+
+            // 1. Generate the template file on disk
+            CodeTemplateGenerator.CreateTemplate(destinationDirectory, ".cs", templateType, className);
+
+            // 2. Refresh the project folder view to display the new file instantly
+            RefreshProjectFolderView(); // Or PopulateProjectExplorerTree(ProjectFolderTreeView, destinationDirectory); if you want it selected/expanded
         }
 
         private void ProjectFolderTreeView_ItemDrag(object sender, ItemDragEventArgs e)

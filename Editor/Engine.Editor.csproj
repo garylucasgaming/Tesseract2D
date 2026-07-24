@@ -24,7 +24,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Engine.Content\Engine.Content.csproj" />
     <ProjectReference Include="..\Engine\Engine.Core.csproj" />
-    <ProjectReference Include="..\GISM\GISM.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -57,6 +56,14 @@
     <Folder Include="Content\Shaders\" />
     <Folder Include="Content\System\" />
     <Folder Include="Content\Templates\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Templates\.cs\Component.tmpl" />
+    <None Include="Templates\.cs\DataComponent.tmpl" />
+    <None Include="Templates\.cs\Manager.tmpl" />
+    <None Include="Templates\.cs\Script.tmpl" />
+    <None Include="Templates\.cs\SystemComponent.tmpl" />
   </ItemGroup>
 
   <ItemGroup>

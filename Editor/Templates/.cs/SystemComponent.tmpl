@@ -1,0 +1,93 @@
+using Engine.Core.ECS;
+using Engine.Core.ECS.Components;
+using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+
+    public class {ClassName} : GameSystem
+    {
+
+
+        //Systems Act on components. components in theory, shouldn't do things themselves. because you don't want 100 
+        //components of the same type clogging up your threads. 
+
+        //instead, a singular system is meant to act on all entities with those components, and manipulate or 
+        //do things with the data inside them. 
+
+    
+        // ContextScene is an accessible field to get access to the currentScene. it is the easiest way to get access
+        // to all entities in the scene if thats something you're interested in. 
+      
+   
+
+        public override IComponentQuery RequiredComponents
+        {
+            get;
+            set;
+        }
+
+        
+
+
+        public {ClassName}()
+        {
+
+            //initliaze your required component query. 
+            //queries can look like this: RequiredComponents = Query.Has<TransformComponent>();
+            //or they can be as complex as you'd like: 
+            //RequiredComponents = Query
+            //   .Has<PhysicsBodyComponent>()
+            //   .And<TransformComponent>()
+            //   .And(Query
+            //       .Or(
+            //           Query.Has<BoxColliderComponent>(),
+            //           Query.Has<CircleColliderComponent>(),
+            //           Query.Has<PolygonColliderComponent>()
+            //           )
+            //       );
+
+            // .Has, and .And are effectively the same, in saying that the entity must have that component. the Or query returns 
+            //true if any of the queries inside it, are true. 
+
+            //if enabled the systems manager will attempt to run the update
+            IsEnabled = true;
+            //if usedInEditor = true, it will run, even when the simulation is not active. 
+            UsedInEditor = false;
+            //this determines when the updatemethod is called. 
+            UpdatePolicy = SystemUpdatePolicy.FrameUpdate;
+
+        }
+
+
+        // the Systems Manager passes a hashset of all entities in a given scene with the required components
+        // for this system to act on.so you can always assume, you are atleast being passed the entities, 
+        //that have those components. 
+        //despite the deltatime, update is always passed the correct corresponding time from the system manager, based on this
+        //systems update policy. 
+        public override void Update(HashSet<GameObject> gameObjects, float deltaTime)
+        {
+
+            // example:
+
+            //foreach(var gameObject in gameObjects)
+            //{
+            //    gameObject.GetComponent<TransformComponent>().Rotation++;
+            //}
+
+
+        }
+
+
+        //if you need to access components to draw things, via monogames texcture2d or whatever, call them in the render method
+        //as the render method is called in the draw method, to draw things to the screen. 
+        public override void Render(HashSet<GameObject> gameObjects, SpriteBatch spriteBatch)
+        {
+           
+        }
+
+    }
+

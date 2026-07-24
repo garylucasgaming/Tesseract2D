@@ -1,7 +1,5 @@
 ﻿using System;
 using System.ComponentModel;
-using GISM.Core.Attributes;
-using GISM.Core.Serializer; // Added to expose [GISMIgnore]
 using Vector2 = Microsoft.Xna.Framework.Vector2;
 
 namespace Engine.Core.ECS.Components
@@ -19,7 +17,7 @@ namespace Engine.Core.ECS.Components
 
         [Browsable(false)]
         // IGNORE: State tracking property with no setter.
-        [GISMIgnore]
+    
         public bool IsSettingOffset => _isSettingOffset;
 
         // KEEP PRIVATE FIELDS: Since the primitive floats are your raw data source,
@@ -47,7 +45,7 @@ namespace Engine.Core.ECS.Components
 
         // IGNORE PROPERTIES: All of these properties map directly to the private fields 
         // we're already capturing. Ignoring them saves processing time and text file bloat.
-        [GISMIgnore]
+  
         public TransformOrigin Origin
         {
             get => _origin;
@@ -59,7 +57,7 @@ namespace Engine.Core.ECS.Components
         }
 
         [Browsable(false)]
-        [GISMIgnore]
+      
         public float X
         {
             get => _x;
@@ -71,7 +69,7 @@ namespace Engine.Core.ECS.Components
         }
 
         [Browsable(false)]
-        [GISMIgnore]
+
         public float Y
         {
             get => _y;
@@ -82,7 +80,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [GISMIgnore]
+      
         [Browsable(false)]
         public float XOffset
         {
@@ -102,7 +100,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [GISMIgnore]
+        
         [Browsable(false)]
         public float YOffset
         {
@@ -122,7 +120,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [GISMIgnore]
+    
         [Browsable(false)]
         public float SizeX
         {
@@ -134,7 +132,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [GISMIgnore]
+       
         [Browsable(false)]
         public float SizeY
         {
@@ -146,7 +144,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [GISMIgnore]
+     
         [Browsable(false)]
         public float ScaleX
         {
@@ -158,7 +156,6 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [GISMIgnore]
         [Browsable(false)]
         public float ScaleY
         {
@@ -170,7 +167,7 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-        [GISMIgnore]
+      
         public float Rotation
         {
             get => _rotation;
@@ -280,14 +277,14 @@ namespace Engine.Core.ECS.Components
 
         // IGNORE READ-ONLY VALUE PROPERTIES
         [Browsable(false)]
-        [GISMIgnore]
+     
         public Vector2 OriginVector
         {
             get => GetOriginOffset();
         }
 
         [Browsable(false)]
-        [GISMIgnore]
+      
         public Vector2 RenderTopLeft
         {
             get => WorldPosition - (GetOriginOffset() * Scale);

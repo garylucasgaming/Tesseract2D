@@ -48,8 +48,4 @@
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.17" PrivateAssets="all" />
   </ItemGroup>
 
-  <ItemGroup>
-    <KniContentReference Include="Content\Engine.WebContent.mgcb" />
-  </ItemGroup>
-
 </Project>

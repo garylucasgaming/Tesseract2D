@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text.Json.Serialization; // Essential for protecting our hierarchy from JSON loops!
 using Engine.Core.ECS.Components;
 using Engine.Core.Utilities;
-using GISM.Core.Attributes;
+
 
 namespace Engine.Core.ECS
 {
@@ -36,7 +36,7 @@ namespace Engine.Core.ECS
         [Browsable(true)]
         public Dictionary<Type, GameComponent> Components { get; set; } = new Dictionary<Type, GameComponent>();
         //public List<GameComponent> Components { get; set; } = new List<GameComponent>();
-        [GISMIgnore]
+      
         public GameScene ContextScene { get; set; } = null!;
 
         public event Action<GameObject, GameComponent>? OnComponentAdded;

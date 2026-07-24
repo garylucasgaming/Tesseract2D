@@ -19,6 +19,8 @@ namespace Engine.Core.Serialization
             get; private set;
         }
 
+        public static string? CurrentProjectName { get; private set; }
+
         public static ProjectManifest? CurrentProjectManifest
         {
             get; set;

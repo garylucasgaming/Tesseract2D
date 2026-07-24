@@ -2,8 +2,6 @@
 using System.ComponentModel;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using GISM.Core.Serializer;
-using GISM.Core.Attributes;
 using System.Reflection;
 using Engine.Core.Utilities;
 using Microsoft.Xna.Framework.Content; // Added for [GISMIgnore]

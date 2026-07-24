@@ -79,7 +79,6 @@
             StartSimulationButton = new ToolStripButton();
             PauseSimulationButton = new ToolStripButton();
             StopSimulationButton = new ToolStripButton();
-            progressBar = new ToolStripProgressBar();
             progressBarTextBox = new ToolStripTextBox();
             tabControl2 = new TabControl();
             ProjectFolderTabPage = new TabPage();
@@ -403,7 +402,7 @@
             ManagersTab.Location = new Point(4, 24);
             ManagersTab.Name = "ManagersTab";
             ManagersTab.Padding = new Padding(3);
-            ManagersTab.Size = new Size(251, 631);
+            ManagersTab.Size = new Size(181, 631);
             ManagersTab.TabIndex = 1;
             ManagersTab.Text = "Managers";
             ManagersTab.UseVisualStyleBackColor = true;
@@ -412,7 +411,7 @@
             // 
             SystemsTab.Location = new Point(4, 24);
             SystemsTab.Name = "SystemsTab";
-            SystemsTab.Size = new Size(251, 631);
+            SystemsTab.Size = new Size(181, 631);
             SystemsTab.TabIndex = 2;
             SystemsTab.Text = "Systems";
             SystemsTab.UseVisualStyleBackColor = true;
@@ -509,7 +508,7 @@
             SceneToolStrip.AutoSize = false;
             SceneToolStrip.BackColor = SystemColors.Control;
             SceneToolStrip.Dock = DockStyle.Bottom;
-            SceneToolStrip.Items.AddRange(new ToolStripItem[] { StartSimulationButton, PauseSimulationButton, StopSimulationButton, progressBar, progressBarTextBox });
+            SceneToolStrip.Items.AddRange(new ToolStripItem[] { StartSimulationButton, PauseSimulationButton, StopSimulationButton, progressBarTextBox });
             SceneToolStrip.Location = new Point(3, 405);
             SceneToolStrip.Name = "SceneToolStrip";
             SceneToolStrip.Size = new Size(756, 25);
@@ -545,11 +544,6 @@
             StopSimulationButton.Size = new Size(23, 22);
             StopSimulationButton.Text = "StopSimulation";
             StopSimulationButton.Click += StopSimulationButton_Click;
-            // 
-            // progressBar
-            // 
-            progressBar.Name = "progressBar";
-            progressBar.Size = new Size(100, 22);
             // 
             // progressBarTextBox
             // 
@@ -596,7 +590,7 @@
             ConsoleTabPage.Location = new Point(4, 24);
             ConsoleTabPage.Name = "ConsoleTabPage";
             ConsoleTabPage.Padding = new Padding(3);
-            ConsoleTabPage.Size = new Size(726, 191);
+            ConsoleTabPage.Size = new Size(762, 164);
             ConsoleTabPage.TabIndex = 1;
             ConsoleTabPage.Text = "Editor Console";
             ConsoleTabPage.UseVisualStyleBackColor = true;
@@ -604,10 +598,10 @@
             // ConsoleTextBox
             // 
             ConsoleTextBox.Dock = DockStyle.Bottom;
-            ConsoleTextBox.Location = new Point(3, 40);
+            ConsoleTextBox.Location = new Point(3, 13);
             ConsoleTextBox.Name = "ConsoleTextBox";
             ConsoleTextBox.ReadOnly = true;
-            ConsoleTextBox.Size = new Size(720, 148);
+            ConsoleTextBox.Size = new Size(756, 148);
             ConsoleTextBox.TabIndex = 2;
             ConsoleTextBox.Text = "";
             // 
@@ -616,7 +610,7 @@
             consoleSearchBar.Dock = DockStyle.Top;
             consoleSearchBar.Location = new Point(3, 3);
             consoleSearchBar.Name = "consoleSearchBar";
-            consoleSearchBar.Size = new Size(720, 25);
+            consoleSearchBar.Size = new Size(756, 25);
             consoleSearchBar.TabIndex = 1;
             consoleSearchBar.SearchTextChanged += consoleSearchBar_SearchTextChanged;
             consoleSearchBar.Load += consoleSearchBar_Load;
@@ -815,7 +809,6 @@
         private TabPage SystemsTab;
         private Panel panel2;
         private Panel panel3;
-        private ToolStripProgressBar progressBar;
         private ToolStripTextBox progressBarTextBox;
         private ToolStripTextBox SceneNameBox;
         private ToolStripMenuItem databaseViewerToolStripMenuItem;

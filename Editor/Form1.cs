@@ -4,6 +4,7 @@ using Engine.Core.ECS;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using Engine.Editor;
+using Engine.Editor.Utilities;
 using Microsoft.Xna.Framework.Content.Pipeline;
 using MonoGame.Framework.Content.Pipeline.Builder;
 using SharpDX.MediaFoundation;
@@ -33,6 +34,10 @@ namespace WinFormsApp1
         private static extern bool DestroyIcon(IntPtr hIcon);
         private readonly System.Collections.Generic.List<(LogSeverity Severity, string Message)> _masterLogHistory =
              new System.Collections.Generic.List<(LogSeverity, string)>();
+
+        private ScriptAssemblyManager _scriptManager = new ScriptAssemblyManager();
+        private DateTime _lastBuildTimestamp = DateTime.MinValue;
+        private bool _isCompiling = false;
         public static TreeView ActiveHierarchyTreeView
         {
             get; private set;
@@ -92,6 +97,7 @@ namespace WinFormsApp1
                 AppendMessageToConsoleBox(severity, message);
             };
             InitializeComponent();
+            this.Activated += Form1_Activated;
 
             Log.Info("[Editor UI] Initializing editor main form...");
             SetTreeViewTheme(ProjectFolderTreeView.Handle);
@@ -173,12 +179,84 @@ namespace WinFormsApp1
             }
         }
 
+        private async void Form1_Activated(object? sender, EventArgs e)
+        {
+            // Avoid triggering multiple compiles if one is already running
+            if(_isCompiling || string.IsNullOrEmpty(EditorContextManager.CurrentProjectRoot))
+                return;
+
+            string sourceFolder = Path.Combine(EditorContextManager.CurrentProjectRoot, "Source");
+            if(!Directory.Exists(sourceFolder))
+                return;
+
+            // 1. Check if any .cs file was modified after our last successful build
+            bool hasModifiedScripts = Directory.GetFiles(sourceFolder, "*.cs", SearchOption.AllDirectories)
+                .Any(filePath => File.GetLastWriteTime(filePath) > _lastBuildTimestamp);
+
+            if(!hasModifiedScripts)
+                return; // Nothing changed, no need to rebuild!
+
+            // 2. Lock compiling flag and record timestamp
+            _isCompiling = true;
+            _lastBuildTimestamp = DateTime.Now;
+
+            // Update status UI
+            UpdateProgressText("Code changes detected. Compiling in background...");
+            Log.Info("Code changes detected. Compiling in background...");
+
+            try
+            {
+                // 3. Trigger background build
+                BuildResult result = await ScriptCompiler.CompileGameplayProjectAsync(
+                    EditorContextManager.CurrentProjectRoot,
+                    EditorContextManager.CurrentProjectName
+                );
+
+                if(result.Success)
+                {
+                    // 4. Hot-swap assembly in RAM
+                    _scriptManager.LoadGameplayAssembly(result.AssemblyPath);
+
+                    // Refresh editor type inspectors / registries
+                    RebuildInspectorPanel(GetSelectedGameObjectFromHierarchy() ?? null);
+                    
+
+                    UpdateProgressText("Compilation successful! Hot-reloaded gameplay scripts.");
+                    Log.Info("Compilation successful! Hot-reloaded gameplay scripts.");
+                }
+                else
+                {
+                    UpdateProgressText("Build Error! Check console output.");
+                    // Print errors to your editor's console panel
+                    Log.Error(result.OutputLog);
+                }
+            }
+            catch(Exception ex)
+            {
+                Log.Error($"Compilation exception: {ex.Message}");
+            }
+            finally
+            {
+                _isCompiling = false;
+            }
+        }
+
         private static void PropertyGrid_PropertyValueChanged(object sender, PropertyValueChangedEventArgs e)
         {
             NeedsToBeSaved = true;
         }
 
-        private void OnProjectLoaded()
+        private void Form1_Load(object sender, EventArgs e)
+        {
+           
+        }
+
+        public void UpdateProgressText(string text)
+        {
+            progressBarTextBox.Text = text;
+        }
+
+        public void OnProjectLoaded()
         {
             UpdateEditorTitle();
 
@@ -648,6 +726,8 @@ namespace WinFormsApp1
         {
             if(ActiveInspectorPanel == null)
                 return;
+            if(targetGo == null)
+                return;
 
             ActiveInspectorPanel.SuspendLayout();
 
@@ -981,10 +1061,7 @@ namespace WinFormsApp1
             return anyChildVisible;
         }
 
-        private void Form1_Load(object sender, EventArgs e)
-        {
-
-        }
+       
 
         private void toolStripComboBox1_Click(object sender, EventArgs e)
         {

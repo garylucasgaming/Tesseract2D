@@ -11,6 +11,8 @@ namespace Engine.Core.ECS.Components
     public class ScriptComponent : GameComponent
     {
       
+        private bool _isActive = false;
+
         [Browsable(false)]
         public bool hasStarted = false;
         [Browsable(true)]
@@ -18,6 +20,22 @@ namespace Engine.Core.ECS.Components
         [Browsable(false)]
 
         public string ScriptFilePath { get; set; }
+
+        public bool IsActive { 
+            get => _isActive; 
+            set
+            {
+                _isActive = value;
+                if(_isActive)
+                {
+                    OnEnable();    
+                }
+                if(!_isActive)
+                {
+                    OnDisable();
+                }
+            }
+        }
        
 
         /// <summary>

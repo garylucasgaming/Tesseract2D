@@ -1,0 +1,48 @@
+using Engine.Core.ECS;
+using Engine.Core.ECS.Components;
+using Engine.Core.Runtime;
+using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+
+    public class {ClassName} : GameManager
+    {
+
+
+        //Managers are meant to be singular objects within a scene that either act as sources of truth, or run specific things
+        // that having a system would not make sense for. like keeping track of a global point total. 
+        // Or a master list of bools for gameStates. 
+
+
+        // ContextScene is an accessible field to get access to the currentScene. it is the easiest way to get access
+        // to all entities or systems, or databases in the scene if thats something you're interested in. 
+
+        //isActive is an accesible field, if not active, it will not run it's code within a scene. 
+
+        //IsPersistant is an accessible field, if true, it will be passed to the next scene when scenes are loaded. 
+
+
+        //initialize is called after the constructor, and whenever the manager is enabled. 
+        public override void Initialize()
+        {
+            throw new NotImplementedException();
+        }
+
+        //shutdown is called whenever a manager is disabled. 
+        public override void Shutdown()
+        {
+            throw new NotImplementedException();
+        }
+
+
+        //this is called everyframe. 
+        public override void Update(float deltaTime)
+        {
+            throw new NotImplementedException();
+        }
+    }
+

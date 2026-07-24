@@ -16,9 +16,4 @@
     <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
-
-  <ItemGroup>
-    <ProjectReference Include="..\GISM\GISM.csproj" />
-  </ItemGroup>
-
 </Project>

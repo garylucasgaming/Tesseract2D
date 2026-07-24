@@ -1,0 +1,58 @@
+using Engine.Core.ECS;
+using Engine.Core.ECS.Components;
+using Engine.Core.Runtime;
+using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+
+    public class {ClassName} : ScriptComponent
+    {
+
+
+        //ScriptComponents are technically not a great way to do things. however, for ease of use and similarity to
+        //unity monobehaviours, script components exist and run on singular gameobjects per instance. 
+        // they effectively combine components and systems into a singular class. and are NOT performant compared to using
+        //components and seperate systems. but if you need one off behaviour, or just don't want to use ECS you can simply 
+        //use scriptcomponents. 
+
+        //like all components, you also have reference to gameObject which is the game object this component is attached to. 
+        // as well as parent, which is the parent of the gameobject. 
+
+        // ContextScene is an accessible field to get access to the currentScene. it is the easiest way to get access
+        // to all entities or systems, or databases in the scene if thats something you're interested in. 
+
+        //isActive is an accesible field, if not active, it will not run it's code within a scene. 
+
+        
+        //this is called whenever the script component is set to active
+        public override void OnEnable()
+        {
+           
+        }
+
+        //this is called whenever the script component is set to not active. 
+        public override void OnDisable()
+        {
+           
+        }
+
+
+        //this is called the first frame of update. you can also check the field HasStarted if you'd like. 
+        public override void Start()
+        {
+           
+        }
+
+        //this is called every frame, in deltatime. 
+        public override void Update()
+        {
+            
+        }
+
+
+    }
+

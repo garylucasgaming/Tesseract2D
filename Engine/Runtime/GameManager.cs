@@ -23,24 +23,18 @@ namespace Engine.Core.Runtime
 
         // Lifecycle Initialization Hook. Called automatically by the GameScene once the entire scene has loaded into memory,
         // ensuring all GameObjects and Systems exist.
-        public virtual void Initialize()
-        {
-        }
+        public abstract void Initialize();
 
 
         // The high-level execution tick. Unlike systems, this doesn't automatically loop through 
         // GameObjects; it runs once per frame to update overarching state logic.
         // <param name="deltaTime">Time elapsed in seconds since the last frame tick.</param>
-        public virtual void Update(float deltaTime)
-        {
-        }
+        public abstract void Update(float deltaTime);
 
 
         // Lifecycle Shutdown Hook. Called automatically when the scene is being torn down 
         // by the SceneDirector. Perfect for cleanly unsubscribing from GameEvents to prevent memory leaks.
-        public virtual void Shutdown()
-        {
-        }
+        public abstract void Shutdown();
 
         
 
