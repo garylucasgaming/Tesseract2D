@@ -1,17 +1,26 @@
 ﻿using Engine.Core.Collections;
 using Engine.Core.ECS;
 using Engine.Core.ECS.Components;
+using Engine.Core.Runtime;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using System;
 using System.Collections;
 using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
+using static System.ComponentModel.TypeConverter;
 
 namespace Engine.Editor.WinFormsApp1
 {
+
+
+
     public class EngineObjectReferenceConverter : TypeConverter
     {
+
+
+
         // This stops the PropertyGrid from showing the "+" expand button
         public override bool GetPropertiesSupported(ITypeDescriptorContext context) => false;
 
@@ -735,14 +744,16 @@ namespace Engine.Editor.WinFormsApp1
                 {
                     bool isCollection = typeof(System.Collections.IEnumerable).IsAssignableFrom(propType);
 
-                    // 💡 ALLOW DATABASES: Explicitly allow Database types and DatabaseReference properties through
+                    // allows specific engine objects through the inspector
                     bool isEngineObject = typeof(GameObject).IsAssignableFrom(propType) ||
-                                          typeof(Database).IsAssignableFrom(propType) ||
-                                          typeof(DataComponent).IsAssignableFrom(propType) ||
-                                          propType.Name == "GameObject" ||
-                                          propType.Name.EndsWith("Component") ||
-                                          propType.Name.EndsWith("Database") ||
-                                          prop.Name.Equals("DatabaseReference", StringComparison.OrdinalIgnoreCase);
+                               typeof(Database).IsAssignableFrom(propType) ||
+                               typeof(DataComponent).IsAssignableFrom(propType) ||
+                               typeof(GameEvent).IsAssignableFrom(propType) || // 💡 ADDED THIS
+                               propType.Name == "GameObject" ||
+                               propType.Name == "GameEvent" ||                                    // 💡 ADDED THIS
+                               propType.Name.EndsWith("Component") ||
+                               propType.Name.EndsWith("Database") ||
+                               prop.Name.Equals("DatabaseReference", StringComparison.OrdinalIgnoreCase);
 
                     if(!isEngineObject && !isCollection)
                         continue;
@@ -757,6 +768,362 @@ namespace Engine.Editor.WinFormsApp1
         public override PropertyDescriptorCollection GetProperties() => GetProperties(null);
         public override object GetPropertyOwner(PropertyDescriptor pd) => _target;
     }
+
+
+    public class GameEventConverter : ExpandableObjectConverter
+    {
+        public override bool GetPropertiesSupported(ITypeDescriptorContext context) => true;
+
+        public override PropertyDescriptorCollection GetProperties(ITypeDescriptorContext context, object value, Attribute[] attributes)
+        {
+            var properties = new List<PropertyDescriptor>();
+
+            properties.Add(new GameEventPropertyDescriptor(nameof(GameEvent.TargetGameObject), typeof(GameObject)));
+            properties.Add(new GameEventPropertyDescriptor(nameof(GameEvent.TargetComponentTypeName), typeof(string)));
+            properties.Add(new GameEventPropertyDescriptor(nameof(GameEvent.MethodName), typeof(string)));
+
+            return new PropertyDescriptorCollection(properties.ToArray());
+        }
+
+        public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
+        {
+            if(destinationType == typeof(string) && value is GameEvent gameEvent)
+            {
+                string targetName = gameEvent.TargetGameObject?.Name ?? "None";
+                string methodName = string.IsNullOrEmpty(gameEvent.MethodName) ? "No Event" : gameEvent.MethodName;
+                return $"{targetName} -> {methodName}";
+            }
+            return base.ConvertTo(context, culture, value, destinationType);
+        }
+    }
+
+    public class GameEventPropertyDescriptor : PropertyDescriptor
+    {
+        private readonly string _propertyName;
+        private readonly Type _propertyType;
+        private readonly TypeConverter? _customConverter;
+
+        public GameEventPropertyDescriptor(string propertyName, Type propertyType)
+            : base(propertyName, new Attribute[] { new CategoryAttribute("Event Binding"), new BrowsableAttribute(true) })
+        {
+            _propertyName = propertyName;
+            _propertyType = propertyType;
+
+            if(_propertyName == nameof(GameEvent.TargetGameObject))
+            {
+                _customConverter = new GameObjectReferenceConverter();
+            }
+            else if(_propertyName == nameof(GameEvent.TargetComponentTypeName))
+            {
+                _customConverter = new GameEventComponentTypeConverter();
+            }
+            else if(_propertyName == nameof(GameEvent.MethodName))
+            {
+                _customConverter = new GameEventMethodConverter(); // 💡 Hook up the method dropdown converter here!
+            }
+        }
+
+        public override TypeConverter Converter => _customConverter ?? base.Converter;
+
+        public override string DisplayName => _propertyName switch
+        {
+            nameof(GameEvent.TargetGameObject) => "Target Object",
+            nameof(GameEvent.TargetComponentTypeName) => "Target Component",
+            nameof(GameEvent.MethodName) => "Target Method",
+            _ => _propertyName
+        };
+
+        public override Type ComponentType => typeof(GameEvent);
+        public override bool IsReadOnly => false;
+        public override Type PropertyType => _propertyType;
+
+        public override object GetValue(object component)
+        {
+            if(component is GameEvent gameEvent)
+            {
+                var prop = typeof(GameEvent).GetProperty(_propertyName);
+                return prop?.GetValue(gameEvent);
+            }
+            return null;
+        }
+
+        public override void SetValue(object component, object value)
+        {
+            if(component is GameEvent gameEvent)
+            {
+                var prop = typeof(GameEvent).GetProperty(_propertyName);
+                if(prop != null)
+                {
+                    // If a string value comes through the grid edit cell, use the custom converter to parse it back to an object
+                    if(value is string strValue && Converter != null && Converter.CanConvertFrom(typeof(string)))
+                    {
+                        value = Converter.ConvertFrom(strValue);
+                    }
+
+                    // Reset downstream dependencies if upstream target changes
+                    if(_propertyName == nameof(GameEvent.TargetGameObject))
+                    {
+                        gameEvent.TargetComponentTypeName = string.Empty;
+                        gameEvent.MethodName = string.Empty;
+                        gameEvent.ClearCache();
+                    }
+                    else if(_propertyName == nameof(GameEvent.TargetComponentTypeName))
+                    {
+                        gameEvent.MethodName = string.Empty;
+                        gameEvent.ClearCache();
+                    }
+
+                    prop.SetValue(gameEvent, value);
+                    gameEvent.ClearCache();
+
+                    TypeDescriptor.Refresh(component);
+                }
+            }
+        }
+
+        public  bool GetStandardValuesSupported(ITypeDescriptorContext context)
+        {
+            return _propertyName == nameof(GameEvent.TargetComponentTypeName) ||
+                   _propertyName == nameof(GameEvent.MethodName) ||
+                   _propertyName == nameof(GameEvent.TargetGameObject);
+        }
+
+        public  bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true;
+
+        public  StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
+        {
+            var gameEvent = context?.Instance as GameEvent;
+
+            // 1. Target GameObject Dropdown
+            if(_propertyName == nameof(GameEvent.TargetGameObject))
+            {
+                var objects = new List<object> { null };
+                if(EditorContextManager.ActiveLoadedScene != null)
+                {
+                    var entities = EditorContextManager.ActiveLoadedScene.Entities.GetSerializableEntities();
+                    if(entities != null)
+                        objects.AddRange(entities.Where(e => e != null));
+                }
+                return new StandardValuesCollection(objects);
+            }
+
+            // 2. Component Type Dropdown
+            if(_propertyName == nameof(GameEvent.TargetComponentTypeName))
+            {
+                var componentNames = new List<string> { string.Empty };
+                if(gameEvent?.TargetGameObject?.Components != null)
+                {
+                    foreach(var comp in gameEvent.TargetGameObject.Components.Values)
+                    {
+                        if(comp != null)
+                        {
+                            string typeName = comp.GetType().Name;
+                            if(!componentNames.Contains(typeName))
+                            {
+                                componentNames.Add(typeName);
+                            }
+                        }
+                    }
+                }
+                return new StandardValuesCollection(componentNames);
+            }
+
+            // 3. Method Name Dropdown
+            if(_propertyName == nameof(GameEvent.MethodName))
+            {
+                var methodNames = new List<string> { string.Empty };
+                if(gameEvent?.TargetGameObject != null && !string.IsNullOrEmpty(gameEvent.TargetComponentTypeName))
+                {
+                    var targetComp = gameEvent.TargetGameObject.Components.Values
+                        .FirstOrDefault(c => c.GetType().Name == gameEvent.TargetComponentTypeName || c.GetType().FullName == gameEvent.TargetComponentTypeName);
+
+                    if(targetComp != null)
+                    {
+                        var validMethods = targetComp.GetType()
+                            .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                            .Where(m => m.ReturnType == typeof(void) && m.GetParameters().Length == 0)
+                            .Select(m => m.Name);
+
+                        methodNames.AddRange(validMethods);
+                    }
+                }
+                return new StandardValuesCollection(methodNames);
+            }
+
+            return GetStandardValues(context);
+        }
+
+        public override bool CanResetValue(object component) => false;
+        public override void ResetValue(object component)
+        {
+        }
+        public override bool ShouldSerializeValue(object component) => true;
+    }
+
+    public class GameEventComponentTypeConverter : TypeConverter
+    {
+        public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
+        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true; // Forces strict dropdown selection
+
+        public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
+        {
+            var choices = new List<string> { "None" };
+
+            // Find the parent GameEvent instance from the context
+            GameEvent? gameEvent = null;
+            if (context?.Instance is GameEvent ge)
+            {
+                gameEvent = ge;
+            }
+            else if (context?.Instance is FilteredPropertyWrapper wrapper && wrapper.Target is GameEvent geTarget)
+            {
+                gameEvent = geTarget;
+            }
+
+            if (gameEvent?.TargetGameObject?.Components != null)
+            {
+                foreach (var comp in gameEvent.TargetGameObject.Components.Values)
+                {
+                    if (comp != null)
+                    {
+                        string fullName = comp.GetType().FullName ?? comp.GetType().Name;
+                        if (!choices.Contains(fullName))
+                        {
+                            choices.Add(fullName);
+                        }
+                    }
+                }
+            }
+
+            return new StandardValuesCollection(choices);
+        }
+
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+        public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType) => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+
+        public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
+        {
+            if (destinationType == typeof(string))
+            {
+                if (value is string str && !string.IsNullOrEmpty(str) && str != "None")
+                {
+                    // Clean up namespace/suffix for display purposes in the cell
+                    string displayName = str.Contains('.') ? str.Substring(str.LastIndexOf('.') + 1) : str;
+                    if (displayName.EndsWith("Component"))
+                    {
+                        displayName = displayName.Substring(0, displayName.Length - "Component".Length);
+                    }
+                    return displayName;
+                }
+                return "None (Component)";
+            }
+            return base.ConvertTo(context, culture, value, destinationType);
+        }
+
+        public override object ConvertFrom(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value)
+        {
+            if (value is string str)
+            {
+                str = str.Trim();
+                if (string.IsNullOrEmpty(str) || str.StartsWith("None", StringComparison.OrdinalIgnoreCase))
+                    return string.Empty;
+
+                // If user selected a short display name, match it back to the full type name stored in the model
+                var choices = GetStandardValues(context);
+                foreach (string choice in choices)
+                {
+                    if (choice == "None") continue;
+                    string shortName = choice.Contains('.') ? choice.Substring(choice.LastIndexOf('.') + 1) : choice;
+                    if (shortName.Equals(str, StringComparison.OrdinalIgnoreCase) || choice.Equals(str, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return choice;
+                    }
+                }
+                return str;
+            }
+            return string.Empty;
+        }
+    }
+
+    public class GameEventMethodConverter : TypeConverter
+    {
+        public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
+        public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true; // Forces strict dropdown selection
+
+        public override StandardValuesCollection GetStandardValues(ITypeDescriptorContext context)
+        {
+            var choices = new List<string> { "None" };
+
+            // Find the parent GameEvent instance from the context
+            GameEvent? gameEvent = null;
+            if(context?.Instance is GameEvent ge)
+            {
+                gameEvent = ge;
+            }
+            else if(context?.Instance is FilteredPropertyWrapper wrapper && wrapper.Target is GameEvent geTarget)
+            {
+                gameEvent = geTarget;
+            }
+
+            if(gameEvent?.TargetGameObject != null && !string.IsNullOrEmpty(gameEvent.TargetComponentTypeName))
+            {
+                // Find the component instance on the target GameObject
+                var targetComp = gameEvent.TargetGameObject.Components.Values
+                    .FirstOrDefault(c => c.GetType().FullName == gameEvent.TargetComponentTypeName || c.GetType().Name == gameEvent.TargetComponentTypeName);
+
+                if(targetComp != null)
+                {
+                    // Find all public instance methods returning void with zero parameters
+                    var validMethods = targetComp.GetType()
+                        .GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                        .Where(m => m.ReturnType == typeof(void) && m.GetParameters().Length == 0)
+                        .Select(m => m.Name);
+
+                    foreach(var method in validMethods)
+                    {
+                        if(!choices.Contains(method))
+                        {
+                            choices.Add(method);
+                        }
+                    }
+                }
+            }
+
+            return new StandardValuesCollection(choices);
+        }
+
+        public override bool CanConvertFrom(ITypeDescriptorContext context, Type sourceType) => sourceType == typeof(string) || base.CanConvertFrom(context, sourceType);
+        public override bool CanConvertTo(ITypeDescriptorContext context, Type destinationType) => destinationType == typeof(string) || base.CanConvertTo(context, destinationType);
+
+        public override object ConvertTo(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value, Type destinationType)
+        {
+            if(destinationType == typeof(string))
+            {
+                if(value is string str && !string.IsNullOrEmpty(str) && str != "None")
+                {
+                    return str;
+                }
+                return "None (Method)";
+            }
+            return base.ConvertTo(context, culture, value, destinationType);
+        }
+
+        public override object ConvertFrom(ITypeDescriptorContext context, System.Globalization.CultureInfo culture, object value)
+        {
+            if(value is string str)
+            {
+                str = str.Trim();
+                if(string.IsNullOrEmpty(str) || str.StartsWith("None", StringComparison.OrdinalIgnoreCase))
+                    return string.Empty;
+
+                return str;
+            }
+            return string.Empty;
+        }
+    }
+
+
+
     public class FilteredPropertyDescriptor : PropertyDescriptor
     {
         private readonly PropertyDescriptor _baseDescriptor;
@@ -773,7 +1140,7 @@ namespace Engine.Editor.WinFormsApp1
 
             // 💡 DYNAMIC INTERCEPTION FOR DATA LINKING PROPERTIES
             if(baseDescriptor.Name.Equals("DatabaseReference", StringComparison.OrdinalIgnoreCase) ||
-                typeof(Engine.Core.Collections.Database).IsAssignableFrom(propType))
+                typeof(Database).IsAssignableFrom(propType))
             {
                 _customConverter = new DatabaseReferenceConverter();
             }
@@ -792,8 +1159,11 @@ namespace Engine.Editor.WinFormsApp1
                     _customConverter = new DataComponentReferenceConverter();
                 else if(typeof(GameObject).IsAssignableFrom(propType) || propType.Name == "GameObject")
                     _customConverter = new GameObjectReferenceConverter();
-                else if(propType.Name.EndsWith("Component") || typeof(Engine.Core.ECS.GameComponent).IsAssignableFrom(propType))
+                else if(propType.Name.EndsWith("Component") || typeof(GameComponent).IsAssignableFrom(propType))
                     _customConverter = new ComponentReferenceConverter();
+                
+                else if(propType.Name == "GameEvent" || typeof(GameEvent).IsAssignableFrom(propType))
+                    _customConverter = new GameEventConverter();
                 else
                     _customConverter = new EngineObjectReferenceConverter();
             }

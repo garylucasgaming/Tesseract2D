@@ -24,6 +24,8 @@ namespace Engine.Core.ECS.Managers
 
         public PhysicsSystem physicsSystem { get; private set; } = null!;
 
+        public ScriptComponentSystem scriptComponentSystem { get; private set; } = null!;
+
         public SystemsManager()
         {
             // Automatically initialize a bucket list for every single policy enum type
@@ -47,6 +49,11 @@ namespace Engine.Core.ECS.Managers
             {
                 physicsSystem = new PhysicsSystem() { ContextScene = ContextScene };
                 AddSystem(physicsSystem);
+            }
+            if(scriptComponentSystem == null)
+            {
+                scriptComponentSystem = new ScriptComponentSystem() { ContextScene = ContextScene };
+                AddSystem(scriptComponentSystem);
             }
         }
 

@@ -262,7 +262,7 @@ namespace WinFormsApp1
 
             if(EditorContextManager.IsProjectLoaded)
             {
-
+                InitializeAndLoadGameplayAssembly();
                 // TODO  set the loaded scene to the project manifests last used scene, default to first scene in scene folder if one exists, if one doesn't exist create a base scene file
 
                 string absoluteBinContentPath = Path.Combine(EditorContextManager.BinPath, "Content");
@@ -862,7 +862,54 @@ namespace WinFormsApp1
             return SceneHierarchyTreeView.SelectedNode.Tag as GameObject;
         }
 
+        private void InitializeAndLoadGameplayAssembly()
+        {
+            if(string.IsNullOrEmpty(EditorContextManager.CurrentProjectRoot))
+                return;
 
+            string sourceFolder = Path.Combine(EditorContextManager.CurrentProjectRoot, "Source");
+            if(!Directory.Exists(sourceFolder))
+                return;
+
+            UpdateProgressText("Compiling and loading gameplay scripts...");
+            Log.Info("[Script Manager] Building gameplay assembly for project startup...");
+
+            try
+            {
+                // Temporarily clear the SynchronizationContext to prevent UI thread deadlocks when calling .Result
+                var oldContext = System.Threading.SynchronizationContext.Current;
+                BuildResult result;
+                try
+                {
+                    System.Threading.SynchronizationContext.SetSynchronizationContext(null);
+
+                    // Execute and wait synchronously and safely
+                    result = ScriptCompiler.CompileGameplayProjectAsync(
+                        EditorContextManager.CurrentProjectRoot,
+                        EditorContextManager.CurrentProjectName
+                    ).Result;
+                }
+                finally
+                {
+                    System.Threading.SynchronizationContext.SetSynchronizationContext(oldContext);
+                }
+
+                if(result.Success && !string.IsNullOrEmpty(result.AssemblyPath))
+                {
+                    _scriptManager.LoadGameplayAssembly(result.AssemblyPath);
+                    _lastBuildTimestamp = DateTime.Now;
+                    Log.Info("[Script Manager] Gameplay assembly successfully loaded. Custom components are ready.");
+                }
+                else
+                {
+                    Log.Error($"[Script Manager Startup Build Error]:\n{result.OutputLog}");
+                }
+            }
+            catch(Exception ex)
+            {
+                Log.Error($"[Script Manager Startup Exception]: {ex.Message}");
+            }
+        }
         private void InitializePropertiesToolstripEvents()
         {
             // Create the master context menu container once
@@ -874,10 +921,27 @@ namespace WinFormsApp1
                 AddComponentButton.DropDownItems.Clear();
                 GameObject? selectedGo = GetSelectedGameObjectFromHierarchy();
 
-                // 1. Gather all valid component types in the project via Reflection
-                var componentTypes = AppDomain.CurrentDomain.GetAssemblies()
-                    .SelectMany(a => a.GetTypes())
-                    .Where(t => t.IsSubclassOf(typeof(GameComponent)) && !t.IsAbstract);
+                // 1. Gather component types using a scoped, memory-safe assembly lookup
+                var componentTypes = new System.Collections.Generic.List<Type>();
+
+                // Add core engine components
+                var coreAssembly = typeof(GameComponent).Assembly;
+                componentTypes.AddRange(coreAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(GameComponent)) && !t.IsAbstract));
+
+                // Add user script components from the current hot-loaded assembly only
+                if(_scriptManager.CurrentAssembly != null)
+                {
+                    try
+                    {
+                        var userTypes = _scriptManager.CurrentAssembly.GetTypes()
+                            .Where(t => t.IsSubclassOf(typeof(GameComponent)) && !t.IsAbstract);
+                        componentTypes.AddRange(userTypes);
+                    }
+                    catch(Exception ex)
+                    {
+                        Log.Error($"[Script Manager] Failed to retrieve types from active gameplay assembly: {ex.Message}");
+                    }
+                }
 
                 foreach(var type in componentTypes)
                 {

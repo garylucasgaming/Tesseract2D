@@ -1,90 +1,83 @@
-﻿using System;
+﻿using Engine.Core.ECS;
+using Engine.Core.Runtime;
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Engine.Core.Runtime
 {
-    // a blank interface marking any structure or class as a valid event payload. 
-    public interface IGameEventData
+
+
+    public class GameEvent
     {
-    }
-
-    // a centralized typesafe highway handling global messaging across the runtime
-    public static class GameEvent
-    {
-
-        // A dictionary mapping an Event Type to a list of action callbacks that handle that type.
-        // We use object because different events have different generic argument types.
-        private static readonly Dictionary<Type, List<object>> _listeners = new();
-
-        /// <summary>
-        /// Subscribes a method to listen for a specific type of GameEvent.
-        /// </summary>
-        /// <typeparam name="T">The type of event data to listen for.</typeparam>
-        /// <param name="callback">The method to execute when the event fires.</param>
-        public static void Subscribe<T>(Action<T> callback) where T : IGameEventData
+        public GameObject? TargetGameObject
         {
-            Type eventType = typeof(T);
+            get; set;
+        }
+        public string TargetComponentTypeName { get; set; } = string.Empty;
+        public string MethodName { get; set; } = string.Empty;
 
-            if(!_listeners.ContainsKey(eventType))
+        
+        private Action? _cachedDelegate;
+
+        public void Invoke()
+        {
+            if(TargetGameObject == null)
+                return;
+
+            if(_cachedDelegate != null)
             {
-                _listeners[eventType] = new List<object>();
+                try
+                {
+                    _cachedDelegate();
+                }
+                catch(Exception ex)
+                {
+                    Utilities.Log.Error($"[GameEvent] Error invoking cached event '{MethodName}': {ex.Message}");
+                    ClearCache();
+                }
+                return;
             }
 
-            _listeners[eventType].Add(callback);
-        }
+            if(string.IsNullOrEmpty(TargetComponentTypeName) || string.IsNullOrEmpty(MethodName))
+                return;
 
-        /// <summary>
-        /// Unsubscribes a method so it stops listening to a specific type of GameEvent.
-        /// Prevents memory leaks when scenes or managers are destroyed.
-        /// </summary>
-        public static void Unsubscribe<T>(Action<T> callback) where T : IGameEventData
-        {
-            Type eventType = typeof(T);
-
-            if(_listeners.TryGetValue(eventType, out var list))
+            try
             {
-                list.Remove(callback);
+                var targetComponent = TargetGameObject.Components.Values
+                    .FirstOrDefault(c => c.GetType().FullName == TargetComponentTypeName || c.GetType().Name == TargetComponentTypeName);
 
-                if(list.Count == 0)
+                if(targetComponent == null)
+                    return;
+
+                MethodInfo? methodInfo = targetComponent.GetType().GetMethod(
+                    MethodName,
+                    BindingFlags.Public | BindingFlags.Instance,
+                    null,
+                    Type.EmptyTypes,
+                    null
+                );
+
+                if(methodInfo != null && methodInfo.ReturnType == typeof(void))
                 {
-                    _listeners.Remove(eventType);
+                    _cachedDelegate = (Action) Delegate.CreateDelegate(typeof(Action), targetComponent, methodInfo);
+                    _cachedDelegate();
                 }
             }
-        }
-
-        /// <summary>
-        /// Broadcasts an event payload instantly to every registered listener.
-        /// </summary>
-        /// <typeparam name="T">The type of event data being sent.</typeparam>
-        /// <param name="eventData">The actual structural data package containing details about the event.</param>
-        public static void Raise<T>(T eventData) where T : IGameEventData
-        {
-            Type eventType = typeof(T);
-
-            if(_listeners.TryGetValue(eventType, out var list))
+            catch(Exception ex)
             {
-                // We loop backwards so if a listener unsubscribes itself during the event callback, 
-                // it won't crash our collection iteration.
-                for(int i = list.Count - 1; i >= 0; i--)
-                {
-                    if(list[i] is Action<T> callback)
-                    {
-                        callback.Invoke(eventData);
-                    }
-                }
+                Utilities.Log.Error($"[GameEvent Reflection Error] Failed to bind event method '{MethodName}': {ex.Message}");
             }
         }
 
-        /// <summary>
-        /// Completely clears all event listeners. Essential for clean scene transitions via the SceneDirector.
-        /// </summary>
-        public static void ClearAllListeners()
+        public void ClearCache()
         {
-            _listeners.Clear();
-            System.Diagnostics.Debug.WriteLine("[Runtime] GameEvent highway completely flushed cleanly.");
+            _cachedDelegate = null;
         }
     }
 }

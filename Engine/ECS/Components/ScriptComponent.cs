@@ -15,11 +15,6 @@ namespace Engine.Core.ECS.Components
 
         [Browsable(false)]
         public bool hasStarted = false;
-        [Browsable(true)]
-        public string ScriptTypeName { get; set; }
-        [Browsable(false)]
-
-        public string ScriptFilePath { get; set; }
 
         public bool IsActive { 
             get => _isActive; 

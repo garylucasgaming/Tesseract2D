@@ -49,7 +49,7 @@ namespace Engine.Core.ECS.Systems
                 }
 
 
-                if(gameObject.isActive)
+                if(gameObject.isActive && comp.IsActive)
                 {
 
                     comp.Update();
