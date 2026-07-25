@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Engine.Core.ECS.Components;
+using Engine.Core.ECS.Components.UI;
 using Engine.Core.Utilities;
 
 namespace Engine.Core.ECS.Systems
@@ -37,7 +38,24 @@ namespace Engine.Core.ECS.Systems
                     _hookedComponents.Add(transform);
                 }
 
-                // Root objects are either completely parentless, or parented directly to the scene wrapper
+                // 1. Resolve UI Sizing/Constraints FIRST so parent dimensions are 
+                // fully up-to-date before hierarchy sync propagates down to children.
+                var uiComp = entity.GetComponent<UIElementComponent>();
+                if(uiComp != null && entity.Parent is GameObject parentGo)
+                {
+                   var parentTransform = parentGo.GetComponent<TransformComponent>();
+                        if(uiComp.UsePercentageSize && parentTransform != null)
+                        {
+                            transform.SizeX = parentTransform.SizeX * uiComp.WidthPercentage;
+                            transform.SizeY = parentTransform.SizeY * uiComp.HeightPercentage;
+                        }
+                    
+                }
+
+                // 2. Handle Container Layouts (Stack layout / padding) 
+                // can also be calculated right here before hierarchy sync.
+
+                // 3. Root objects trigger the full tree sync pass down to their children
                 if(entity.Parent == null || entity.Parent is GameScene)
                 {
                     if(_activeSyncingComponents.Add(transform))

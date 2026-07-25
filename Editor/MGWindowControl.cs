@@ -109,12 +109,23 @@ namespace Editor
                 return;
 
             GameObject selectedGo = GetSelectedGameObject();
+            var uiRenderSys = _activeScene.Systems.GetSystem<UIRenderSystem>();
 
+
+            //world space render
             Matrix viewMatrix = EditorCamera.GetViewMatrix(Editor.GraphicsDevice.Viewport);
             Editor.spriteBatch.Begin(transformMatrix: viewMatrix);
-
+            uiRenderSys.CurrentRenderSpace = Engine.Core.ECS.Components.UI.UISPACE.WorldSpace;
             _activeScene.Systems.Render(Editor.spriteBatch, Editor.Content);
             _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo, Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance, _inputService.CurrentMode);
+
+            Editor.spriteBatch.End();
+
+            // screenspace render
+
+            Editor.spriteBatch.Begin();
+            uiRenderSys.CurrentRenderSpace = Engine.Core.ECS.Components.UI.UISPACE.ScreenSpace;
+            _activeScene.Systems.UIRenderScreen(Editor.spriteBatch, Editor.Content);
 
             Editor.spriteBatch.End();
         }

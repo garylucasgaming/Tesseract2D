@@ -92,11 +92,21 @@
             splitContainer1 = new SplitContainer();
             splitContainer2 = new SplitContainer();
             splitContainer3 = new SplitContainer();
+            ManagerListView = new ListView();
+            toolStrip1 = new ToolStrip();
+            toolStrip2 = new ToolStrip();
+            SystemListView = new ListView();
+            AddManagerDropdownButton = new ToolStripDropDownButton();
+            RemoveManagerButton = new ToolStripButton();
+            AddSystemDropdownButton = new ToolStripDropDownButton();
+            RemoveSystemButton = new ToolStripButton();
             menuStrip1.SuspendLayout();
             SceneHierarchyPanel.SuspendLayout();
             tabControl3.SuspendLayout();
             SceneHierarchyTab.SuspendLayout();
             HierarchyToolStrip.SuspendLayout();
+            ManagersTab.SuspendLayout();
+            SystemsTab.SuspendLayout();
             PropertiesWindow.SuspendLayout();
             propertiesToolStrip.SuspendLayout();
             tabControl1.SuspendLayout();
@@ -120,6 +130,8 @@
             splitContainer3.Panel1.SuspendLayout();
             splitContainer3.Panel2.SuspendLayout();
             splitContainer3.SuspendLayout();
+            toolStrip1.SuspendLayout();
+            toolStrip2.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -399,6 +411,8 @@
             // 
             // ManagersTab
             // 
+            ManagersTab.Controls.Add(ManagerListView);
+            ManagersTab.Controls.Add(toolStrip1);
             ManagersTab.Location = new Point(4, 24);
             ManagersTab.Name = "ManagersTab";
             ManagersTab.Padding = new Padding(3);
@@ -409,6 +423,8 @@
             // 
             // SystemsTab
             // 
+            SystemsTab.Controls.Add(SystemListView);
+            SystemsTab.Controls.Add(toolStrip2);
             SystemsTab.Location = new Point(4, 24);
             SystemsTab.Name = "SystemsTab";
             SystemsTab.Size = new Size(181, 631);
@@ -695,6 +711,78 @@
             splitContainer3.SplitterDistance = 485;
             splitContainer3.TabIndex = 0;
             // 
+            // ManagerListView
+            // 
+            ManagerListView.Dock = DockStyle.Fill;
+            ManagerListView.Location = new Point(3, 28);
+            ManagerListView.Name = "ManagerListView";
+            ManagerListView.Size = new Size(175, 600);
+            ManagerListView.TabIndex = 0;
+            ManagerListView.UseCompatibleStateImageBehavior = false;
+            // 
+            // toolStrip1
+            // 
+            toolStrip1.Items.AddRange(new ToolStripItem[] { AddManagerDropdownButton, RemoveManagerButton });
+            toolStrip1.Location = new Point(3, 3);
+            toolStrip1.Name = "toolStrip1";
+            toolStrip1.Size = new Size(175, 25);
+            toolStrip1.TabIndex = 1;
+            toolStrip1.Text = "toolStrip1";
+            // 
+            // toolStrip2
+            // 
+            toolStrip2.Items.AddRange(new ToolStripItem[] { AddSystemDropdownButton, RemoveSystemButton });
+            toolStrip2.Location = new Point(0, 0);
+            toolStrip2.Name = "toolStrip2";
+            toolStrip2.Size = new Size(181, 25);
+            toolStrip2.TabIndex = 0;
+            toolStrip2.Text = "toolStrip2";
+            // 
+            // SystemListView
+            // 
+            SystemListView.Dock = DockStyle.Fill;
+            SystemListView.Location = new Point(0, 25);
+            SystemListView.Name = "SystemListView";
+            SystemListView.Size = new Size(181, 606);
+            SystemListView.TabIndex = 1;
+            SystemListView.UseCompatibleStateImageBehavior = false;
+            // 
+            // AddManagerDropdownButton
+            // 
+            AddManagerDropdownButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            AddManagerDropdownButton.Image = (Image) resources.GetObject("AddManagerDropdownButton.Image");
+            AddManagerDropdownButton.ImageTransparentColor = Color.Magenta;
+            AddManagerDropdownButton.Name = "AddManagerDropdownButton";
+            AddManagerDropdownButton.Size = new Size(29, 22);
+            AddManagerDropdownButton.Text = "AddManagerDropdownButton";
+            // 
+            // RemoveManagerButton
+            // 
+            RemoveManagerButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            RemoveManagerButton.Image = (Image) resources.GetObject("RemoveManagerButton.Image");
+            RemoveManagerButton.ImageTransparentColor = Color.Magenta;
+            RemoveManagerButton.Name = "RemoveManagerButton";
+            RemoveManagerButton.Size = new Size(23, 22);
+            RemoveManagerButton.Text = "RemoveManagerButton";
+            // 
+            // AddSystemDropdownButton
+            // 
+            AddSystemDropdownButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            AddSystemDropdownButton.Image = (Image) resources.GetObject("AddSystemDropdownButton.Image");
+            AddSystemDropdownButton.ImageTransparentColor = Color.Magenta;
+            AddSystemDropdownButton.Name = "AddSystemDropdownButton";
+            AddSystemDropdownButton.Size = new Size(29, 22);
+            AddSystemDropdownButton.Text = "AddSystemDropdownButton";
+            // 
+            // RemoveSystemButton
+            // 
+            RemoveSystemButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            RemoveSystemButton.Image = (Image) resources.GetObject("RemoveSystemButton.Image");
+            RemoveSystemButton.ImageTransparentColor = Color.Magenta;
+            RemoveSystemButton.Name = "RemoveSystemButton";
+            RemoveSystemButton.Size = new Size(23, 22);
+            RemoveSystemButton.Text = "RemoveSystemButton";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -716,6 +804,10 @@
             SceneHierarchyTab.PerformLayout();
             HierarchyToolStrip.ResumeLayout(false);
             HierarchyToolStrip.PerformLayout();
+            ManagersTab.ResumeLayout(false);
+            ManagersTab.PerformLayout();
+            SystemsTab.ResumeLayout(false);
+            SystemsTab.PerformLayout();
             PropertiesWindow.ResumeLayout(false);
             PropertiesWindow.PerformLayout();
             propertiesToolStrip.ResumeLayout(false);
@@ -744,6 +836,10 @@
             splitContainer3.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize) splitContainer3).EndInit();
             splitContainer3.ResumeLayout(false);
+            toolStrip1.ResumeLayout(false);
+            toolStrip1.PerformLayout();
+            toolStrip2.ResumeLayout(false);
+            toolStrip2.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -815,5 +911,13 @@
         private SplitContainer splitContainer1;
         private SplitContainer splitContainer2;
         private SplitContainer splitContainer3;
+        private ListView ManagerListView;
+        private ToolStrip toolStrip1;
+        private ListView SystemListView;
+        private ToolStrip toolStrip2;
+        private ToolStripDropDownButton AddManagerDropdownButton;
+        private ToolStripButton RemoveManagerButton;
+        private ToolStripDropDownButton AddSystemDropdownButton;
+        private ToolStripButton RemoveSystemButton;
     }
 }
