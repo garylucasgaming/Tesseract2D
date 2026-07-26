@@ -56,7 +56,7 @@
             helpToolStripMenuItem = new ToolStripMenuItem();
             documentationToolStripMenuItem = new ToolStripMenuItem();
             SceneHierarchyPanel = new GroupBox();
-            tabControl3 = new TabControl();
+            TabPage = new TabControl();
             SceneHierarchyTab = new TabPage();
             SceneHierarchyTreeView = new TreeView();
             HierarchyToolStrip = new ToolStrip();
@@ -66,7 +66,21 @@
             SceneNameBox = new ToolStripTextBox();
             sceneHierarchySearchBar = new Editor.TextSearchBarControl();
             ManagersTab = new TabPage();
+            ManagerListView = new ListView();
+            toolStrip1 = new ToolStrip();
+            AddManagerDropdownButton = new ToolStripDropDownButton();
+            RemoveManagerButton = new ToolStripButton();
             SystemsTab = new TabPage();
+            SystemListView = new ListView();
+            toolStrip2 = new ToolStrip();
+            AddSystemDropdownButton = new ToolStripDropDownButton();
+            RemoveSystemButton = new ToolStripButton();
+            UITab = new TabPage();
+            UIListView = new ListView();
+            UIToolStrip = new ToolStrip();
+            AddUIScreenButton = new ToolStripDropDownButton();
+            RemoveUIScreenButton = new ToolStripButton();
+            LaunchGumEditorButton = new ToolStripButton();
             PropertiesWindow = new GroupBox();
             InspectorFlowPanel = new FlowLayoutPanel();
             propertiesToolStrip = new ToolStrip();
@@ -92,21 +106,17 @@
             splitContainer1 = new SplitContainer();
             splitContainer2 = new SplitContainer();
             splitContainer3 = new SplitContainer();
-            ManagerListView = new ListView();
-            toolStrip1 = new ToolStrip();
-            toolStrip2 = new ToolStrip();
-            SystemListView = new ListView();
-            AddManagerDropdownButton = new ToolStripDropDownButton();
-            RemoveManagerButton = new ToolStripButton();
-            AddSystemDropdownButton = new ToolStripDropDownButton();
-            RemoveSystemButton = new ToolStripButton();
             menuStrip1.SuspendLayout();
             SceneHierarchyPanel.SuspendLayout();
-            tabControl3.SuspendLayout();
+            TabPage.SuspendLayout();
             SceneHierarchyTab.SuspendLayout();
             HierarchyToolStrip.SuspendLayout();
             ManagersTab.SuspendLayout();
+            toolStrip1.SuspendLayout();
             SystemsTab.SuspendLayout();
+            toolStrip2.SuspendLayout();
+            UITab.SuspendLayout();
+            UIToolStrip.SuspendLayout();
             PropertiesWindow.SuspendLayout();
             propertiesToolStrip.SuspendLayout();
             tabControl1.SuspendLayout();
@@ -130,8 +140,6 @@
             splitContainer3.Panel1.SuspendLayout();
             splitContainer3.Panel2.SuspendLayout();
             splitContainer3.SuspendLayout();
-            toolStrip1.SuspendLayout();
-            toolStrip2.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -140,7 +148,7 @@
             menuStrip1.Items.AddRange(new ToolStripItem[] { menuToolStripMenuItem, editToolStripMenuItem, assetsToolStripMenuItem, windowToolStripMenuItem, helpToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(770, 24);
+            menuStrip1.Size = new Size(738, 24);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -308,26 +316,27 @@
             // 
             // SceneHierarchyPanel
             // 
-            SceneHierarchyPanel.Controls.Add(tabControl3);
+            SceneHierarchyPanel.Controls.Add(TabPage);
             SceneHierarchyPanel.Dock = DockStyle.Fill;
             SceneHierarchyPanel.Location = new Point(0, 0);
             SceneHierarchyPanel.Name = "SceneHierarchyPanel";
-            SceneHierarchyPanel.Size = new Size(195, 681);
+            SceneHierarchyPanel.Size = new Size(238, 681);
             SceneHierarchyPanel.TabIndex = 1;
             SceneHierarchyPanel.TabStop = false;
             SceneHierarchyPanel.Text = "Scene Hierarchy";
             // 
-            // tabControl3
+            // TabPage
             // 
-            tabControl3.Controls.Add(SceneHierarchyTab);
-            tabControl3.Controls.Add(ManagersTab);
-            tabControl3.Controls.Add(SystemsTab);
-            tabControl3.Dock = DockStyle.Fill;
-            tabControl3.Location = new Point(3, 19);
-            tabControl3.Name = "tabControl3";
-            tabControl3.SelectedIndex = 0;
-            tabControl3.Size = new Size(189, 659);
-            tabControl3.TabIndex = 4;
+            TabPage.Controls.Add(SceneHierarchyTab);
+            TabPage.Controls.Add(ManagersTab);
+            TabPage.Controls.Add(SystemsTab);
+            TabPage.Controls.Add(UITab);
+            TabPage.Dock = DockStyle.Fill;
+            TabPage.Location = new Point(3, 19);
+            TabPage.Name = "TabPage";
+            TabPage.SelectedIndex = 0;
+            TabPage.Size = new Size(232, 659);
+            TabPage.TabIndex = 4;
             // 
             // SceneHierarchyTab
             // 
@@ -337,7 +346,7 @@
             SceneHierarchyTab.Location = new Point(4, 24);
             SceneHierarchyTab.Name = "SceneHierarchyTab";
             SceneHierarchyTab.Padding = new Padding(3);
-            SceneHierarchyTab.Size = new Size(181, 631);
+            SceneHierarchyTab.Size = new Size(224, 631);
             SceneHierarchyTab.TabIndex = 0;
             SceneHierarchyTab.Text = "Scene";
             SceneHierarchyTab.UseVisualStyleBackColor = true;
@@ -349,7 +358,7 @@
             SceneHierarchyTreeView.LabelEdit = true;
             SceneHierarchyTreeView.Location = new Point(3, 53);
             SceneHierarchyTreeView.Name = "SceneHierarchyTreeView";
-            SceneHierarchyTreeView.Size = new Size(175, 575);
+            SceneHierarchyTreeView.Size = new Size(218, 575);
             SceneHierarchyTreeView.TabIndex = 1;
             SceneHierarchyTreeView.ItemDrag += SceneHierarchyTreeView_ItemDrag;
             SceneHierarchyTreeView.DragDrop += SceneHierarchyTreeView_DragDrop;
@@ -360,7 +369,7 @@
             HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton, CreateNewSceneButton, SceneNameBox });
             HierarchyToolStrip.Location = new Point(3, 28);
             HierarchyToolStrip.Name = "HierarchyToolStrip";
-            HierarchyToolStrip.Size = new Size(175, 25);
+            HierarchyToolStrip.Size = new Size(218, 25);
             HierarchyToolStrip.TabIndex = 2;
             HierarchyToolStrip.Text = "toolStrip2";
             // 
@@ -397,7 +406,7 @@
             // SceneNameBox
             // 
             SceneNameBox.Name = "SceneNameBox";
-            SceneNameBox.Size = new Size(100, 23);
+            SceneNameBox.Size = new Size(100, 25);
             SceneNameBox.TextChanged += SceneNameBox_TextChanged;
             // 
             // sceneHierarchySearchBar
@@ -405,7 +414,7 @@
             sceneHierarchySearchBar.Dock = DockStyle.Top;
             sceneHierarchySearchBar.Location = new Point(3, 3);
             sceneHierarchySearchBar.Name = "sceneHierarchySearchBar";
-            sceneHierarchySearchBar.Size = new Size(175, 25);
+            sceneHierarchySearchBar.Size = new Size(218, 25);
             sceneHierarchySearchBar.TabIndex = 3;
             sceneHierarchySearchBar.Load += textSearchBarControl1_Load;
             // 
@@ -416,10 +425,46 @@
             ManagersTab.Location = new Point(4, 24);
             ManagersTab.Name = "ManagersTab";
             ManagersTab.Padding = new Padding(3);
-            ManagersTab.Size = new Size(181, 631);
+            ManagersTab.Size = new Size(224, 631);
             ManagersTab.TabIndex = 1;
             ManagersTab.Text = "Managers";
             ManagersTab.UseVisualStyleBackColor = true;
+            // 
+            // ManagerListView
+            // 
+            ManagerListView.Dock = DockStyle.Fill;
+            ManagerListView.Location = new Point(3, 28);
+            ManagerListView.Name = "ManagerListView";
+            ManagerListView.Size = new Size(218, 600);
+            ManagerListView.TabIndex = 0;
+            ManagerListView.UseCompatibleStateImageBehavior = false;
+            // 
+            // toolStrip1
+            // 
+            toolStrip1.Items.AddRange(new ToolStripItem[] { AddManagerDropdownButton, RemoveManagerButton });
+            toolStrip1.Location = new Point(3, 3);
+            toolStrip1.Name = "toolStrip1";
+            toolStrip1.Size = new Size(218, 25);
+            toolStrip1.TabIndex = 1;
+            toolStrip1.Text = "toolStrip1";
+            // 
+            // AddManagerDropdownButton
+            // 
+            AddManagerDropdownButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            AddManagerDropdownButton.Image = (Image) resources.GetObject("AddManagerDropdownButton.Image");
+            AddManagerDropdownButton.ImageTransparentColor = Color.Magenta;
+            AddManagerDropdownButton.Name = "AddManagerDropdownButton";
+            AddManagerDropdownButton.Size = new Size(29, 22);
+            AddManagerDropdownButton.Text = "AddManagerDropdownButton";
+            // 
+            // RemoveManagerButton
+            // 
+            RemoveManagerButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            RemoveManagerButton.Image = (Image) resources.GetObject("RemoveManagerButton.Image");
+            RemoveManagerButton.ImageTransparentColor = Color.Magenta;
+            RemoveManagerButton.Name = "RemoveManagerButton";
+            RemoveManagerButton.Size = new Size(23, 22);
+            RemoveManagerButton.Text = "RemoveManagerButton";
             // 
             // SystemsTab
             // 
@@ -427,10 +472,104 @@
             SystemsTab.Controls.Add(toolStrip2);
             SystemsTab.Location = new Point(4, 24);
             SystemsTab.Name = "SystemsTab";
-            SystemsTab.Size = new Size(181, 631);
+            SystemsTab.Size = new Size(224, 631);
             SystemsTab.TabIndex = 2;
             SystemsTab.Text = "Systems";
             SystemsTab.UseVisualStyleBackColor = true;
+            // 
+            // SystemListView
+            // 
+            SystemListView.Dock = DockStyle.Fill;
+            SystemListView.Location = new Point(0, 25);
+            SystemListView.Name = "SystemListView";
+            SystemListView.Size = new Size(224, 606);
+            SystemListView.TabIndex = 1;
+            SystemListView.UseCompatibleStateImageBehavior = false;
+            // 
+            // toolStrip2
+            // 
+            toolStrip2.Items.AddRange(new ToolStripItem[] { AddSystemDropdownButton, RemoveSystemButton });
+            toolStrip2.Location = new Point(0, 0);
+            toolStrip2.Name = "toolStrip2";
+            toolStrip2.Size = new Size(224, 25);
+            toolStrip2.TabIndex = 0;
+            toolStrip2.Text = "toolStrip2";
+            // 
+            // AddSystemDropdownButton
+            // 
+            AddSystemDropdownButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            AddSystemDropdownButton.Image = (Image) resources.GetObject("AddSystemDropdownButton.Image");
+            AddSystemDropdownButton.ImageTransparentColor = Color.Magenta;
+            AddSystemDropdownButton.Name = "AddSystemDropdownButton";
+            AddSystemDropdownButton.Size = new Size(29, 22);
+            AddSystemDropdownButton.Text = "AddSystemDropdownButton";
+            // 
+            // RemoveSystemButton
+            // 
+            RemoveSystemButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            RemoveSystemButton.Image = (Image) resources.GetObject("RemoveSystemButton.Image");
+            RemoveSystemButton.ImageTransparentColor = Color.Magenta;
+            RemoveSystemButton.Name = "RemoveSystemButton";
+            RemoveSystemButton.Size = new Size(23, 22);
+            RemoveSystemButton.Text = "RemoveSystemButton";
+            // 
+            // UITab
+            // 
+            UITab.Controls.Add(UIListView);
+            UITab.Controls.Add(UIToolStrip);
+            UITab.Location = new Point(4, 24);
+            UITab.Name = "UITab";
+            UITab.Padding = new Padding(3);
+            UITab.Size = new Size(224, 631);
+            UITab.TabIndex = 3;
+            UITab.Text = "UI";
+            UITab.UseVisualStyleBackColor = true;
+            // 
+            // UIListView
+            // 
+            UIListView.Dock = DockStyle.Fill;
+            UIListView.Location = new Point(3, 28);
+            UIListView.Name = "UIListView";
+            UIListView.Size = new Size(218, 600);
+            UIListView.TabIndex = 1;
+            UIListView.UseCompatibleStateImageBehavior = false;
+            // 
+            // UIToolStrip
+            // 
+            UIToolStrip.Items.AddRange(new ToolStripItem[] { AddUIScreenButton, RemoveUIScreenButton, LaunchGumEditorButton });
+            UIToolStrip.Location = new Point(3, 3);
+            UIToolStrip.Name = "UIToolStrip";
+            UIToolStrip.Size = new Size(218, 25);
+            UIToolStrip.TabIndex = 0;
+            UIToolStrip.Text = "toolStrip3";
+            // 
+            // AddUIScreenButton
+            // 
+            AddUIScreenButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            AddUIScreenButton.Image = (Image) resources.GetObject("AddUIScreenButton.Image");
+            AddUIScreenButton.ImageTransparentColor = Color.Magenta;
+            AddUIScreenButton.Name = "AddUIScreenButton";
+            AddUIScreenButton.Size = new Size(29, 22);
+            AddUIScreenButton.Text = "AddUIScreen";
+            // 
+            // RemoveUIScreenButton
+            // 
+            RemoveUIScreenButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            RemoveUIScreenButton.Image = (Image) resources.GetObject("RemoveUIScreenButton.Image");
+            RemoveUIScreenButton.ImageTransparentColor = Color.Magenta;
+            RemoveUIScreenButton.Name = "RemoveUIScreenButton";
+            RemoveUIScreenButton.Size = new Size(23, 22);
+            RemoveUIScreenButton.Text = "RemoveUIScreen";
+            // 
+            // LaunchGumEditorButton
+            // 
+            LaunchGumEditorButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            LaunchGumEditorButton.Image = (Image) resources.GetObject("LaunchGumEditorButton.Image");
+            LaunchGumEditorButton.ImageTransparentColor = Color.Magenta;
+            LaunchGumEditorButton.Name = "LaunchGumEditorButton";
+            LaunchGumEditorButton.Size = new Size(87, 22);
+            LaunchGumEditorButton.Text = "LaunchGumUI";
+            LaunchGumEditorButton.Click += LaunchGumEditorButton_Click;
             // 
             // PropertiesWindow
             // 
@@ -442,7 +581,7 @@
             PropertiesWindow.FlatStyle = FlatStyle.Flat;
             PropertiesWindow.Location = new Point(0, 0);
             PropertiesWindow.Name = "PropertiesWindow";
-            PropertiesWindow.Size = new Size(291, 681);
+            PropertiesWindow.Size = new Size(280, 681);
             PropertiesWindow.TabIndex = 2;
             PropertiesWindow.TabStop = false;
             PropertiesWindow.Text = "Properties";
@@ -454,7 +593,7 @@
             InspectorFlowPanel.FlowDirection = FlowDirection.TopDown;
             InspectorFlowPanel.Location = new Point(3, 44);
             InspectorFlowPanel.Name = "InspectorFlowPanel";
-            InspectorFlowPanel.Size = new Size(285, 634);
+            InspectorFlowPanel.Size = new Size(274, 634);
             InspectorFlowPanel.TabIndex = 0;
             InspectorFlowPanel.WrapContents = false;
             // 
@@ -463,7 +602,7 @@
             propertiesToolStrip.Items.AddRange(new ToolStripItem[] { AddComponentButton, RemoveComponentButton });
             propertiesToolStrip.Location = new Point(3, 19);
             propertiesToolStrip.Name = "propertiesToolStrip";
-            propertiesToolStrip.Size = new Size(285, 25);
+            propertiesToolStrip.Size = new Size(274, 25);
             propertiesToolStrip.TabIndex = 1;
             propertiesToolStrip.Text = "toolStrip3";
             // 
@@ -492,7 +631,7 @@
             tabControl1.Location = new Point(0, 24);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(770, 461);
+            tabControl1.Size = new Size(738, 461);
             tabControl1.TabIndex = 3;
             // 
             // SceneView
@@ -502,7 +641,7 @@
             SceneView.Location = new Point(4, 24);
             SceneView.Name = "SceneView";
             SceneView.Padding = new Padding(3);
-            SceneView.Size = new Size(762, 433);
+            SceneView.Size = new Size(730, 433);
             SceneView.TabIndex = 0;
             SceneView.Text = "Scene View";
             SceneView.UseVisualStyleBackColor = true;
@@ -515,7 +654,7 @@
             mgWindowControl.Name = "mgWindowControl";
             mgWindowControl.SimulationPaused = false;
             mgWindowControl.SimulationRunning = false;
-            mgWindowControl.Size = new Size(756, 402);
+            mgWindowControl.Size = new Size(724, 402);
             mgWindowControl.TabIndex = 0;
             mgWindowControl.Text = "mgWindowControl2";
             // 
@@ -527,7 +666,7 @@
             SceneToolStrip.Items.AddRange(new ToolStripItem[] { StartSimulationButton, PauseSimulationButton, StopSimulationButton, progressBarTextBox });
             SceneToolStrip.Location = new Point(3, 405);
             SceneToolStrip.Name = "SceneToolStrip";
-            SceneToolStrip.Size = new Size(756, 25);
+            SceneToolStrip.Size = new Size(724, 25);
             SceneToolStrip.TabIndex = 4;
             SceneToolStrip.Text = "toolStrip1";
             // 
@@ -575,7 +714,7 @@
             tabControl2.Location = new Point(0, 0);
             tabControl2.Name = "tabControl2";
             tabControl2.SelectedIndex = 0;
-            tabControl2.Size = new Size(770, 192);
+            tabControl2.Size = new Size(738, 192);
             tabControl2.TabIndex = 1;
             // 
             // ProjectFolderTabPage
@@ -584,7 +723,7 @@
             ProjectFolderTabPage.Location = new Point(4, 24);
             ProjectFolderTabPage.Name = "ProjectFolderTabPage";
             ProjectFolderTabPage.Padding = new Padding(3);
-            ProjectFolderTabPage.Size = new Size(762, 164);
+            ProjectFolderTabPage.Size = new Size(730, 164);
             ProjectFolderTabPage.TabIndex = 0;
             ProjectFolderTabPage.Text = "Project Folder";
             ProjectFolderTabPage.UseVisualStyleBackColor = true;
@@ -596,7 +735,7 @@
             ProjectFolderTreeView.HotTracking = true;
             ProjectFolderTreeView.Location = new Point(3, 3);
             ProjectFolderTreeView.Name = "ProjectFolderTreeView";
-            ProjectFolderTreeView.Size = new Size(756, 158);
+            ProjectFolderTreeView.Size = new Size(724, 158);
             ProjectFolderTreeView.TabIndex = 1;
             // 
             // ConsoleTabPage
@@ -606,7 +745,7 @@
             ConsoleTabPage.Location = new Point(4, 24);
             ConsoleTabPage.Name = "ConsoleTabPage";
             ConsoleTabPage.Padding = new Padding(3);
-            ConsoleTabPage.Size = new Size(762, 164);
+            ConsoleTabPage.Size = new Size(730, 164);
             ConsoleTabPage.TabIndex = 1;
             ConsoleTabPage.Text = "Editor Console";
             ConsoleTabPage.UseVisualStyleBackColor = true;
@@ -617,7 +756,7 @@
             ConsoleTextBox.Location = new Point(3, 13);
             ConsoleTextBox.Name = "ConsoleTextBox";
             ConsoleTextBox.ReadOnly = true;
-            ConsoleTextBox.Size = new Size(756, 148);
+            ConsoleTextBox.Size = new Size(724, 148);
             ConsoleTextBox.TabIndex = 2;
             ConsoleTextBox.Text = "";
             // 
@@ -626,7 +765,7 @@
             consoleSearchBar.Dock = DockStyle.Top;
             consoleSearchBar.Location = new Point(3, 3);
             consoleSearchBar.Name = "consoleSearchBar";
-            consoleSearchBar.Size = new Size(756, 25);
+            consoleSearchBar.Size = new Size(724, 25);
             consoleSearchBar.TabIndex = 1;
             consoleSearchBar.SearchTextChanged += consoleSearchBar_SearchTextChanged;
             consoleSearchBar.Load += consoleSearchBar_Load;
@@ -638,7 +777,7 @@
             panel1.Dock = DockStyle.Fill;
             panel1.Location = new Point(0, 0);
             panel1.Name = "panel1";
-            panel1.Size = new Size(770, 485);
+            panel1.Size = new Size(738, 485);
             panel1.TabIndex = 4;
             // 
             // panel2
@@ -647,7 +786,7 @@
             panel2.Dock = DockStyle.Fill;
             panel2.Location = new Point(0, 0);
             panel2.Name = "panel2";
-            panel2.Size = new Size(195, 681);
+            panel2.Size = new Size(238, 681);
             panel2.TabIndex = 5;
             // 
             // panel3
@@ -656,7 +795,7 @@
             panel3.Dock = DockStyle.Fill;
             panel3.Location = new Point(0, 0);
             panel3.Name = "panel3";
-            panel3.Size = new Size(291, 681);
+            panel3.Size = new Size(280, 681);
             panel3.TabIndex = 6;
             // 
             // splitContainer1
@@ -673,7 +812,7 @@
             // 
             splitContainer1.Panel2.Controls.Add(splitContainer2);
             splitContainer1.Size = new Size(1264, 681);
-            splitContainer1.SplitterDistance = 195;
+            splitContainer1.SplitterDistance = 238;
             splitContainer1.TabIndex = 5;
             // 
             // splitContainer2
@@ -689,8 +828,8 @@
             // splitContainer2.Panel2
             // 
             splitContainer2.Panel2.Controls.Add(panel3);
-            splitContainer2.Size = new Size(1065, 681);
-            splitContainer2.SplitterDistance = 770;
+            splitContainer2.Size = new Size(1022, 681);
+            splitContainer2.SplitterDistance = 738;
             splitContainer2.TabIndex = 0;
             // 
             // splitContainer3
@@ -707,81 +846,9 @@
             // splitContainer3.Panel2
             // 
             splitContainer3.Panel2.Controls.Add(tabControl2);
-            splitContainer3.Size = new Size(770, 681);
+            splitContainer3.Size = new Size(738, 681);
             splitContainer3.SplitterDistance = 485;
             splitContainer3.TabIndex = 0;
-            // 
-            // ManagerListView
-            // 
-            ManagerListView.Dock = DockStyle.Fill;
-            ManagerListView.Location = new Point(3, 28);
-            ManagerListView.Name = "ManagerListView";
-            ManagerListView.Size = new Size(175, 600);
-            ManagerListView.TabIndex = 0;
-            ManagerListView.UseCompatibleStateImageBehavior = false;
-            // 
-            // toolStrip1
-            // 
-            toolStrip1.Items.AddRange(new ToolStripItem[] { AddManagerDropdownButton, RemoveManagerButton });
-            toolStrip1.Location = new Point(3, 3);
-            toolStrip1.Name = "toolStrip1";
-            toolStrip1.Size = new Size(175, 25);
-            toolStrip1.TabIndex = 1;
-            toolStrip1.Text = "toolStrip1";
-            // 
-            // toolStrip2
-            // 
-            toolStrip2.Items.AddRange(new ToolStripItem[] { AddSystemDropdownButton, RemoveSystemButton });
-            toolStrip2.Location = new Point(0, 0);
-            toolStrip2.Name = "toolStrip2";
-            toolStrip2.Size = new Size(181, 25);
-            toolStrip2.TabIndex = 0;
-            toolStrip2.Text = "toolStrip2";
-            // 
-            // SystemListView
-            // 
-            SystemListView.Dock = DockStyle.Fill;
-            SystemListView.Location = new Point(0, 25);
-            SystemListView.Name = "SystemListView";
-            SystemListView.Size = new Size(181, 606);
-            SystemListView.TabIndex = 1;
-            SystemListView.UseCompatibleStateImageBehavior = false;
-            // 
-            // AddManagerDropdownButton
-            // 
-            AddManagerDropdownButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            AddManagerDropdownButton.Image = (Image) resources.GetObject("AddManagerDropdownButton.Image");
-            AddManagerDropdownButton.ImageTransparentColor = Color.Magenta;
-            AddManagerDropdownButton.Name = "AddManagerDropdownButton";
-            AddManagerDropdownButton.Size = new Size(29, 22);
-            AddManagerDropdownButton.Text = "AddManagerDropdownButton";
-            // 
-            // RemoveManagerButton
-            // 
-            RemoveManagerButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            RemoveManagerButton.Image = (Image) resources.GetObject("RemoveManagerButton.Image");
-            RemoveManagerButton.ImageTransparentColor = Color.Magenta;
-            RemoveManagerButton.Name = "RemoveManagerButton";
-            RemoveManagerButton.Size = new Size(23, 22);
-            RemoveManagerButton.Text = "RemoveManagerButton";
-            // 
-            // AddSystemDropdownButton
-            // 
-            AddSystemDropdownButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            AddSystemDropdownButton.Image = (Image) resources.GetObject("AddSystemDropdownButton.Image");
-            AddSystemDropdownButton.ImageTransparentColor = Color.Magenta;
-            AddSystemDropdownButton.Name = "AddSystemDropdownButton";
-            AddSystemDropdownButton.Size = new Size(29, 22);
-            AddSystemDropdownButton.Text = "AddSystemDropdownButton";
-            // 
-            // RemoveSystemButton
-            // 
-            RemoveSystemButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            RemoveSystemButton.Image = (Image) resources.GetObject("RemoveSystemButton.Image");
-            RemoveSystemButton.ImageTransparentColor = Color.Magenta;
-            RemoveSystemButton.Name = "RemoveSystemButton";
-            RemoveSystemButton.Size = new Size(23, 22);
-            RemoveSystemButton.Text = "RemoveSystemButton";
             // 
             // Form1
             // 
@@ -799,15 +866,23 @@
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             SceneHierarchyPanel.ResumeLayout(false);
-            tabControl3.ResumeLayout(false);
+            TabPage.ResumeLayout(false);
             SceneHierarchyTab.ResumeLayout(false);
             SceneHierarchyTab.PerformLayout();
             HierarchyToolStrip.ResumeLayout(false);
             HierarchyToolStrip.PerformLayout();
             ManagersTab.ResumeLayout(false);
             ManagersTab.PerformLayout();
+            toolStrip1.ResumeLayout(false);
+            toolStrip1.PerformLayout();
             SystemsTab.ResumeLayout(false);
             SystemsTab.PerformLayout();
+            toolStrip2.ResumeLayout(false);
+            toolStrip2.PerformLayout();
+            UITab.ResumeLayout(false);
+            UITab.PerformLayout();
+            UIToolStrip.ResumeLayout(false);
+            UIToolStrip.PerformLayout();
             PropertiesWindow.ResumeLayout(false);
             PropertiesWindow.PerformLayout();
             propertiesToolStrip.ResumeLayout(false);
@@ -836,10 +911,6 @@
             splitContainer3.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize) splitContainer3).EndInit();
             splitContainer3.ResumeLayout(false);
-            toolStrip1.ResumeLayout(false);
-            toolStrip1.PerformLayout();
-            toolStrip2.ResumeLayout(false);
-            toolStrip2.PerformLayout();
             ResumeLayout(false);
         }
 
@@ -899,7 +970,7 @@
         private Editor.TextSearchBarControl sceneHierarchySearchBar;
         private Editor.TextSearchBarControl consoleSearchBar;
         private RichTextBox ConsoleTextBox;
-        private TabControl tabControl3;
+        private TabControl TabPage;
         private TabPage SceneHierarchyTab;
         private TabPage ManagersTab;
         private TabPage SystemsTab;
@@ -919,5 +990,11 @@
         private ToolStripButton RemoveManagerButton;
         private ToolStripDropDownButton AddSystemDropdownButton;
         private ToolStripButton RemoveSystemButton;
+        private TabPage UITab;
+        private ListView UIListView;
+        private ToolStrip UIToolStrip;
+        private ToolStripDropDownButton AddUIScreenButton;
+        private ToolStripButton RemoveUIScreenButton;
+        private ToolStripButton LaunchGumEditorButton;
     }
 }

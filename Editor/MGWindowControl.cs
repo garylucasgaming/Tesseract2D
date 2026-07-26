@@ -43,6 +43,9 @@ namespace Editor
             _inputService = new EditorInputService(_inputManager, EditorCamera);
             _renderService = new EditorRenderService();
             Editor.FPSCounter.Visible = false;
+
+            EngineUI.Initialize(Editor.GraphicsDevice, Editor.Content);
+
             _inputService.OnTransformModified = () =>
             {
                 RefreshInspector("TransformComponent");
@@ -60,7 +63,7 @@ namespace Editor
 
             _inputManager.Update();
             _activeScene = EditorContextManager.ActiveLoadedScene;
-           
+            EngineUI.Update(gameTime);
 
             if(_activeScene != null)
             {
@@ -109,24 +112,19 @@ namespace Editor
                 return;
 
             GameObject selectedGo = GetSelectedGameObject();
-            var uiRenderSys = _activeScene.Systems.GetSystem<UIRenderSystem>();
-
+           
 
             //world space render
             Matrix viewMatrix = EditorCamera.GetViewMatrix(Editor.GraphicsDevice.Viewport);
             Editor.spriteBatch.Begin(transformMatrix: viewMatrix);
-            uiRenderSys.CurrentRenderSpace = Engine.Core.ECS.Components.UI.UISPACE.WorldSpace;
             _activeScene.Systems.Render(Editor.spriteBatch, Editor.Content);
             _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo, Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance, _inputService.CurrentMode);
 
             Editor.spriteBatch.End();
 
-            // screenspace render
-
+            // screenspace/ui render
             Editor.spriteBatch.Begin();
-            uiRenderSys.CurrentRenderSpace = Engine.Core.ECS.Components.UI.UISPACE.ScreenSpace;
-            _activeScene.Systems.UIRenderScreen(Editor.spriteBatch, Editor.Content);
-
+            EngineUI.Draw();
             Editor.spriteBatch.End();
         }
 

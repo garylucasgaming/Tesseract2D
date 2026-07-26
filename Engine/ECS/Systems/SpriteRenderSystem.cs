@@ -1,5 +1,4 @@
 ﻿using Engine.Core.ECS.Components;
-using Engine.Core.ECS.Components.UI;
 using Engine.Core.Utilities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -32,7 +31,7 @@ namespace Engine.Core.ECS.Systems
         public SpriteRenderSystem()
         {
 
-            RequiredComponents = Query.Has<SpriteComponent>().And<TransformComponent>().Not<UIElementComponent>();
+            RequiredComponents = Query.Has<SpriteComponent>().And<TransformComponent>();
             UsedInEditor = true;
             UpdatePolicy = SystemUpdatePolicy.FrameUpdate;
 

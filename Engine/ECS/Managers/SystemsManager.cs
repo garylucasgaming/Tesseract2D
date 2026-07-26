@@ -26,7 +26,6 @@ namespace Engine.Core.ECS.Managers
 
         public ScriptComponentSystem scriptComponentSystem { get; private set; } = null!;
 
-        public UIRenderSystem uIRenderSystem { get; private set; } = null!;
 
      
         public SystemsManager()
@@ -58,11 +57,7 @@ namespace Engine.Core.ECS.Managers
                 scriptComponentSystem = new ScriptComponentSystem() { ContextScene = ContextScene };
                 AddSystem(scriptComponentSystem);
             }
-            if(uIRenderSystem == null)
-            {
-                uIRenderSystem = new UIRenderSystem() { ContextScene = ContextScene };
-                AddSystem(uIRenderSystem);
-            }
+          
            
         }
 
@@ -144,11 +139,7 @@ namespace Engine.Core.ECS.Managers
                     srs.LoadSprites(cm);
 
                 }
-                if(system is UIRenderSystem srr && EditorContextManager.IsProjectLoaded)
-                {
-                    srr.LoadSprites(cm);
-
-                }
+               
 
                 // Call the generic render pass safely (Render always runs so editor previews display)
                 system.Render(cachedEntities, spriteBatch);
@@ -231,25 +222,6 @@ namespace Engine.Core.ECS.Managers
             }
         }
 
-        public void UIRenderScreen(SpriteBatch spriteBatch, ContentManager cm)
-        {
-           
-
-            
-                HashSet<GameObject> cachedEntities = _systemEntityCache[uIRenderSystem];
-
-            if(!uIRenderSystem.IsEnabled || !uIRenderSystem.shouldUpdate)
-                return;
-
-                if(EditorContextManager.IsProjectLoaded)
-                {
-                    uIRenderSystem.LoadSprites(cm);
-                }
-
-                // Call the generic render pass safely (Render always runs so editor previews display)
-                uIRenderSystem.Render(cachedEntities, spriteBatch);
-            
-        }
         
 
         /// Call this whenever an entity is explicitly destroyed or removed from the active scene tree.

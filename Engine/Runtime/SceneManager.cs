@@ -80,17 +80,19 @@ namespace Engine.Core.Runtime
         {
             //TODO change to serializing the scene;
             ActiveScene = NextScene;
+
+            EngineUI.LoadSceneUI(ActiveScene);
             _currentSceneIndex++;
             SetNextScene();
         }
 
         public static void LoadScene(GameScene newScene)
         {
-           
-
-           //todo
 
 
+            //todo
+
+            EngineUI.LoadSceneUI(newScene);
             
             //ActiveScene = SceneSerializer.LoadScene(newScene);
 

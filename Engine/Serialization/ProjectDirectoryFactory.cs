@@ -34,16 +34,14 @@ namespace Engine.Core.Serialization
                 string libraryRoot = Path.Combine(projectRoot, "Library");
                 string tempRoot = Path.Combine(projectRoot, "Temp");
 
-                
                 Directory.CreateDirectory(contentRoot);
                 Directory.CreateDirectory(projectSettingsRoot);
                 Directory.CreateDirectory(libraryRoot);
                 Directory.CreateDirectory(tempRoot);
 
-                //assets subfolder
+                // Assets subfolder
                 string assetsRoot = Path.Combine(contentRoot, "Assets");
                 Directory.CreateDirectory(assetsRoot);
-
 
                 // 3. Populate sub-folders inside the Assets directory
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Scripts"));
@@ -54,10 +52,26 @@ namespace Engine.Core.Serialization
                 Directory.CreateDirectory(sceneFolder);
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Prefabs"));
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Databases"));
-                Directory.CreateDirectory(Path.Combine(assetsRoot, "Prefabs"));
 
+                // 4. Create dedicated GumProject directory inside Content
+                string gumProjectRoot = Path.Combine(contentRoot, "GumProject");
+                Directory.CreateDirectory(gumProjectRoot);
 
-                //project content pipeline config
+                // Stamp out a minimal valid .gumx project file
+                string gumProjectFilePath = Path.Combine(gumProjectRoot, $"{projectName}.gumx");
+                string gumProjectXml = $@"<?xml version=""1.0"" encoding=""utf-8""?>
+<GumProjectSave xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">
+  <Version>1</Version>
+  <Screens />
+  <Components />
+  <StandardElements />
+  <CustomBehaviors />
+</GumProjectSave>";
+
+                File.WriteAllText(gumProjectFilePath, gumProjectXml);
+                Log.Info($"[Project Factory] Stamped default Gum project file: {gumProjectFilePath}");
+
+                // Project content pipeline config
                 var projectConfig = new
                 {
                     ProjectName = projectName,
@@ -68,13 +82,11 @@ namespace Engine.Core.Serialization
 
                 string configPath = Path.Combine(projectSettingsRoot, "ProjectConfig.json");
                 File.WriteAllText(configPath, JsonSerializer.Serialize(projectConfig));
-                
 
                 Log.Info($"[Project Factory] Successfully initialized workspace layouts at: {projectRoot}");
 
                 // 5. Stamp out a blank, fresh Project Manifest JSON database inside the data Content folder
                 string manifestPath = Path.Combine(contentRoot, "ProjectManifest.db");
-               //actually write data to the project manifest
                 File.WriteAllText(manifestPath, "{}");
                 Log.Info("[Project Factory] Stamped data-link ProjectManifest.db file.");
 

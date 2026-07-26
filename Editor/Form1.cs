@@ -712,6 +712,67 @@ namespace WinFormsApp1
             }
         }
 
+        private void LaunchGumEditorButton_Click(object sender, EventArgs e)
+        {
+            if(!EditorContextManager.IsProjectLoaded)
+            {
+                MessageBox.Show("No project is loaded. Cannot launch the Gum editor.", "Project Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 1. Locate the Gum project directory within the active workspace
+            string gumProjectDir = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "GumProject");
+            if(!Directory.Exists(gumProjectDir))
+            {
+                Directory.CreateDirectory(gumProjectDir);
+            }
+
+            // 2. Find the .gumx project file
+            string[] gumFiles = Directory.GetFiles(gumProjectDir, "*.gumx");
+            string gumFilePath = string.Empty;
+
+            if(gumFiles.Length > 0)
+            {
+                gumFilePath = gumFiles[0];
+            }
+            else
+            {
+                // Fallback: Generate a default .gumx if none exists yet
+                string projectName = EditorContextManager.CurrentProjectName ?? Path.GetFileName(EditorContextManager.CurrentProjectRoot);
+                gumFilePath = Path.Combine(gumProjectDir, $"{projectName}.gumx");
+
+                string gumProjectXml = $@"<?xml version=""1.0"" encoding=""utf-8""?>
+<GumProjectSave xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">
+  <Version>1</Version>
+  <Screens />
+  <Components />
+  <StandardElements />
+  <CustomBehaviors />
+</GumProjectSave>";
+
+                File.WriteAllText(gumFilePath, gumProjectXml);
+                Log.Info($"[Gum Editor] Generated missing .gumx project file at: {gumFilePath}");
+            }
+
+            try
+            {
+                // 3. Launch the Gum editor via shell execution (opens the .gumx file directly in the standalone Gum application)
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = gumFilePath,
+                    UseShellExecute = true
+                };
+
+                System.Diagnostics.Process.Start(startInfo);
+                Log.Info($"[Gum Editor] Successfully launched Gum editor with project: {gumFilePath}");
+            }
+            catch(Exception ex)
+            {
+                Log.Error($"[Gum Editor Error] Failed to launch Gum editor: {ex.Message}");
+                MessageBox.Show($"Could not launch the Gum editor automatically.\nEnsure the Gum tool is installed and `.gumx` files are registered on your system.\n\nError: {ex.Message}", "Launch Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         // Tree Shared Searching Utilities
         private void ResetTreeNodes(TreeNodeCollection nodes)
         {
