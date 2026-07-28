@@ -102,6 +102,10 @@ namespace WinFormsApp1
             ProjectFolderTreeView.DragDrop += ProjectFolderTreeView_DragDrop;
             ProjectFolderTreeView.ItemDrag += ProjectFolderTreeView_ItemDrag;
             ProjectFolderTreeView.DragOver += ProjectFolderTreeView_DragOver;
+
+
+            
+            
         }
 
         private string PromptForClassNameDialog()
@@ -133,6 +137,10 @@ namespace WinFormsApp1
 
         }
 
+        public void OnFocusProjectView(object sender, EventArgs e)
+        {
+            RefreshProjectFolderView();
+        }
 
         public TreeNode GetSelectedProjectNode()
         {

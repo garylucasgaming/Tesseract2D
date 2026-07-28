@@ -35,6 +35,8 @@ namespace WinFormsApp1
         private readonly System.Collections.Generic.List<(LogSeverity Severity, string Message)> _masterLogHistory =
              new System.Collections.Generic.List<(LogSeverity, string)>();
 
+
+        private readonly System.Collections.Generic.List<string> _uiScreenNames = new System.Collections.Generic.List<string>();
         private ScriptAssemblyManager _scriptManager = new ScriptAssemblyManager();
         private DateTime _lastBuildTimestamp = DateTime.MinValue;
         private bool _isCompiling = false;
@@ -109,6 +111,8 @@ namespace WinFormsApp1
             ActiveInspectorPanel = this.PropertiesWindow;
             UpdateEditorTitle();
             InitializePropertiesToolstripEvents();
+            InitializeUITabEvents();
+            InitializeScreenBindingsInspector();
         }
 
         private void TextSearchBarControl1_TextChanged(object sender, EventArgs e)
@@ -219,7 +223,7 @@ namespace WinFormsApp1
 
                     // Refresh editor type inspectors / registries
                     RebuildInspectorPanel(GetSelectedGameObjectFromHierarchy() ?? null);
-                    
+                    RefreshProjectFolderView();
 
                     UpdateProgressText("Compilation successful! Hot-reloaded gameplay scripts.");
                     Log.Info("Compilation successful! Hot-reloaded gameplay scripts.");
@@ -320,6 +324,104 @@ namespace WinFormsApp1
                 }
             }
             PopulateProjectExplorerTree(ProjectFolderTreeView);
+        }
+
+
+        private void InitializeUITabEvents()
+        {
+            // Ensure your toolstrip dropdown button and listview have appropriate names 
+            // (e.g., AddScreenDropDownButton, RemoveScreenButton, UiScreensListView)
+
+            // 1. Populate the Add Screen Dropdown dynamically from the Gum project files
+            AddUIScreenButton.DropDown = new ContextMenuStrip();
+            AddUIScreenButton.DropDownOpening += (s, e) =>
+            {
+                AddUIScreenButton.DropDownItems.Clear();
+
+                if(!EditorContextManager.IsProjectLoaded)
+                {
+                    return;
+                }
+
+                // Locate the Gum project screens directory
+                string gumProjectDir = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "GumProject");
+                string screensDir = Path.Combine(gumProjectDir, "Screens");
+
+                var availableScreens = new System.Collections.Generic.List<string>();
+
+                if(Directory.Exists(screensDir))
+                {
+                    // Gum screens are stored as .gusx files
+                    string[] screenFiles = Directory.GetFiles(screensDir, "*.gusx", SearchOption.AllDirectories);
+                    foreach(var file in screenFiles)
+                    {
+                        string screenName = Path.GetFileNameWithoutExtension(file);
+                        availableScreens.Add(screenName);
+                    }
+                }
+
+                if(availableScreens.Count == 0)
+                {
+                    ToolStripMenuItem emptyItem = new ToolStripMenuItem("(No Gum Screens Found)");
+                    emptyItem.Enabled = false;
+                    AddUIScreenButton.DropDownItems.Add(emptyItem);
+                    return;
+                }
+
+                foreach(var screenName in availableScreens)
+                {
+                    ToolStripMenuItem item = new ToolStripMenuItem(screenName);
+                    string targetScreen = screenName; // Lock closure context
+
+                    // Optional: Disable if already added to the UI list
+                    if(_uiScreenNames.Contains(targetScreen))
+                    {
+                        item.Enabled = false;
+                        item.Text += " (Added)";
+                    }
+
+                    item.Click += (subSender, subArgs) =>
+                    {
+                        if(!_uiScreenNames.Contains(targetScreen))
+                        {
+                            _uiScreenNames.Add(targetScreen);
+                            RefreshUiScreenListView();
+                            NeedsToBeSaved = true;
+                            Log.Info($"[UI Editor] Added screen '{targetScreen}' to UI layout list.");
+                        }
+                    };
+
+                    AddUIScreenButton.DropDownItems.Add(item);
+                }
+            };
+
+            // 2. Handle Removing a Screen from the ListView
+            RemoveUIScreenButton.Click += (s, e) =>
+            {
+                if(UIListView.SelectedItems.Count == 0)
+                {
+                    MessageBox.Show("Please select a screen from the list to remove.", "Selection Missing");
+                    return;
+                }
+
+                string selectedScreen = UIListView.SelectedItems[0].Text;
+                if(_uiScreenNames.Contains(selectedScreen))
+                {
+                    _uiScreenNames.Remove(selectedScreen);
+                    RefreshUiScreenListView();
+                    NeedsToBeSaved = true;
+                    Log.Info($"[UI Editor] Removed screen '{selectedScreen}' from UI layout list.");
+                }
+            };
+        }
+
+        private void RefreshUiScreenListView()
+        {
+            UIListView.Items.Clear();
+            foreach(var screenName in _uiScreenNames)
+            {
+                UIListView.Items.Add(new ListViewItem(screenName));
+            }
         }
 
         public void UpdateSceneTextBox(string sceneName)

@@ -32,6 +32,11 @@ namespace Engine.Editor.WinFormsApp1
         private static readonly Color DarkBodyColor = SystemColors.Control;
         private static readonly Color SelectedHeaderColor = Color.FromArgb(40, 100, 180);
         private static readonly Color SelectedBodyColor = Color.FromArgb(220, 230, 245);
+       
+        public static string? SelectedPropertyName
+        {
+            get; private set;
+        }
 
         public static void ClearSelection()
         {
@@ -143,6 +148,9 @@ namespace Engine.Editor.WinFormsApp1
 
                 cardPanel.BackColor = SelectedBodyColor;
                 headerLabel.BackColor = SelectedHeaderColor;
+
+                // Capture currently selected property from this card's property grid
+                SelectedPropertyName = propGrid.SelectedGridItem?.PropertyDescriptor?.Name ?? propGrid.SelectedGridItem?.Label;
             };
 
             if(componentInstance == previouslySelectedInstance)
@@ -170,7 +178,18 @@ namespace Engine.Editor.WinFormsApp1
             };
 
             propGrid.GotFocus += (s, e) => markAsSelected();
-            propGrid.SelectedGridItemChanged += (s, e) => markAsSelected();
+            propGrid.SelectedGridItemChanged += (s, e) =>
+            {
+                markAsSelected();
+                if(e.NewSelection?.PropertyDescriptor != null)
+                {
+                    SelectedPropertyName = e.NewSelection.PropertyDescriptor.Name;
+                }
+                else if(e.NewSelection != null)
+                {
+                    SelectedPropertyName = e.NewSelection.Label;
+                }
+            };
 
             cardPanel.Controls.Add(propGrid);
             cardPanel.Controls.Add(headerLabel);

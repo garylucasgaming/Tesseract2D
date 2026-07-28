@@ -1,4 +1,5 @@
 ﻿using Engine.Core.Collections;
+using Engine.Core.Runtime;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -13,6 +14,12 @@ namespace Engine.Core.ECS.Components
         private GameObject _object;
         private GameComponent _component;
         private DataLinkComponent _tile;
+
+
+        public event Action TestAction;
+        public GameEvent? TestEvent
+        {
+            get; set; } = new GameEvent();
         
         public GameObject objectReference
         {

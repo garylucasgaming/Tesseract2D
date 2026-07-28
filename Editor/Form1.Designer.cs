@@ -106,6 +106,8 @@
             splitContainer1 = new SplitContainer();
             splitContainer2 = new SplitContainer();
             splitContainer3 = new SplitContainer();
+            splitContainer4 = new SplitContainer();
+            ScreenBindingsPanel = new Panel();
             menuStrip1.SuspendLayout();
             SceneHierarchyPanel.SuspendLayout();
             TabPage.SuspendLayout();
@@ -140,6 +142,10 @@
             splitContainer3.Panel1.SuspendLayout();
             splitContainer3.Panel2.SuspendLayout();
             splitContainer3.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize) splitContainer4).BeginInit();
+            splitContainer4.Panel1.SuspendLayout();
+            splitContainer4.Panel2.SuspendLayout();
+            splitContainer4.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -515,7 +521,7 @@
             // 
             // UITab
             // 
-            UITab.Controls.Add(UIListView);
+            UITab.Controls.Add(splitContainer4);
             UITab.Controls.Add(UIToolStrip);
             UITab.Location = new Point(4, 24);
             UITab.Name = "UITab";
@@ -528,9 +534,9 @@
             // UIListView
             // 
             UIListView.Dock = DockStyle.Fill;
-            UIListView.Location = new Point(3, 28);
+            UIListView.Location = new Point(0, 0);
             UIListView.Name = "UIListView";
-            UIListView.Size = new Size(218, 600);
+            UIListView.Size = new Size(218, 355);
             UIListView.TabIndex = 1;
             UIListView.UseCompatibleStateImageBehavior = false;
             // 
@@ -563,11 +569,11 @@
             // 
             // LaunchGumEditorButton
             // 
-            LaunchGumEditorButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            LaunchGumEditorButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
             LaunchGumEditorButton.Image = (Image) resources.GetObject("LaunchGumEditorButton.Image");
             LaunchGumEditorButton.ImageTransparentColor = Color.Magenta;
             LaunchGumEditorButton.Name = "LaunchGumEditorButton";
-            LaunchGumEditorButton.Size = new Size(87, 22);
+            LaunchGumEditorButton.Size = new Size(23, 22);
             LaunchGumEditorButton.Text = "LaunchGumUI";
             LaunchGumEditorButton.Click += LaunchGumEditorButton_Click;
             // 
@@ -850,6 +856,32 @@
             splitContainer3.SplitterDistance = 485;
             splitContainer3.TabIndex = 0;
             // 
+            // splitContainer4
+            // 
+            splitContainer4.Dock = DockStyle.Fill;
+            splitContainer4.Location = new Point(3, 28);
+            splitContainer4.Name = "splitContainer4";
+            splitContainer4.Orientation = Orientation.Horizontal;
+            // 
+            // splitContainer4.Panel1
+            // 
+            splitContainer4.Panel1.Controls.Add(UIListView);
+            // 
+            // splitContainer4.Panel2
+            // 
+            splitContainer4.Panel2.Controls.Add(ScreenBindingsPanel);
+            splitContainer4.Size = new Size(218, 600);
+            splitContainer4.SplitterDistance = 355;
+            splitContainer4.TabIndex = 2;
+            // 
+            // ScreenBindingsPanel
+            // 
+            ScreenBindingsPanel.Dock = DockStyle.Fill;
+            ScreenBindingsPanel.Location = new Point(0, 0);
+            ScreenBindingsPanel.Name = "ScreenBindingsPanel";
+            ScreenBindingsPanel.Size = new Size(218, 241);
+            ScreenBindingsPanel.TabIndex = 0;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -911,6 +943,10 @@
             splitContainer3.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize) splitContainer3).EndInit();
             splitContainer3.ResumeLayout(false);
+            splitContainer4.Panel1.ResumeLayout(false);
+            splitContainer4.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize) splitContainer4).EndInit();
+            splitContainer4.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -994,7 +1030,9 @@
         private ListView UIListView;
         private ToolStrip UIToolStrip;
         private ToolStripDropDownButton AddUIScreenButton;
-        private ToolStripButton RemoveUIScreenButton;
         private ToolStripButton LaunchGumEditorButton;
+        private ToolStripButton RemoveUIScreenButton;
+        private SplitContainer splitContainer4;
+        private Panel ScreenBindingsPanel;
     }
 }
