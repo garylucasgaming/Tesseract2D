@@ -9,7 +9,7 @@ using Engine.Core.Utilities;
 
 namespace Engine.Core.ECS
 {
-    public class GameObject : Object
+    public class GameObject
     {
 
         private bool _isActive = true;
@@ -30,6 +30,8 @@ namespace Engine.Core.ECS
                     ActiveEvent?.Invoke(this, isActive);
             }
         }
+
+        
 
         public List<String> tags { get; set; } = new List<String>();
        
@@ -129,6 +131,21 @@ namespace Engine.Core.ECS
             return null;
         }
 
+        public List<GameObject> GetAllChildren()
+        {
+            var allChildren = new List<GameObject>();
+            foreach(var child in Children)
+            {
+                if(child is GameObject go)
+                {
+                    allChildren.Add(go);
+                    // Recursively pull all descendants down the tree
+                    allChildren.AddRange(go.GetAllChildren());
+                }
+            }
+            return allChildren;
+        }
+
         public void SetParent(GameObject? newParent)
         {
 
@@ -197,7 +214,7 @@ namespace Engine.Core.ECS
                 return;
 
             component.gameObject = this;
-
+            component.isEnabled = true;
             Type componentType = component.GetType();
 
             // Use your non-generic component list to check for duplicates safely at runtime

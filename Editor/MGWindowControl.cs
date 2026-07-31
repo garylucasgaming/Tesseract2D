@@ -23,6 +23,9 @@ namespace Editor
         private InputManager _inputManager;
         private float deltaTime;
         private GameScene _activeScene;
+
+        public int WindowWidth;
+        public int WindowHeight;
        
 
         // --- Timestep Accumulator Variables ---
@@ -38,13 +41,12 @@ namespace Editor
         protected override void Initialize()
         {
             GizmoRenderer.Initialize(Editor.GraphicsDevice);
-            
+           
             _inputManager = new InputManager();
             _inputService = new EditorInputService(_inputManager, EditorCamera);
             _renderService = new EditorRenderService();
             Editor.FPSCounter.Visible = false;
-
-            EngineUI.Initialize(Editor.GraphicsDevice, Editor.Content);
+            
 
             _inputService.OnTransformModified = () =>
             {
@@ -63,7 +65,7 @@ namespace Editor
 
             _inputManager.Update();
             _activeScene = EditorContextManager.ActiveLoadedScene;
-            EngineUI.Update(gameTime);
+            
 
             if(_activeScene != null)
             {
@@ -112,19 +114,20 @@ namespace Editor
                 return;
 
             GameObject selectedGo = GetSelectedGameObject();
-           
 
             //world space render
             Matrix viewMatrix = EditorCamera.GetViewMatrix(Editor.GraphicsDevice.Viewport);
             Editor.spriteBatch.Begin(transformMatrix: viewMatrix);
             _activeScene.Systems.Render(Editor.spriteBatch, Editor.Content);
+            _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.World);
             _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo, Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance, _inputService.CurrentMode);
-
+            
+            
             Editor.spriteBatch.End();
 
             // screenspace/ui render
             Editor.spriteBatch.Begin();
-            EngineUI.Draw();
+            _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.Screen);
             Editor.spriteBatch.End();
         }
 

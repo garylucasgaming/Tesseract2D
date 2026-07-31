@@ -1,4 +1,5 @@
 ﻿using Engine.Core.ECS;
+using Engine.Core.ECS.Components;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -11,6 +12,8 @@ namespace Engine.Core.ECS
 {
     public abstract class GameComponent
     {
+
+        private bool _isEnabled = false;
 
         [Browsable(false)]
         public GameObject? gameObject
@@ -38,7 +41,36 @@ namespace Engine.Core.ECS
             }
         }
 
+        [Browsable(false)]
+        [Ignore]
+        public bool isEnabled
+        {
+            get => _isEnabled;
+            set
+            {
+                _isEnabled = value;
+                if(_isEnabled == true)
+                {
+                    OnEnabled();
+                }
+                else if(_isEnabled == false)
+                {
+                    OnDisabled();
+                }
+                   
+            }
+        }
 
-        
+
+        public virtual void OnEnabled()
+        {
+        }
+
+        public virtual void OnDisabled()
+        {
+        }
+
+
+
     }
 }

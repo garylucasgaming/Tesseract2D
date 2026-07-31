@@ -75,12 +75,6 @@
             toolStrip2 = new ToolStrip();
             AddSystemDropdownButton = new ToolStripDropDownButton();
             RemoveSystemButton = new ToolStripButton();
-            UITab = new TabPage();
-            UIListView = new ListView();
-            UIToolStrip = new ToolStrip();
-            AddUIScreenButton = new ToolStripDropDownButton();
-            RemoveUIScreenButton = new ToolStripButton();
-            LaunchGumEditorButton = new ToolStripButton();
             PropertiesWindow = new GroupBox();
             InspectorFlowPanel = new FlowLayoutPanel();
             propertiesToolStrip = new ToolStrip();
@@ -106,8 +100,6 @@
             splitContainer1 = new SplitContainer();
             splitContainer2 = new SplitContainer();
             splitContainer3 = new SplitContainer();
-            splitContainer4 = new SplitContainer();
-            ScreenBindingsPanel = new Panel();
             menuStrip1.SuspendLayout();
             SceneHierarchyPanel.SuspendLayout();
             TabPage.SuspendLayout();
@@ -117,8 +109,6 @@
             toolStrip1.SuspendLayout();
             SystemsTab.SuspendLayout();
             toolStrip2.SuspendLayout();
-            UITab.SuspendLayout();
-            UIToolStrip.SuspendLayout();
             PropertiesWindow.SuspendLayout();
             propertiesToolStrip.SuspendLayout();
             tabControl1.SuspendLayout();
@@ -142,10 +132,6 @@
             splitContainer3.Panel1.SuspendLayout();
             splitContainer3.Panel2.SuspendLayout();
             splitContainer3.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize) splitContainer4).BeginInit();
-            splitContainer4.Panel1.SuspendLayout();
-            splitContainer4.Panel2.SuspendLayout();
-            splitContainer4.SuspendLayout();
             SuspendLayout();
             // 
             // menuStrip1
@@ -267,43 +253,43 @@
             // 
             toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { spriteEditorToolStripMenuItem1, tileMapEditorToolStripMenuItem, animatorToolStripMenuItem, uICanvasToolStripMenuItem, audioMixerToolStripMenuItem, databaseViewerToolStripMenuItem });
             toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
-            toolsToolStripMenuItem.Size = new Size(101, 22);
+            toolsToolStripMenuItem.Size = new Size(180, 22);
             toolsToolStripMenuItem.Text = "Tools";
             // 
             // spriteEditorToolStripMenuItem1
             // 
             spriteEditorToolStripMenuItem1.Name = "spriteEditorToolStripMenuItem1";
-            spriteEditorToolStripMenuItem1.Size = new Size(160, 22);
+            spriteEditorToolStripMenuItem1.Size = new Size(180, 22);
             spriteEditorToolStripMenuItem1.Text = "Sprite Editor";
             // 
             // tileMapEditorToolStripMenuItem
             // 
             tileMapEditorToolStripMenuItem.Name = "tileMapEditorToolStripMenuItem";
-            tileMapEditorToolStripMenuItem.Size = new Size(160, 22);
+            tileMapEditorToolStripMenuItem.Size = new Size(180, 22);
             tileMapEditorToolStripMenuItem.Text = "TileMap Editor";
             // 
             // animatorToolStripMenuItem
             // 
             animatorToolStripMenuItem.Name = "animatorToolStripMenuItem";
-            animatorToolStripMenuItem.Size = new Size(160, 22);
+            animatorToolStripMenuItem.Size = new Size(180, 22);
             animatorToolStripMenuItem.Text = "Animator";
             // 
             // uICanvasToolStripMenuItem
             // 
             uICanvasToolStripMenuItem.Name = "uICanvasToolStripMenuItem";
-            uICanvasToolStripMenuItem.Size = new Size(160, 22);
+            uICanvasToolStripMenuItem.Size = new Size(180, 22);
             uICanvasToolStripMenuItem.Text = "UI Canvas";
             // 
             // audioMixerToolStripMenuItem
             // 
             audioMixerToolStripMenuItem.Name = "audioMixerToolStripMenuItem";
-            audioMixerToolStripMenuItem.Size = new Size(160, 22);
+            audioMixerToolStripMenuItem.Size = new Size(180, 22);
             audioMixerToolStripMenuItem.Text = "Audio Mixer";
             // 
             // databaseViewerToolStripMenuItem
             // 
             databaseViewerToolStripMenuItem.Name = "databaseViewerToolStripMenuItem";
-            databaseViewerToolStripMenuItem.Size = new Size(160, 22);
+            databaseViewerToolStripMenuItem.Size = new Size(180, 22);
             databaseViewerToolStripMenuItem.Text = "Database Viewer";
             databaseViewerToolStripMenuItem.Click += databaseViewerToolStripMenuItem_Click;
             // 
@@ -336,7 +322,6 @@
             TabPage.Controls.Add(SceneHierarchyTab);
             TabPage.Controls.Add(ManagersTab);
             TabPage.Controls.Add(SystemsTab);
-            TabPage.Controls.Add(UITab);
             TabPage.Dock = DockStyle.Fill;
             TabPage.Location = new Point(3, 19);
             TabPage.Name = "TabPage";
@@ -518,64 +503,6 @@
             RemoveSystemButton.Name = "RemoveSystemButton";
             RemoveSystemButton.Size = new Size(23, 22);
             RemoveSystemButton.Text = "RemoveSystemButton";
-            // 
-            // UITab
-            // 
-            UITab.Controls.Add(splitContainer4);
-            UITab.Controls.Add(UIToolStrip);
-            UITab.Location = new Point(4, 24);
-            UITab.Name = "UITab";
-            UITab.Padding = new Padding(3);
-            UITab.Size = new Size(224, 631);
-            UITab.TabIndex = 3;
-            UITab.Text = "UI";
-            UITab.UseVisualStyleBackColor = true;
-            // 
-            // UIListView
-            // 
-            UIListView.Dock = DockStyle.Fill;
-            UIListView.Location = new Point(0, 0);
-            UIListView.Name = "UIListView";
-            UIListView.Size = new Size(218, 355);
-            UIListView.TabIndex = 1;
-            UIListView.UseCompatibleStateImageBehavior = false;
-            // 
-            // UIToolStrip
-            // 
-            UIToolStrip.Items.AddRange(new ToolStripItem[] { AddUIScreenButton, RemoveUIScreenButton, LaunchGumEditorButton });
-            UIToolStrip.Location = new Point(3, 3);
-            UIToolStrip.Name = "UIToolStrip";
-            UIToolStrip.Size = new Size(218, 25);
-            UIToolStrip.TabIndex = 0;
-            UIToolStrip.Text = "toolStrip3";
-            // 
-            // AddUIScreenButton
-            // 
-            AddUIScreenButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            AddUIScreenButton.Image = (Image) resources.GetObject("AddUIScreenButton.Image");
-            AddUIScreenButton.ImageTransparentColor = Color.Magenta;
-            AddUIScreenButton.Name = "AddUIScreenButton";
-            AddUIScreenButton.Size = new Size(29, 22);
-            AddUIScreenButton.Text = "AddUIScreen";
-            // 
-            // RemoveUIScreenButton
-            // 
-            RemoveUIScreenButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            RemoveUIScreenButton.Image = (Image) resources.GetObject("RemoveUIScreenButton.Image");
-            RemoveUIScreenButton.ImageTransparentColor = Color.Magenta;
-            RemoveUIScreenButton.Name = "RemoveUIScreenButton";
-            RemoveUIScreenButton.Size = new Size(23, 22);
-            RemoveUIScreenButton.Text = "RemoveUIScreen";
-            // 
-            // LaunchGumEditorButton
-            // 
-            LaunchGumEditorButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
-            LaunchGumEditorButton.Image = (Image) resources.GetObject("LaunchGumEditorButton.Image");
-            LaunchGumEditorButton.ImageTransparentColor = Color.Magenta;
-            LaunchGumEditorButton.Name = "LaunchGumEditorButton";
-            LaunchGumEditorButton.Size = new Size(23, 22);
-            LaunchGumEditorButton.Text = "LaunchGumUI";
-            LaunchGumEditorButton.Click += LaunchGumEditorButton_Click;
             // 
             // PropertiesWindow
             // 
@@ -856,32 +783,6 @@
             splitContainer3.SplitterDistance = 485;
             splitContainer3.TabIndex = 0;
             // 
-            // splitContainer4
-            // 
-            splitContainer4.Dock = DockStyle.Fill;
-            splitContainer4.Location = new Point(3, 28);
-            splitContainer4.Name = "splitContainer4";
-            splitContainer4.Orientation = Orientation.Horizontal;
-            // 
-            // splitContainer4.Panel1
-            // 
-            splitContainer4.Panel1.Controls.Add(UIListView);
-            // 
-            // splitContainer4.Panel2
-            // 
-            splitContainer4.Panel2.Controls.Add(ScreenBindingsPanel);
-            splitContainer4.Size = new Size(218, 600);
-            splitContainer4.SplitterDistance = 355;
-            splitContainer4.TabIndex = 2;
-            // 
-            // ScreenBindingsPanel
-            // 
-            ScreenBindingsPanel.Dock = DockStyle.Fill;
-            ScreenBindingsPanel.Location = new Point(0, 0);
-            ScreenBindingsPanel.Name = "ScreenBindingsPanel";
-            ScreenBindingsPanel.Size = new Size(218, 241);
-            ScreenBindingsPanel.TabIndex = 0;
-            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -911,10 +812,6 @@
             SystemsTab.PerformLayout();
             toolStrip2.ResumeLayout(false);
             toolStrip2.PerformLayout();
-            UITab.ResumeLayout(false);
-            UITab.PerformLayout();
-            UIToolStrip.ResumeLayout(false);
-            UIToolStrip.PerformLayout();
             PropertiesWindow.ResumeLayout(false);
             PropertiesWindow.PerformLayout();
             propertiesToolStrip.ResumeLayout(false);
@@ -943,10 +840,6 @@
             splitContainer3.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize) splitContainer3).EndInit();
             splitContainer3.ResumeLayout(false);
-            splitContainer4.Panel1.ResumeLayout(false);
-            splitContainer4.Panel2.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize) splitContainer4).EndInit();
-            splitContainer4.ResumeLayout(false);
             ResumeLayout(false);
         }
 
@@ -1026,13 +919,5 @@
         private ToolStripButton RemoveManagerButton;
         private ToolStripDropDownButton AddSystemDropdownButton;
         private ToolStripButton RemoveSystemButton;
-        private TabPage UITab;
-        private ListView UIListView;
-        private ToolStrip UIToolStrip;
-        private ToolStripDropDownButton AddUIScreenButton;
-        private ToolStripButton LaunchGumEditorButton;
-        private ToolStripButton RemoveUIScreenButton;
-        private SplitContainer splitContainer4;
-        private Panel ScreenBindingsPanel;
     }
 }

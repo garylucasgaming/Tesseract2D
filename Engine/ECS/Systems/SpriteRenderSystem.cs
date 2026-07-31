@@ -1,4 +1,5 @@
 ﻿using Engine.Core.ECS.Components;
+using Engine.Core.ECS.Components.UI;
 using Engine.Core.Utilities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -31,7 +32,7 @@ namespace Engine.Core.ECS.Systems
         public SpriteRenderSystem()
         {
 
-            RequiredComponents = Query.Has<SpriteComponent>().And<TransformComponent>();
+            RequiredComponents = Query.Has<SpriteComponent>().And<TransformComponent>().Not<UIElementComponent>();
             UsedInEditor = true;
             UpdatePolicy = SystemUpdatePolicy.FrameUpdate;
 
@@ -93,6 +94,8 @@ namespace Engine.Core.ECS.Systems
                     {
                         continue;
                     }
+                    if(sc.isUI)
+                        continue;
 
                     Vector3 sv = sc.Colour;
                     Color c = new Color(sv.X, sv.Y, sv.Z);
@@ -141,6 +144,7 @@ namespace Engine.Core.ECS.Systems
                 if(!sc.isSpriteLoaded)
                 {
                     sc.LoadSprite(cm);
+                    sc.isSpriteLoaded = true;
                 }
             }
         }

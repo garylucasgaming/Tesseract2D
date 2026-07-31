@@ -261,7 +261,7 @@ namespace WinFormsApp1
             {
                 // Spawns a clean root-level object directly registered to the scene manager!
                 newEntity = activeScene.Spawn("New GameObject");
-                newEntity.GetComponent<TransformComponent>().WorldPosition = new Microsoft.Xna.Framework.Vector2(mgWindowControl.Width/2, mgWindowControl.Height/2);
+                newEntity.GetComponent<TransformComponent>().WorldPosition = new Microsoft.Xna.Framework.Vector2(0,0);
             }
 
             // Completely rebuild the tree with the newly registered entity safely included

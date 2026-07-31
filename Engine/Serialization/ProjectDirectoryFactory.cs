@@ -53,24 +53,7 @@ namespace Engine.Core.Serialization
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Prefabs"));
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Databases"));
 
-                // 4. Create dedicated GumProject directory inside Content
-                string gumProjectRoot = Path.Combine(contentRoot, "GumProject");
-                Directory.CreateDirectory(gumProjectRoot);
-
-                // Stamp out a minimal valid .gumx project file
-                string gumProjectFilePath = Path.Combine(gumProjectRoot, $"{projectName}.gumx");
-                string gumProjectXml = $@"<?xml version=""1.0"" encoding=""utf-8""?>
-<GumProjectSave xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" xmlns:xsd=""http://www.w3.org/2001/XMLSchema"">
-  <Version>1</Version>
-  <Screens />
-  <Components />
-  <StandardElements />
-  <CustomBehaviors />
-</GumProjectSave>";
-
-                File.WriteAllText(gumProjectFilePath, gumProjectXml);
-                Log.Info($"[Project Factory] Stamped default Gum project file: {gumProjectFilePath}");
-
+             
                 // Project content pipeline config
                 var projectConfig = new
                 {

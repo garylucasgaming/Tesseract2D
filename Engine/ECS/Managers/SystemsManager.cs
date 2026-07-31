@@ -1,4 +1,5 @@
-﻿using Engine.Core.ECS.Systems;
+﻿using Engine.Core.ECS.Components.UI;
+using Engine.Core.ECS.Systems;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using Microsoft.Xna.Framework.Content;
@@ -25,6 +26,10 @@ namespace Engine.Core.ECS.Managers
         public PhysicsSystem physicsSystem { get; private set; } = null!;
 
         public ScriptComponentSystem scriptComponentSystem { get; private set; } = null!;
+
+        public UIRenderSystem uiRenderSystem { get; private set; } = null!;
+
+        public UILayoutSystem uiLayoutSystem { get; private set; } = null!;
 
 
      
@@ -57,8 +62,18 @@ namespace Engine.Core.ECS.Managers
                 scriptComponentSystem = new ScriptComponentSystem() { ContextScene = ContextScene };
                 AddSystem(scriptComponentSystem);
             }
-          
-           
+            if(uiRenderSystem == null)
+            {
+                uiRenderSystem = new UIRenderSystem() { ContextScene = ContextScene };
+                AddSystem(uiRenderSystem);
+            }
+            if(uiLayoutSystem == null)
+            {
+                uiLayoutSystem = new UILayoutSystem() { ContextScene = ContextScene };
+                AddSystem(uiLayoutSystem);
+            }
+
+
         }
 
         /// Registers a system, assigns it to its timing bucket, and builds its initial matching cache.
@@ -139,11 +154,18 @@ namespace Engine.Core.ECS.Managers
                     srs.LoadSprites(cm);
 
                 }
-               
 
                 // Call the generic render pass safely (Render always runs so editor previews display)
                 system.Render(cachedEntities, spriteBatch);
             }
+        }
+
+        public void RenderUI(SpriteBatch sb, ContentManager cm, UISpace space)
+        {
+            uiRenderSystem.Initialize(cm);
+
+            uiRenderSystem.Render(sb,cm, space);
+ 
         }
 
         /// Runs TickUpdate systems on your locked, rigid simulation step ticker.

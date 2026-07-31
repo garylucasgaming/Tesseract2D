@@ -21,7 +21,10 @@ namespace Engine.Core.ECS.Components
 
     public class SpriteComponent : GameComponent
     {
-
+         public bool isUI
+        {
+            get; set;
+        } = false;
         private string _texturePath;
         private Color _colour = Color.White;
 
@@ -81,7 +84,7 @@ namespace Engine.Core.ECS.Components
 
         
 
-        [Browsable(true)]
+        
         public DrawLayer SortingLayer { get; set; } = DrawLayer.Default;
 
         //  MonoGame depth sorting requires a float between 0.0f and 1.0f

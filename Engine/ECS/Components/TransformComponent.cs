@@ -15,8 +15,10 @@ namespace Engine.Core.ECS.Components
         
         private bool _isSettingOffset = false;
 
+  
+
         [Browsable(false)]
-        // IGNORE: State tracking property with no setter.
+      
     
         public bool IsSettingOffset => _isSettingOffset;
 
@@ -167,7 +169,37 @@ namespace Engine.Core.ECS.Components
             }
         }
 
-      
+        [Browsable(false)]
+        public Vector2 GetScreenSpacePosition()
+        {
+            Vector2 accumulatedPos = Vector2.Zero;
+            GameObject? current = gameObject;
+
+            while(current != null)
+            {
+                var trans = current.GetComponent<TransformComponent>();
+                if(trans != null)
+                {
+                    // If we hit the Canvas root, use its WorldPosition (X, Y) as the screen-space origin.
+                    // Otherwise, accumulate local offsets for child elements.
+                    if(current.HasComponent<UI.UICanvasComponent>())
+                    {
+                        accumulatedPos += trans.WorldPosition;
+                        break;
+                    }
+                    else
+                    {
+                        accumulatedPos += trans.LocalPosition;
+                    }
+                }
+
+                current = current.Parent as GameObject;
+            }
+
+            return accumulatedPos;
+        }
+
+
         public float Rotation
         {
             get => _rotation;

@@ -3,7 +3,6 @@ using Engine.Core.ECS.Managers;
 using Engine.Core.Runtime;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
-using Gum;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,8 +18,6 @@ namespace Engine.Core.ECS
 
         private int _loadOrder;
 
-        private List<string> _UIScreens;
-
         // Identification properties for the Editor UI to read
         public string SceneName { get; set; } = "Untitled Scene";
 
@@ -35,10 +32,8 @@ namespace Engine.Core.ECS
 
         public PhysicsManager Physics { get; private set; } = null!;
 
-        public List<string> GumUIScreens
-        {
-            get => _UIScreens; set => _UIScreens = value;
-        }
+
+        
 
         public int LoadOrder {
             get => _loadOrder;
@@ -193,27 +188,7 @@ namespace Engine.Core.ECS
         }
 
 
-        public void AddUIScreen(string screenName)
-        {
-            if(GumUIScreens.Contains(screenName))
-            {
-                Log.Warning("Gum UI Screen already is attached to scene.");
-                return;
-            }
-            else
-            {
-
-                GumUIScreens.Add(screenName);
-                Log.Info("Gum UI Screen successfully added to Scene!");
-            }
-        }
-
-
-        public void RemoveUIScreen(string screenName)
-        {
-
-            GumUIScreens.Add(screenName);
-        }
+       
 
     }
 

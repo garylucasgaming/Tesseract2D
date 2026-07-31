@@ -38,24 +38,20 @@ public static class GameObjectSerializer
             string typeName = compKvp.Key;
             Type? compType = null;
 
-            // Pass 1: Try finding it as a built-in core engine component
-            compType = Type.GetType($"Engine.Core.ECS.Components.{typeName}, Engine.Core");
-
-            // Pass 2: If it's a user script, it won't be in the core engine namespace. 
-            // Scan the executing app domains for the class type name directly!
-            if(compType == null)
+            foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
-                foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                try
                 {
-                    // Look for an exact match by class name (e.g., "PlayerController")
-                    var foundType = assembly.GetType(typeName) ??
-                                     assembly.GetType($"Game.Scripts.{typeName}"); // Or whatever your script namespace prefix is
+                    compType = assembly.GetTypes()
+                        .FirstOrDefault(t => t.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase) &&
+                                             typeof(GameComponent).IsAssignableFrom(t));
 
-                    if(foundType != null && typeof(GameComponent).IsAssignableFrom(foundType))
-                    {
-                        compType = foundType;
+                    if(compType != null)
                         break;
-                    }
+                }
+                catch
+                {
+                    // Ignore dynamic assemblies that may throw on GetTypes() reflection scan
                 }
             }
 
@@ -70,7 +66,7 @@ public static class GameObjectSerializer
                     if(go.Components.ContainsKey(compType))
                         go.Components[compType] = newComp;
                     else
-                        go.Components.Add(compType, newComp);
+                        go.AddComponent(newComp);
                 }
             }
             else

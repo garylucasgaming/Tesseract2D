@@ -1,7 +1,9 @@
-﻿using System;
-using System.IO;
-using Engine.Core.ECS;
+﻿using Engine.Core.ECS;
+using Engine.Core.Runtime;
 using Engine.Core.Utilities;
+using nkast.Aether.Physics2D.Common;
+using System;
+using System.IO;
 
 namespace Engine.Core.Serialization
 {
@@ -16,15 +18,18 @@ namespace Engine.Core.Serialization
         /// </summary>
         public static string? CurrentProjectRoot
         {
-            get; private set;
+            get; set;
         }
 
-        public static string? CurrentProjectName { get; private set; }
+        public static string? CurrentProjectName { get; set; }
 
         public static ProjectManifest? CurrentProjectManifest
         {
             get; set;
         }
+
+
+        
 
         /// <summary>
         /// Helper flag to easily check if the editor has completed its loading sequence.
@@ -53,6 +58,7 @@ namespace Engine.Core.Serialization
 
         public static string TexturesPath => GetPath(AssetsPath, "Textures");
 
+
         /// Gets or sets the live, in-memory runtime scene currently active in the editor workspace.
         /// </summary>
         public static GameScene? ActiveLoadedScene
@@ -74,6 +80,8 @@ namespace Engine.Core.Serialization
             }
 
             CurrentProjectRoot = projectRootPath;
+            CurrentProjectName = System.IO.Path.GetFileName(projectRootPath);
+            
             Log.Info($"[Editor Context] Active project workspace successfully mounted to: {CurrentProjectRoot}");
         }
 
@@ -100,7 +108,7 @@ namespace Engine.Core.Serialization
 
             // Clean up backslashes/forward slashes just in case
             string cleanRelative = relativePath.Replace('\\', '/').TrimStart('/');
-            return Path.Combine(CurrentProjectRoot!, cleanRelative);
+            return System.IO.Path.Combine(CurrentProjectRoot!, cleanRelative);
         }
 
         /// <summary>
@@ -134,7 +142,7 @@ namespace Engine.Core.Serialization
             // Build the segments
             foreach(var segment in segments)
             {
-                path = Path.Combine(path, segment);
+                path = System.IO.Path.Combine(path, segment);
             }
             return path;
         }

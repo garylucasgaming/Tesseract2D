@@ -46,6 +46,7 @@ namespace Engine.Core.ECS.Managers
             if(!entity.Components.ContainsKey(typeof(TransformComponent)))
             {
                 entity.AddComponent<TransformComponent>();
+                
             }
 
 

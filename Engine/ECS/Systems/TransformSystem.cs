@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Engine.Core.ECS.Components;
+using Engine.Core.ECS.Components.UI;
 using Engine.Core.Utilities;
 
 namespace Engine.Core.ECS.Systems
@@ -19,6 +20,7 @@ namespace Engine.Core.ECS.Systems
         public TransformSystem()
         {
             RequiredComponents = Query.Has<TransformComponent>();
+            ;
             UsedInEditor = true;
             UpdatePolicy = SystemUpdatePolicy.FrameUpdate;
         }
