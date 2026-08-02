@@ -8,6 +8,7 @@ using System.Windows.Forms;
 
 namespace Engine.Editor.WinFormsApp1
 {
+    using Engine.Editor.Theming;
     using global::WinFormsApp1;
 
     public static class ComponentCardFactory
@@ -92,7 +93,7 @@ namespace Engine.Editor.WinFormsApp1
                 Visible = state.IsExpanded,
                 Dock = DockStyle.Fill
             };
-
+            
             ConfigurePropertyGridDropdowns(propGrid);
 
             // 💡 Responsive Auto-Resize logic safe for FlowLayoutPanel

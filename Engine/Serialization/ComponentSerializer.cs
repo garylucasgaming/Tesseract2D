@@ -1,10 +1,11 @@
-﻿using System;
+﻿using Engine.Core.ECS;
+using Engine.Core.Runtime;
+using Microsoft.Xna.Framework;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Engine.Core.ECS;
-using Microsoft.Xna.Framework;
 using GameComponent = Engine.Core.ECS.GameComponent; // Reference MonoGame's Vector2
 
 namespace Engine.Core.Serialization
@@ -105,6 +106,19 @@ namespace Engine.Core.Serialization
                     { "$ref", "Component" },
                     { "GameObjectId", goId },
                     { "ComponentType", comp.GetType().Name }
+                };
+            }
+
+            // Single GameEvent Reference / Payload
+            if(value is GameEvent gameEvent)
+            {
+                string targetGoId = gameEvent.TargetGameObject != null ? gameEvent.TargetGameObject.Id.ToString() : Guid.Empty.ToString();
+                return new Dictionary<string, object>
+                {
+                    { "$ref", "GameEvent" },
+                    { "TargetGameObjectId", targetGoId },
+                    { "TargetComponentTypeName", gameEvent.TargetComponentTypeName ?? string.Empty },
+                    { "MethodName", gameEvent.MethodName ?? string.Empty }
                 };
             }
 
@@ -256,6 +270,18 @@ namespace Engine.Core.Serialization
                             }
                         }
                     }
+                }
+                else if(refType == "GameEvent")
+                {
+                    var gameEvent = new GameEvent();
+                    string targetGoIdStr = GetDictString(dict, "TargetGameObjectId");
+                    if(Guid.TryParse(targetGoIdStr, out Guid targetGoId) && idToEntityMap.TryGetValue(targetGoId, out var targetGo))
+                    {
+                        gameEvent.TargetGameObject = targetGo;
+                    }
+                    gameEvent.TargetComponentTypeName = GetDictString(dict, "TargetComponentTypeName") ?? string.Empty;
+                    gameEvent.MethodName = GetDictString(dict, "MethodName") ?? string.Empty;
+                    return gameEvent;
                 }
                 return null;
             }

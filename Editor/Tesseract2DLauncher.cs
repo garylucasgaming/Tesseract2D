@@ -1,4 +1,5 @@
 ﻿using Engine.Core.Serialization;
+using Engine.Editor.Theming;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -10,11 +11,7 @@ using WinFormsApp1;
 namespace Engine.Editor
 {
 
-    public class NewProjectOptions
-    {
-        public string ProjectName { get; set; } = string.Empty;
-        public List<string> SelectedPlatforms { get; set; } = new List<string>();
-    }
+  
     public partial class Tesseract2DLauncher : Form
     {
         // Reference to the panel or FlowLayoutPanel under your top header
@@ -22,6 +19,8 @@ namespace Engine.Editor
         public Tesseract2DLauncher()
         {
             InitializeComponent();
+            
+            //ControlThemeExtensions.ApplySynthwaveTheme(this);
 
             this.Load += (s, e) => RefreshProjectListUI();
         }

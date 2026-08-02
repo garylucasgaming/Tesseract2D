@@ -146,13 +146,17 @@
             // 
             // menuToolStripMenuItem
             // 
+            menuToolStripMenuItem.BackColor = SystemColors.Control;
             menuToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { newProjectToolStripMenuItem, loadProjectToolStripMenuItem, saveProjectToolStripMenuItem, saveProjectAsToolStripMenuItem, exitToolStripMenuItem, fileToolStripMenuItem });
+            menuToolStripMenuItem.ForeColor = SystemColors.ControlText;
             menuToolStripMenuItem.Name = "menuToolStripMenuItem";
             menuToolStripMenuItem.Size = new Size(37, 20);
             menuToolStripMenuItem.Text = "File";
             // 
             // newProjectToolStripMenuItem
             // 
+            newProjectToolStripMenuItem.BackColor = SystemColors.Control;
+            newProjectToolStripMenuItem.ForeColor = SystemColors.ControlText;
             newProjectToolStripMenuItem.Name = "newProjectToolStripMenuItem";
             newProjectToolStripMenuItem.Size = new Size(154, 22);
             newProjectToolStripMenuItem.Text = "New Project";
@@ -160,6 +164,8 @@
             // 
             // loadProjectToolStripMenuItem
             // 
+            loadProjectToolStripMenuItem.BackColor = SystemColors.Control;
+            loadProjectToolStripMenuItem.ForeColor = SystemColors.ControlText;
             loadProjectToolStripMenuItem.Name = "loadProjectToolStripMenuItem";
             loadProjectToolStripMenuItem.Size = new Size(154, 22);
             loadProjectToolStripMenuItem.Text = "Load Project";
@@ -167,6 +173,8 @@
             // 
             // saveProjectToolStripMenuItem
             // 
+            saveProjectToolStripMenuItem.BackColor = SystemColors.Control;
+            saveProjectToolStripMenuItem.ForeColor = SystemColors.ControlText;
             saveProjectToolStripMenuItem.Name = "saveProjectToolStripMenuItem";
             saveProjectToolStripMenuItem.Size = new Size(154, 22);
             saveProjectToolStripMenuItem.Text = "Save Project";
@@ -174,31 +182,41 @@
             // 
             // saveProjectAsToolStripMenuItem
             // 
+            saveProjectAsToolStripMenuItem.BackColor = SystemColors.Control;
+            saveProjectAsToolStripMenuItem.ForeColor = SystemColors.ControlText;
             saveProjectAsToolStripMenuItem.Name = "saveProjectAsToolStripMenuItem";
             saveProjectAsToolStripMenuItem.Size = new Size(154, 22);
             saveProjectAsToolStripMenuItem.Text = "Save Project As";
             // 
             // exitToolStripMenuItem
             // 
+            exitToolStripMenuItem.BackColor = SystemColors.Control;
+            exitToolStripMenuItem.ForeColor = SystemColors.ControlText;
             exitToolStripMenuItem.Name = "exitToolStripMenuItem";
             exitToolStripMenuItem.Size = new Size(154, 22);
             exitToolStripMenuItem.Text = "Exit";
             // 
             // fileToolStripMenuItem
             // 
+            fileToolStripMenuItem.BackColor = SystemColors.Control;
+            fileToolStripMenuItem.ForeColor = SystemColors.ControlText;
             fileToolStripMenuItem.Name = "fileToolStripMenuItem";
             fileToolStripMenuItem.Size = new Size(154, 22);
             fileToolStripMenuItem.Text = "Build Game";
             // 
             // editToolStripMenuItem
             // 
+            editToolStripMenuItem.BackColor = SystemColors.Control;
             editToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { projectSettingsToolStripMenuItem, prjoectPreferencesToolStripMenuItem, editShortcutsToolStripMenuItem });
+            editToolStripMenuItem.ForeColor = SystemColors.ControlText;
             editToolStripMenuItem.Name = "editToolStripMenuItem";
             editToolStripMenuItem.Size = new Size(39, 20);
             editToolStripMenuItem.Text = "Edit";
             // 
             // projectSettingsToolStripMenuItem
             // 
+            projectSettingsToolStripMenuItem.BackColor = SystemColors.Control;
+            projectSettingsToolStripMenuItem.ForeColor = SystemColors.ControlText;
             projectSettingsToolStripMenuItem.Name = "projectSettingsToolStripMenuItem";
             projectSettingsToolStripMenuItem.Size = new Size(175, 22);
             projectSettingsToolStripMenuItem.Text = "Project Settings";
@@ -206,44 +224,58 @@
             // 
             // prjoectPreferencesToolStripMenuItem
             // 
+            prjoectPreferencesToolStripMenuItem.BackColor = SystemColors.Control;
+            prjoectPreferencesToolStripMenuItem.ForeColor = SystemColors.ControlText;
             prjoectPreferencesToolStripMenuItem.Name = "prjoectPreferencesToolStripMenuItem";
             prjoectPreferencesToolStripMenuItem.Size = new Size(175, 22);
             prjoectPreferencesToolStripMenuItem.Text = "Project Preferences";
             // 
             // editShortcutsToolStripMenuItem
             // 
+            editShortcutsToolStripMenuItem.BackColor = SystemColors.Control;
+            editShortcutsToolStripMenuItem.ForeColor = SystemColors.ControlText;
             editShortcutsToolStripMenuItem.Name = "editShortcutsToolStripMenuItem";
             editShortcutsToolStripMenuItem.Size = new Size(175, 22);
             editShortcutsToolStripMenuItem.Text = "Edit Shortcuts";
             // 
             // assetsToolStripMenuItem
             // 
+            assetsToolStripMenuItem.BackColor = SystemColors.Control;
             assetsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { importAssetsToolStripMenuItem, openMGCBToolStripMenuItem, reimportAllAssetsToolStripMenuItem });
+            assetsToolStripMenuItem.ForeColor = SystemColors.ControlText;
             assetsToolStripMenuItem.Name = "assetsToolStripMenuItem";
             assetsToolStripMenuItem.Size = new Size(52, 20);
             assetsToolStripMenuItem.Text = "Assets";
             // 
             // importAssetsToolStripMenuItem
             // 
+            importAssetsToolStripMenuItem.BackColor = SystemColors.Control;
+            importAssetsToolStripMenuItem.ForeColor = SystemColors.ControlText;
             importAssetsToolStripMenuItem.Name = "importAssetsToolStripMenuItem";
             importAssetsToolStripMenuItem.Size = new Size(176, 22);
             importAssetsToolStripMenuItem.Text = "Import Assets";
             // 
             // openMGCBToolStripMenuItem
             // 
+            openMGCBToolStripMenuItem.BackColor = SystemColors.Control;
+            openMGCBToolStripMenuItem.ForeColor = SystemColors.ControlText;
             openMGCBToolStripMenuItem.Name = "openMGCBToolStripMenuItem";
             openMGCBToolStripMenuItem.Size = new Size(176, 22);
             openMGCBToolStripMenuItem.Text = "Open MGCB";
             // 
             // reimportAllAssetsToolStripMenuItem
             // 
+            reimportAllAssetsToolStripMenuItem.BackColor = SystemColors.Control;
+            reimportAllAssetsToolStripMenuItem.ForeColor = SystemColors.ControlText;
             reimportAllAssetsToolStripMenuItem.Name = "reimportAllAssetsToolStripMenuItem";
             reimportAllAssetsToolStripMenuItem.Size = new Size(176, 22);
             reimportAllAssetsToolStripMenuItem.Text = "Reimport All Assets";
             // 
             // windowToolStripMenuItem
             // 
+            windowToolStripMenuItem.BackColor = SystemColors.Control;
             windowToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { toolsToolStripMenuItem });
+            windowToolStripMenuItem.ForeColor = SystemColors.ControlText;
             windowToolStripMenuItem.Name = "windowToolStripMenuItem";
             windowToolStripMenuItem.Overflow = ToolStripItemOverflow.AsNeeded;
             windowToolStripMenuItem.Size = new Size(63, 20);
@@ -251,65 +283,73 @@
             // 
             // toolsToolStripMenuItem
             // 
+            toolsToolStripMenuItem.BackColor = SystemColors.Control;
             toolsToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { spriteEditorToolStripMenuItem1, tileMapEditorToolStripMenuItem, animatorToolStripMenuItem, uICanvasToolStripMenuItem, audioMixerToolStripMenuItem, databaseViewerToolStripMenuItem });
+            toolsToolStripMenuItem.ForeColor = SystemColors.ControlText;
             toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
-            toolsToolStripMenuItem.Size = new Size(180, 22);
+            toolsToolStripMenuItem.Size = new Size(101, 22);
             toolsToolStripMenuItem.Text = "Tools";
             // 
             // spriteEditorToolStripMenuItem1
             // 
             spriteEditorToolStripMenuItem1.Name = "spriteEditorToolStripMenuItem1";
-            spriteEditorToolStripMenuItem1.Size = new Size(180, 22);
+            spriteEditorToolStripMenuItem1.Size = new Size(160, 22);
             spriteEditorToolStripMenuItem1.Text = "Sprite Editor";
             // 
             // tileMapEditorToolStripMenuItem
             // 
             tileMapEditorToolStripMenuItem.Name = "tileMapEditorToolStripMenuItem";
-            tileMapEditorToolStripMenuItem.Size = new Size(180, 22);
+            tileMapEditorToolStripMenuItem.Size = new Size(160, 22);
             tileMapEditorToolStripMenuItem.Text = "TileMap Editor";
             // 
             // animatorToolStripMenuItem
             // 
             animatorToolStripMenuItem.Name = "animatorToolStripMenuItem";
-            animatorToolStripMenuItem.Size = new Size(180, 22);
+            animatorToolStripMenuItem.Size = new Size(160, 22);
             animatorToolStripMenuItem.Text = "Animator";
             // 
             // uICanvasToolStripMenuItem
             // 
             uICanvasToolStripMenuItem.Name = "uICanvasToolStripMenuItem";
-            uICanvasToolStripMenuItem.Size = new Size(180, 22);
+            uICanvasToolStripMenuItem.Size = new Size(160, 22);
             uICanvasToolStripMenuItem.Text = "UI Canvas";
             // 
             // audioMixerToolStripMenuItem
             // 
             audioMixerToolStripMenuItem.Name = "audioMixerToolStripMenuItem";
-            audioMixerToolStripMenuItem.Size = new Size(180, 22);
+            audioMixerToolStripMenuItem.Size = new Size(160, 22);
             audioMixerToolStripMenuItem.Text = "Audio Mixer";
             // 
             // databaseViewerToolStripMenuItem
             // 
             databaseViewerToolStripMenuItem.Name = "databaseViewerToolStripMenuItem";
-            databaseViewerToolStripMenuItem.Size = new Size(180, 22);
+            databaseViewerToolStripMenuItem.Size = new Size(160, 22);
             databaseViewerToolStripMenuItem.Text = "Database Viewer";
             databaseViewerToolStripMenuItem.Click += databaseViewerToolStripMenuItem_Click;
             // 
             // helpToolStripMenuItem
             // 
+            helpToolStripMenuItem.BackColor = SystemColors.Control;
             helpToolStripMenuItem.DropDownItems.AddRange(new ToolStripItem[] { documentationToolStripMenuItem });
+            helpToolStripMenuItem.ForeColor = SystemColors.ControlText;
             helpToolStripMenuItem.Name = "helpToolStripMenuItem";
             helpToolStripMenuItem.Size = new Size(44, 20);
             helpToolStripMenuItem.Text = "Help";
             // 
             // documentationToolStripMenuItem
             // 
+            documentationToolStripMenuItem.BackColor = SystemColors.Control;
+            documentationToolStripMenuItem.ForeColor = SystemColors.ControlText;
             documentationToolStripMenuItem.Name = "documentationToolStripMenuItem";
             documentationToolStripMenuItem.Size = new Size(157, 22);
             documentationToolStripMenuItem.Text = "Documentation";
             // 
             // SceneHierarchyPanel
             // 
+            SceneHierarchyPanel.BackColor = SystemColors.Control;
             SceneHierarchyPanel.Controls.Add(TabPage);
             SceneHierarchyPanel.Dock = DockStyle.Fill;
+            SceneHierarchyPanel.ForeColor = SystemColors.ControlText;
             SceneHierarchyPanel.Location = new Point(0, 0);
             SceneHierarchyPanel.Name = "SceneHierarchyPanel";
             SceneHierarchyPanel.Size = new Size(238, 681);
@@ -345,7 +385,9 @@
             // SceneHierarchyTreeView
             // 
             SceneHierarchyTreeView.AllowDrop = true;
+            SceneHierarchyTreeView.BackColor = SystemColors.Control;
             SceneHierarchyTreeView.Dock = DockStyle.Fill;
+            SceneHierarchyTreeView.ForeColor = SystemColors.ControlText;
             SceneHierarchyTreeView.LabelEdit = true;
             SceneHierarchyTreeView.Location = new Point(3, 53);
             SceneHierarchyTreeView.Name = "SceneHierarchyTreeView";
@@ -357,6 +399,7 @@
             // 
             // HierarchyToolStrip
             // 
+            HierarchyToolStrip.BackColor = SystemColors.Control;
             HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton, CreateNewSceneButton, SceneNameBox });
             HierarchyToolStrip.Location = new Point(3, 28);
             HierarchyToolStrip.Name = "HierarchyToolStrip";
@@ -396,12 +439,15 @@
             // 
             // SceneNameBox
             // 
+            SceneNameBox.BackColor = SystemColors.Control;
+            SceneNameBox.ForeColor = SystemColors.ControlText;
             SceneNameBox.Name = "SceneNameBox";
             SceneNameBox.Size = new Size(100, 25);
             SceneNameBox.TextChanged += SceneNameBox_TextChanged;
             // 
             // sceneHierarchySearchBar
             // 
+            sceneHierarchySearchBar.BackColor = SystemColors.Control;
             sceneHierarchySearchBar.Dock = DockStyle.Top;
             sceneHierarchySearchBar.Location = new Point(3, 3);
             sceneHierarchySearchBar.Name = "sceneHierarchySearchBar";
@@ -423,7 +469,9 @@
             // 
             // ManagerListView
             // 
+            ManagerListView.BackColor = SystemColors.Control;
             ManagerListView.Dock = DockStyle.Fill;
+            ManagerListView.ForeColor = SystemColors.ControlText;
             ManagerListView.Location = new Point(3, 28);
             ManagerListView.Name = "ManagerListView";
             ManagerListView.Size = new Size(218, 600);
@@ -432,6 +480,7 @@
             // 
             // toolStrip1
             // 
+            toolStrip1.BackColor = SystemColors.Control;
             toolStrip1.Items.AddRange(new ToolStripItem[] { AddManagerDropdownButton, RemoveManagerButton });
             toolStrip1.Location = new Point(3, 3);
             toolStrip1.Name = "toolStrip1";
@@ -470,7 +519,9 @@
             // 
             // SystemListView
             // 
+            SystemListView.BackColor = SystemColors.Control;
             SystemListView.Dock = DockStyle.Fill;
+            SystemListView.ForeColor = SystemColors.ControlText;
             SystemListView.Location = new Point(0, 25);
             SystemListView.Name = "SystemListView";
             SystemListView.Size = new Size(224, 606);
@@ -479,6 +530,7 @@
             // 
             // toolStrip2
             // 
+            toolStrip2.BackColor = SystemColors.Control;
             toolStrip2.Items.AddRange(new ToolStripItem[] { AddSystemDropdownButton, RemoveSystemButton });
             toolStrip2.Location = new Point(0, 0);
             toolStrip2.Name = "toolStrip2";
@@ -508,10 +560,12 @@
             // 
             PropertiesWindow.AutoSize = true;
             PropertiesWindow.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            PropertiesWindow.BackColor = SystemColors.Control;
             PropertiesWindow.Controls.Add(InspectorFlowPanel);
             PropertiesWindow.Controls.Add(propertiesToolStrip);
             PropertiesWindow.Dock = DockStyle.Fill;
             PropertiesWindow.FlatStyle = FlatStyle.Flat;
+            PropertiesWindow.ForeColor = SystemColors.ControlText;
             PropertiesWindow.Location = new Point(0, 0);
             PropertiesWindow.Name = "PropertiesWindow";
             PropertiesWindow.Size = new Size(280, 681);
@@ -532,6 +586,7 @@
             // 
             // propertiesToolStrip
             // 
+            propertiesToolStrip.BackColor = SystemColors.Control;
             propertiesToolStrip.Items.AddRange(new ToolStripItem[] { AddComponentButton, RemoveComponentButton });
             propertiesToolStrip.Location = new Point(3, 19);
             propertiesToolStrip.Name = "propertiesToolStrip";
@@ -635,6 +690,8 @@
             // 
             // progressBarTextBox
             // 
+            progressBarTextBox.BackColor = SystemColors.Control;
+            progressBarTextBox.ForeColor = SystemColors.ControlText;
             progressBarTextBox.Name = "progressBarTextBox";
             progressBarTextBox.ReadOnly = true;
             progressBarTextBox.Size = new Size(300, 25);
@@ -652,19 +709,22 @@
             // 
             // ProjectFolderTabPage
             // 
+            ProjectFolderTabPage.BackColor = SystemColors.Control;
             ProjectFolderTabPage.Controls.Add(ProjectFolderTreeView);
+            ProjectFolderTabPage.ForeColor = SystemColors.ControlText;
             ProjectFolderTabPage.Location = new Point(4, 24);
             ProjectFolderTabPage.Name = "ProjectFolderTabPage";
             ProjectFolderTabPage.Padding = new Padding(3);
             ProjectFolderTabPage.Size = new Size(730, 164);
             ProjectFolderTabPage.TabIndex = 0;
             ProjectFolderTabPage.Text = "Project Folder";
-            ProjectFolderTabPage.UseVisualStyleBackColor = true;
             // 
             // ProjectFolderTreeView
             // 
             ProjectFolderTreeView.AllowDrop = true;
+            ProjectFolderTreeView.BackColor = SystemColors.Control;
             ProjectFolderTreeView.Dock = DockStyle.Fill;
+            ProjectFolderTreeView.ForeColor = SystemColors.ControlText;
             ProjectFolderTreeView.HotTracking = true;
             ProjectFolderTreeView.Location = new Point(3, 3);
             ProjectFolderTreeView.Name = "ProjectFolderTreeView";
@@ -685,16 +745,18 @@
             // 
             // ConsoleTextBox
             // 
+            ConsoleTextBox.BackColor = SystemColors.Control;
             ConsoleTextBox.Dock = DockStyle.Bottom;
-            ConsoleTextBox.Location = new Point(3, 13);
+            ConsoleTextBox.Location = new Point(3, 27);
             ConsoleTextBox.Name = "ConsoleTextBox";
             ConsoleTextBox.ReadOnly = true;
-            ConsoleTextBox.Size = new Size(724, 148);
+            ConsoleTextBox.Size = new Size(724, 134);
             ConsoleTextBox.TabIndex = 2;
             ConsoleTextBox.Text = "";
             // 
             // consoleSearchBar
             // 
+            consoleSearchBar.BackColor = SystemColors.Control;
             consoleSearchBar.Dock = DockStyle.Top;
             consoleSearchBar.Location = new Point(3, 3);
             consoleSearchBar.Name = "consoleSearchBar";
@@ -705,6 +767,7 @@
             // 
             // panel1
             // 
+            panel1.BackColor = SystemColors.Control;
             panel1.Controls.Add(tabControl1);
             panel1.Controls.Add(menuStrip1);
             panel1.Dock = DockStyle.Fill;

@@ -5,6 +5,7 @@ using Engine.Core.Runtime;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using Engine.Editor;
+using Engine.Editor.Theming;
 using Engine.Editor.Utilities;
 using Microsoft.Xna.Framework.Content.Pipeline;
 using MonoGame.Framework.Content.Pipeline.Builder;
@@ -100,6 +101,8 @@ namespace WinFormsApp1
                 AppendMessageToConsoleBox(severity, message);
             };
             InitializeComponent();
+            
+            //ControlThemeExtensions.ApplySynthwaveTheme(this);
             this.Activated += Form1_Activated;
 
             Log.Info("[Editor UI] Initializing editor main form...");
@@ -877,6 +880,7 @@ namespace WinFormsApp1
                     cardWidth,
                     previouslySelected
                 );
+
                 goCard.Tag = targetGo;
                 flowLayout.Controls.Add(goCard);
 
@@ -902,6 +906,7 @@ namespace WinFormsApp1
             flowLayout.AutoScrollPosition = new Point(0, previousScrollY);
             HookPropertyGridChanges(ActiveInspectorPanel);
             ActiveInspectorPanel.ResumeLayout(true);
+
         }
         /// <summary>
         /// Recursively finds and refreshes all PropertyGrid controls inside the inspector's panel.

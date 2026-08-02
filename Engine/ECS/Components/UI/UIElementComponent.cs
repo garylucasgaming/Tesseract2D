@@ -37,12 +37,12 @@ namespace Engine.Core.ECS.Components.UI
         }
 
 
-        public GameEvent? Hovered { get; set; }
+        public GameEvent? Hovered { get; set; } = new GameEvent();
 
         public GameEvent? Clicked
         {
             get; set;
-        }
+        } = new GameEvent();
 
 
     }

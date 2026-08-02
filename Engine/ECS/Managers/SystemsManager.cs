@@ -1,5 +1,6 @@
 ﻿using Engine.Core.ECS.Components.UI;
 using Engine.Core.ECS.Systems;
+using Engine.Core.Runtime;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using Microsoft.Xna.Framework.Content;
@@ -31,8 +32,10 @@ namespace Engine.Core.ECS.Managers
 
         public UILayoutSystem uiLayoutSystem { get; private set; } = null!;
 
+        public UIInputSystem uiInputSystem { get; private set; } = null!;
 
-     
+
+
         public SystemsManager()
         {
             // Automatically initialize a bucket list for every single policy enum type
@@ -71,6 +74,11 @@ namespace Engine.Core.ECS.Managers
             {
                 uiLayoutSystem = new UILayoutSystem() { ContextScene = ContextScene };
                 AddSystem(uiLayoutSystem);
+            }
+            if(uiInputSystem == null)
+            {
+                uiInputSystem = new UIInputSystem(Globals.InputManager,Globals.EditorCamera, Globals.Viewport ) { ContextScene = ContextScene };
+                AddSystem(uiInputSystem);
             }
 
 

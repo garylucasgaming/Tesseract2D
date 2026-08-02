@@ -33,7 +33,9 @@
             // 
             // textSearchInput
             // 
+            textSearchInput.BackColor = SystemColors.Control;
             textSearchInput.Dock = DockStyle.Fill;
+            textSearchInput.ForeColor = SystemColors.ControlText;
             textSearchInput.Location = new Point(0, 0);
             textSearchInput.Name = "textSearchInput";
             textSearchInput.Size = new Size(150, 23);
@@ -43,6 +45,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
+            BackColor = SystemColors.Control;
             Controls.Add(textSearchInput);
             Name = "TextSearchBarControl";
             Size = new Size(150, 25);

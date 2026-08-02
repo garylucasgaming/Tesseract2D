@@ -41,8 +41,12 @@ namespace Editor
         protected override void Initialize()
         {
             GizmoRenderer.Initialize(Editor.GraphicsDevice);
-           
-            _inputManager = new InputManager();
+            Globals.Initialize();
+
+            EditorCamera = Globals.EditorCamera;
+            Globals.SetViewport(Editor.GraphicsDevice.Viewport);
+
+            _inputManager = Globals.InputManager;
             _inputService = new EditorInputService(_inputManager, EditorCamera);
             _renderService = new EditorRenderService();
             Editor.FPSCounter.Visible = false;
