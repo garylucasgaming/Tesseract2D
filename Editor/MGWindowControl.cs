@@ -74,7 +74,7 @@ namespace Editor
             if(_activeScene != null)
             {
                
-                bool playModeActive = SimulationRunning && !SimulationPaused;
+                EditorContextManager.PlayState = SimulationRunning && !SimulationPaused;
                 
                 GameObject selectedGo = GetSelectedGameObject();
                 object selectedComponent = Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance;
@@ -85,13 +85,13 @@ namespace Editor
                 float clampedDelta = Math.Min(deltaTime, 0.25f);
 
                 // 2. Only tick the rigid simulation systems (Physics) when play mode is active
-                if(playModeActive)
+                if(EditorContextManager.PlayState)
                 {
                     _physicsAccumulator += clampedDelta;
                     while(_physicsAccumulator >= TargetTickTime)
                     {
                         // Run TickUpdate (including your PhysicsSystem)
-                        _activeScene.TickUpdate(TargetTickTime, playModeActive);
+                        _activeScene.TickUpdate(TargetTickTime, EditorContextManager.PlayState);
                         _physicsAccumulator -= TargetTickTime;
                     }
                 }
@@ -104,7 +104,7 @@ namespace Editor
 
                 // 3. Update all standard systems (FrameUpdate & FixedUpdate)
                 // Note: Ensure your Scene's Update handles passing this parameter down to Systems.Update()
-                _activeScene.Update(clampedDelta, playModeActive);
+                _activeScene.Update(clampedDelta, EditorContextManager.PlayState);
 
             }
         }
@@ -124,15 +124,23 @@ namespace Editor
             Editor.spriteBatch.Begin(transformMatrix: viewMatrix);
             _activeScene.Systems.Render(Editor.spriteBatch, Editor.Content);
             _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.World);
+            if(!EditorContextManager.PlayState)
+            {
+                _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.Screen);
+            }
             _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo, Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance, _inputService.CurrentMode);
             
             
             Editor.spriteBatch.End();
 
+            if(EditorContextManager.PlayState)
+            {
+                Editor.spriteBatch.Begin();
+                _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.Screen);
+                Editor.spriteBatch.End();
+            }
             // screenspace/ui render
-            Editor.spriteBatch.Begin();
-            _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.Screen);
-            Editor.spriteBatch.End();
+           
         }
 
         public void StartSimulation()

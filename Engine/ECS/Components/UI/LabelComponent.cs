@@ -18,7 +18,7 @@ namespace Engine.Core.ECS.Components.UI
         private bool _useKerning = false;
         private bool _isBold = false;
         private bool _isItalic = false;
-        private Color _textColor = Color.White;
+        private Vector3 _textColor = new Vector3(255,255,255);
 
         public string Text
         {
@@ -34,16 +34,13 @@ namespace Engine.Core.ECS.Components.UI
 
       
 
-        public Color TextColor
+        public Vector3 TextColor
         {
             get => _textColor;
             set => _textColor = value;
         }
 
-        public void Draw(SpriteBatch sb)
-        {
-            sb.DrawString(Font, Text, gameObject.GetComponent<TransformComponent>().WorldPosition, TextColor);
-        }
+      
 
     }
 }

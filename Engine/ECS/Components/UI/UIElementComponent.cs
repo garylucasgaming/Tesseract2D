@@ -25,24 +25,23 @@ namespace Engine.Core.ECS.Components.UI
 
 
         [Browsable(false)]
-        public bool isHovered
+        public virtual bool isHovered
         {
             get; set;
         }
 
         [Browsable(false)]
-        public bool isClicked
+        public virtual bool isClicked
         {
             get; set;
         }
 
 
         public GameEvent? Hovered { get; set; } = new GameEvent();
+        public GameEvent? HoverExit { get; set; } = new GameEvent();
 
-        public GameEvent? Clicked
-        {
-            get; set;
-        } = new GameEvent();
+        public GameEvent? Clicked { get; set; } = new GameEvent();
+        public GameEvent? Released { get; set; } = new GameEvent();
 
 
     }

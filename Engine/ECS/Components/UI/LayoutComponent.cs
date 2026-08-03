@@ -65,5 +65,12 @@ namespace Engine.Core.ECS.Components.UI
             get => _preferredWidth;
             set => _preferredWidth = value;
         }
+
+
+        public override void OnEnabled()
+        {
+            base.OnEnabled();
+            // Additional initialization if needed
+        }
     }
 }

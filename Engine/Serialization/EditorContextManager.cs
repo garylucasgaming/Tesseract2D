@@ -28,6 +28,7 @@ namespace Engine.Core.Serialization
             get; set;
         }
 
+        public static bool PlayState { get; set; }
 
         
 

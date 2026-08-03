@@ -1,6 +1,8 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Engine.Core.Serialization;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using nkast.Aether.Physics2D.Common;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -42,14 +44,13 @@ namespace Engine.Core.ECS.Components.UI
 
             foreach(var child in ChildElements)
             {
-                if(child.gameObject.HasComponent<UIImageComponent>())
+                // Broaden this to check for ANY SpriteComponent, ensuring Panels get processed
+                if(child.gameObject.HasComponent<SpriteComponent>())
                 {
-                    var imageComp = child.gameObject.GetComponent<UIImageComponent>();
-                    var sprite = imageComp.Sprite;
+                    var sprite = child.gameObject.GetComponent<SpriteComponent>();
 
                     if(sprite != null)
                     {
-                        // Force canvas-level rules onto the child element
                         sprite.SortingLayer = CanvasDrawLayer;
                         sprite.isUI = true;
 
@@ -70,10 +71,8 @@ namespace Engine.Core.ECS.Components.UI
             if(gameObject == null)
                 return;
 
-            // 1. Grab every single descendant GameObject in the entire tree below this canvas
             var allDescendantGameObjects = gameObject.GetAllChildren();
 
-            // 2. Extract any UI components found on those objects
             foreach(var descendant in allDescendantGameObjects)
             {
                 if(descendant == null)
@@ -84,11 +83,15 @@ namespace Engine.Core.ECS.Components.UI
                 {
                     ChildElements.Add(uiComp);
 
-                    // Enforce canvas settings immediately upon rediscovery
-                    if(uiComp is UIImageComponent imgComp && imgComp.Sprite != null)
+                    // Again, broaden this to check for SpriteComponent
+                    if(descendant.HasComponent<SpriteComponent>())
                     {
-                        imgComp.Sprite.SortingLayer = CanvasDrawLayer;
-                        imgComp.Sprite.isUI = true;
+                        var sprite = descendant.GetComponent<SpriteComponent>();
+                        if(sprite != null)
+                        {
+                            sprite.SortingLayer = CanvasDrawLayer;
+                            sprite.isUI = true;
+                        }
                     }
                 }
             }
@@ -98,11 +101,10 @@ namespace Engine.Core.ECS.Components.UI
         {
             int currentCount = gameObject != null ? gameObject.GetAllChildren().Count : 0;
 
-            // If a child was added/removed in the editor or at runtime, or we haven't initialized yet:
             if(currentCount != _lastKnownDescendantCount || !isInitialized)
             {
-                ReloadChildren();
-                LoadSprites(cm); // Re-applies textures and canvas layer rules to the new elements
+                // LoadSprites already handles calling ReloadChildren(), so we just call this once
+                LoadSprites(cm);
 
                 _lastKnownDescendantCount = currentCount;
                 isInitialized = true;
@@ -127,63 +129,80 @@ namespace Engine.Core.ECS.Components.UI
 
         public void Render(SpriteBatch sb, ContentManager cm)
         {
-
             CheckAndSyncHierarchy(cm);
+            bool shouldActAsScreenSpace = (Space == UISpace.Screen) && EditorContextManager.PlayState;
+            var canvasTransform = gameObject.GetComponent<TransformComponent>();
+            Vector2 canvasWorldPos = canvasTransform != null ? canvasTransform.WorldPosition : Vector2.Zero;
+
             foreach(var child in ChildElements)
             {
-                if(child == null)
+                if(child == null || child.gameObject == null)
                     continue;
+
+                var transform = child.gameObject.GetComponent<TransformComponent>();
+                if(transform == null)
+                    continue; // Safely check transform once at the top
+
+                Vector2 drawPosition = shouldActAsScreenSpace
+                            ? transform.WorldPosition - canvasWorldPos
+                            : transform.WorldPosition;
+
+                // 1. Render Sprites (Completely independent block)
                 if(child.gameObject.HasComponent<SpriteComponent>())
                 {
                     var sprite = child.gameObject.GetComponent<SpriteComponent>();
-                    var transform = child.gameObject.GetComponent<TransformComponent>();
 
-                    if(transform != null)
+                    if(sprite.Texture != null)
                     {
-                        if(sprite.Texture == null)
-                        {
-                            continue;
-                        }
-
                         Vector3 sv = sprite.Colour;
                         Color c = new Color(sv.X, sv.Y, sv.Z);
 
-                        // 1. Determine the raw dimensions of the texture we are sampling.
-                        // If the sprite component has a specific source rectangle (e.g. for spritesheets),
-                        // we use that size. Otherwise, we use the entire texture's width and height.
                         Vector2 rawDimension = sprite.SourceRectangle.HasValue
                             ? new Vector2(sprite.SourceRectangle.Value.Width, sprite.SourceRectangle.Value.Height)
                             : new Vector2(sprite.Texture.Width, sprite.Texture.Height);
 
-                        // 2. Prevent a nasty division-by-zero crash if an asset fails to load
-                        if(rawDimension.X == 0 || rawDimension.Y == 0)
-                            continue;
+                        // Check for valid dimensions before drawing, but don't use 'continue' here!
+                        if(rawDimension.X != 0 && rawDimension.Y != 0)
+                        {
+                            Vector2 baseScale = new Vector2(
+                                transform.SizeX / rawDimension.X,
+                                transform.SizeY / rawDimension.Y
+                            );
 
-                        // 3. Calculate the scale factor required to force the raw image 
-                        // into the bounding box defined by transform.SizeX and SizeY.
-                        Vector2 baseScale = new Vector2(
-                            transform.SizeX / rawDimension.X,
-                            transform.SizeY / rawDimension.Y
-                        );
+                            Vector2 finalScale = baseScale * transform.Scale;
 
-                        // 4. Combine it with the entity's local scale modifier (for dynamic squash/stretch)
-                        Vector2 finalScale = baseScale * transform.Scale;
+                            sb.Draw(
+                                sprite.Texture,
+                                drawPosition,
+                                sprite.SourceRectangle,
+                                c,
+                                transform.Rotation,
+                                transform.OriginVector,
+                                finalScale,
+                                sprite.Effects,
+                                sprite.LayerDepth
+                            );
+                        }
+                    }
+                }
 
-                        Vector2 drawPosition = (Space == UISpace.Screen)
-                            ? transform.GetScreenSpacePosition()
-                            : transform.WorldPosition;
-
-                        // 5. Draw it! Pass the calculated finalScale instead of transform.Scale.
-                        sb.Draw(
-                            sprite.Texture,
+                // 2. Render Labels (Now safely outside the sprite check)
+                if(child.gameObject.HasComponent<LabelComponent>())
+                {
+                    var label = child.gameObject.GetComponent<LabelComponent>();
+                    if(label.Font != null)
+                    {
+                        Color c = new Color(label.TextColor.X, label.TextColor.Y, label.TextColor.Z);
+                        sb.DrawString(
+                            label.Font,
+                            label.Text,
                             drawPosition,
-                            sprite.SourceRectangle, // Keeps its clean value (null for full image, or a spritesheet slice)
                             c,
                             transform.Rotation,
                             transform.OriginVector,
-                            finalScale, 
-                            sprite.Effects,
-                            sprite.LayerDepth
+                            transform.Scale,
+                            SpriteEffects.None,
+                            0f
                         );
                     }
                 }

@@ -36,7 +36,7 @@ namespace Engine.Core.Serialization
 
   <!-- Include Content/Assets files so they show up under the project hierarchy in Visual Studio -->
   <ItemGroup>
-    <Compile Include=""{relativeAssetsPath}/**/*.cs"" />
+    <Compile Include=""{relativeAssetsPath}\**\*.cs"" />
   </ItemGroup>
 </Project>";
 

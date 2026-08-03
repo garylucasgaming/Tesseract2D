@@ -252,7 +252,13 @@ namespace Engine.Core.ECS
 
         public bool HasComponent<T>() where T : GameComponent
         {
-            return Components.ContainsKey(typeof(T));
+            if(Components.ContainsKey(typeof(T)))
+            {
+                return Components.ContainsKey(typeof(T));
+            }
+            else
+                return false;
+           
         }
 
         public bool HasComponents(params Type[] componentTypes)
@@ -287,6 +293,7 @@ namespace Engine.Core.ECS
                 return;
 
             componentToRemove.gameObject = null;
+            componentToRemove.isEnabled = false;
             Components.Remove(typeof(T));
             OnComponentRemoved?.Invoke(this, componentToRemove);
         }

@@ -1,6 +1,7 @@
 ﻿using Engine.Core.ECS.Components;
 using Engine.Core.ECS.Components.UI;
 using Engine.Core.Runtime;
+using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -50,20 +51,30 @@ namespace Engine.Core.ECS.Systems
             bool isLeftDown = _inputManager.IsLeftButtonDown;
             bool isLeftPressedThisFrame = isLeftDown && !_previousLeftMouseButtonState;
 
+            // Check if the game simulation is actively running
+            bool isPlaying = EditorContextManager.PlayState;
+
             foreach(var canvasGo in gameObjects)
             {
                 var canvas = canvasGo.GetComponent<UICanvasComponent>();
                 if(canvas == null || !canvas.IsActive)
                     continue;
 
-                // 1. Resolve mouse position based on canvas space (Screen vs World camera-space)
-                Vector2 mousePos = (canvas.Space == UISpace.Screen)
+                var canvasTransform = canvasGo.GetComponent<TransformComponent>();
+                Vector2 canvasWorldPos = canvasTransform != null ? canvasTransform.WorldPosition : Vector2.Zero;
+
+                // Determine if this canvas acts as true screen space or world/preview space right now
+                bool shouldActAsScreenSpace = (canvas.Space == UISpace.Screen) && isPlaying;
+
+                // 1. Resolve mouse position: If it's acting as true screen space, use raw mouse pos. 
+                // If it's in editor preview mode (stopped), it's rendering in world space, so we must use camera space!
+                Vector2 mousePos = shouldActAsScreenSpace
                     ? rawMousePos
                     : _camera.ScreenToWorld(rawMousePos, _viewport);
 
                 foreach(var uiComp in canvas.ChildElements)
                 {
-                    if(uiComp == null || !uiComp.IsActive)
+                    if(uiComp == null || !uiComp.isEnabled || uiComp.gameObject == null)
                         continue;
 
                     var transform = uiComp.gameObject.GetComponent<TransformComponent>();
@@ -71,8 +82,8 @@ namespace Engine.Core.ECS.Systems
                         continue;
 
                     // 2. Match the exact draw position calculation from UICanvasComponent
-                    Vector2 drawPosition = (canvas.Space == UISpace.Screen)
-                        ? transform.GetScreenSpacePosition()
+                    Vector2 drawPosition = shouldActAsScreenSpace
+                        ? transform.WorldPosition - canvasWorldPos
                         : transform.WorldPosition;
 
                     // 3. Calculate bounding box accounting for Origin and Scale
@@ -88,15 +99,25 @@ namespace Engine.Core.ECS.Systems
 
                     if(isInside && !wasHovered)
                     {
-                        uiComp.Hovered?.Invoke(); // Triggers target method via reflection/cache
+                        uiComp.Hovered?.Invoke();
+                    }
+                    else if(!isInside && wasHovered)
+                    {
+                        uiComp.HoverExit?.Invoke();
                     }
 
                     // 5. Handle Click State & Event
+                    bool wasClicked = uiComp.isClicked;
                     uiComp.isClicked = isInside && isLeftDown;
 
                     if(isInside && isLeftPressedThisFrame)
                     {
-                        uiComp.Clicked?.Invoke(); // Triggers target method via reflection/cache
+                        uiComp.Clicked?.Invoke();
+                    }
+
+                    if(!isLeftDown && wasClicked)
+                    {
+                        uiComp.Released?.Invoke();
                     }
                 }
             }
