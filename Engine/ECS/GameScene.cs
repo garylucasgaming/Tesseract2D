@@ -1,5 +1,6 @@
 ﻿using Engine.Core.ECS.Components;
 using Engine.Core.ECS.Managers;
+using Engine.Core.GamePlay;
 using Engine.Core.Runtime;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
@@ -18,6 +19,8 @@ namespace Engine.Core.ECS
 
         private int _loadOrder;
 
+        private Map _sceneMap = new Map(25,19);
+
         // Identification properties for the Editor UI to read
         public string SceneName { get; set; } = "Untitled Scene";
 
@@ -32,8 +35,12 @@ namespace Engine.Core.ECS
 
         public PhysicsManager Physics { get; private set; } = null!;
 
+        public Map SceneMap
+        {
+            get => _sceneMap;
+            set => _sceneMap = value;
+        }
 
-        
 
         public int LoadOrder {
             get => _loadOrder;
@@ -52,6 +59,8 @@ namespace Engine.Core.ECS
             InitializeManagers();
            
         }
+
+        
 
         public void InitializeManagers() 
         {
@@ -74,7 +83,25 @@ namespace Engine.Core.ECS
             Entities.OnEntityRemoved += entity => Systems.OnEntityDestroyed(entity);
         }
 
-        
+        public void SetMapSize(int width, int height)
+        {
+            SceneMap = new Map(width, height);
+        }
+
+        public void ResizeMap(int newWidth, int newHeight)
+        {
+            var newMap = new Map(newWidth, newHeight);
+            // Copy existing data to the new map
+            for(int x = 0; x < Math.Min(SceneMap.Width, newWidth); x++)
+            {
+                for(int y = 0; y < Math.Min(SceneMap.Height, newHeight); y++)
+                {
+                    newMap.Grid[x, y] = SceneMap.Grid[x, y];
+                }
+            }
+            SceneMap = newMap;
+        }
+
         //creates and returns a gameobject
         public GameObject Spawn(string name) 
         {

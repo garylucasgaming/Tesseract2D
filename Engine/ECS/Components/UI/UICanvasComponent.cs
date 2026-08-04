@@ -1,4 +1,5 @@
 ﻿using Engine.Core.Serialization;
+using Engine.Core.Utilities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -58,6 +59,28 @@ namespace Engine.Core.ECS.Components.UI
                         {
                             sprite.LoadSprite(cm);
                             sprite.isSpriteLoaded = true;
+                        }
+                    }
+                }
+
+                //loads spritefonts
+                if(child.gameObject.HasComponent<LabelComponent>())
+                {
+                    Log.Info("child has label");
+                    var label = child.gameObject.GetComponent<LabelComponent>();
+                    if(label != null)
+                    {
+                        try
+                        {
+                            // Load the SpriteFont using ContentManager (pass path relative to content or asset root)
+                            string relativePath = AssetManager.GetContentRelativePath(label.FontAssetPath, AssetType.Font);
+
+                            label.Font = cm.Load<SpriteFont>(relativePath);
+                            Log.Info($"[UI Info] Successfully loaded SpriteFont from path '{label.FontAssetPath}' for LabelComponent on GameObject '{child.gameObject.Name}'.");
+                        }
+                        catch(Exception ex)
+                        {
+                            Log.Error($"[UI Error] Failed to load SpriteFont from path '{label.FontAssetPath}': {ex.Message}");
                         }
                     }
                 }
@@ -132,6 +155,17 @@ namespace Engine.Core.ECS.Components.UI
             CheckAndSyncHierarchy(cm);
             bool shouldActAsScreenSpace = (Space == UISpace.Screen) && EditorContextManager.PlayState;
             var canvasTransform = gameObject.GetComponent<TransformComponent>();
+
+            if(canvasTransform != null)
+            {
+                if(Space == UISpace.Screen)
+                {
+                    var viewport = sb.GraphicsDevice.Viewport;
+                    canvasTransform.SizeX = viewport.Width/4;
+                    canvasTransform.SizeY = viewport.Height/4;
+                }
+            }
+
             Vector2 canvasWorldPos = canvasTransform != null ? canvasTransform.WorldPosition : Vector2.Zero;
 
             foreach(var child in ChildElements)
@@ -193,6 +227,9 @@ namespace Engine.Core.ECS.Components.UI
                     if(label.Font != null)
                     {
                         Color c = new Color(label.TextColor.X, label.TextColor.Y, label.TextColor.Z);
+                        float baseFontSize = 48f; // Assuming 48 is the base size for scaling
+                        float textScale = label.TextSize / baseFontSize;
+                        Vector2 finalFontScale = new Vector2(textScale) * transform.Scale;
                         sb.DrawString(
                             label.Font,
                             label.Text,
@@ -200,7 +237,7 @@ namespace Engine.Core.ECS.Components.UI
                             c,
                             transform.Rotation,
                             transform.OriginVector,
-                            transform.Scale,
+                            finalFontScale,
                             SpriteEffects.None,
                             0f
                         );

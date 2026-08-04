@@ -64,6 +64,9 @@
             LoadSceneButton = new ToolStripButton();
             CreateNewSceneButton = new ToolStripButton();
             SceneNameBox = new ToolStripTextBox();
+            ScreenMapSizeDropDown = new ToolStripDropDownButton();
+            resizeMapToolStripMenuItem = new ToolStripMenuItem();
+            setTileSizeToolStripMenuItem = new ToolStripMenuItem();
             sceneHierarchySearchBar = new Editor.TextSearchBarControl();
             ManagersTab = new TabPage();
             ManagerListView = new ListView();
@@ -400,7 +403,7 @@
             // HierarchyToolStrip
             // 
             HierarchyToolStrip.BackColor = SystemColors.Control;
-            HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton, CreateNewSceneButton, SceneNameBox });
+            HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton, CreateNewSceneButton, SceneNameBox, ScreenMapSizeDropDown });
             HierarchyToolStrip.Location = new Point(3, 28);
             HierarchyToolStrip.Name = "HierarchyToolStrip";
             HierarchyToolStrip.Size = new Size(218, 25);
@@ -442,8 +445,33 @@
             SceneNameBox.BackColor = SystemColors.Control;
             SceneNameBox.ForeColor = SystemColors.ControlText;
             SceneNameBox.Name = "SceneNameBox";
-            SceneNameBox.Size = new Size(100, 25);
+            SceneNameBox.Size = new Size(75, 25);
             SceneNameBox.TextChanged += SceneNameBox_TextChanged;
+            // 
+            // ScreenMapSizeDropDown
+            // 
+            ScreenMapSizeDropDown.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            ScreenMapSizeDropDown.DropDownItems.AddRange(new ToolStripItem[] { resizeMapToolStripMenuItem, setTileSizeToolStripMenuItem });
+            ScreenMapSizeDropDown.Image = (Image) resources.GetObject("ScreenMapSizeDropDown.Image");
+            ScreenMapSizeDropDown.ImageTransparentColor = Color.Magenta;
+            ScreenMapSizeDropDown.Name = "ScreenMapSizeDropDown";
+            ScreenMapSizeDropDown.Size = new Size(44, 22);
+            ScreenMapSizeDropDown.Text = "Map";
+            ScreenMapSizeDropDown.ToolTipText = "Map";
+            // 
+            // resizeMapToolStripMenuItem
+            // 
+            resizeMapToolStripMenuItem.Name = "resizeMapToolStripMenuItem";
+            resizeMapToolStripMenuItem.Size = new Size(180, 22);
+            resizeMapToolStripMenuItem.Text = "ResizeMap";
+            resizeMapToolStripMenuItem.Click += resizeMapToolStripMenuItem_Click;
+            // 
+            // setTileSizeToolStripMenuItem
+            // 
+            setTileSizeToolStripMenuItem.Name = "setTileSizeToolStripMenuItem";
+            setTileSizeToolStripMenuItem.Size = new Size(180, 22);
+            setTileSizeToolStripMenuItem.Text = "SetTileSize";
+            setTileSizeToolStripMenuItem.Click += setTileSizeToolStripMenuItem_Click;
             // 
             // sceneHierarchySearchBar
             // 
@@ -637,6 +665,7 @@
             // mgWindowControl
             // 
             mgWindowControl.Dock = DockStyle.Fill;
+            mgWindowControl.GraphicsProfile = Microsoft.Xna.Framework.Graphics.GraphicsProfile.HiDef;
             mgWindowControl.Location = new Point(3, 3);
             mgWindowControl.MouseHoverUpdatesOnly = false;
             mgWindowControl.Name = "mgWindowControl";
@@ -982,5 +1011,8 @@
         private ToolStripButton RemoveManagerButton;
         private ToolStripDropDownButton AddSystemDropdownButton;
         private ToolStripButton RemoveSystemButton;
+        private ToolStripDropDownButton ScreenMapSizeDropDown;
+        private ToolStripMenuItem resizeMapToolStripMenuItem;
+        private ToolStripMenuItem setTileSizeToolStripMenuItem;
     }
 }

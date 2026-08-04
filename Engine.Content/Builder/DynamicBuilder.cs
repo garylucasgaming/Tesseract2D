@@ -33,6 +33,7 @@ namespace Engine.Content.Builder
             content.Include<WildcardRule>("*");
             //start by including everything
             content.Include<WildcardRule>("");
+            content.Include<WildcardRule>("*.spritefont", file => Path.GetFileNameWithoutExtension(file));
 
             //exlcudes
             content.Exclude<WildcardRule>("*.git");
@@ -40,10 +41,11 @@ namespace Engine.Content.Builder
 
             //include copy
             content.IncludeCopy<WildcardRule>("*.yml");
+            
 
             content.IncludeCopy<WildcardRule>("*.cs");
 
-            content.IncludeCopy<WildcardRule>("*.lua");
+            //content.IncludeCopy<WildcardRule>("*.lua");
 
             content.IncludeCopy<WildcardRule>("*.scene");
 

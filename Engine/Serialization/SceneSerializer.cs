@@ -4,12 +4,29 @@ using System.IO;
 using Tommy;
 using Engine.Core.ECS;
 using Engine.Core.Utilities;
+using Engine.Core.GamePlay;
 using System.ComponentModel;
 using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
 
 namespace Engine.Core.Serialization
 {
+    public class MapDataDto
+    {
+        public int Width
+        {
+            get; set;
+        }
+        public int Height
+        {
+            get; set;
+        }
+        public int TileSize
+        {
+            get; set;
+        }
+        public List<int> GridFlattened { get; set; } = new List<int>();
+    }
 
     public class SceneDataDto
     {
@@ -18,6 +35,10 @@ namespace Engine.Core.Serialization
             get; set;
         }
         public string Id
+        {
+            get; set;
+        }
+        public MapDataDto SceneMap
         {
             get; set;
         }
@@ -44,6 +65,7 @@ namespace Engine.Core.Serialization
         // Key: Component Type Name (e.g., "TransformComponent"), Value: Field/Property key-value state
         public Dictionary<string, Dictionary<string, object>> Components { get; set; } = new Dictionary<string, Dictionary<string, object>>();
     }
+
     public static class SceneSerializer
     {
         private static readonly ISerializer Serializer = new SerializerBuilder()
@@ -62,6 +84,29 @@ namespace Engine.Core.Serialization
                 SceneName = scene.SceneName,
                 Id = scene.Id.ToString()
             };
+
+            // Serialize Map Data if it exists
+            if(scene.SceneMap != null)
+            {
+                var map = scene.SceneMap;
+                var mapDto = new MapDataDto
+                {
+                    Width = map.Width,
+                    Height = map.Height,
+                    TileSize = map.TileSize,
+                    GridFlattened = new List<int>(map.Width * map.Height)
+                };
+
+                for(int x = 0; x < map.Width; x++)
+                {
+                    for(int y = 0; y < map.Height; y++)
+                    {
+                        mapDto.GridFlattened.Add(map.Grid[x, y]);
+                    }
+                }
+
+                sceneDto.SceneMap = mapDto;
+            }
 
             foreach(var entity in scene.Entities.GetSerializableEntities())
             {
@@ -85,6 +130,30 @@ namespace Engine.Core.Serialization
                     SceneName = sceneDto.SceneName,
                     Id = Guid.Parse(sceneDto.Id)
                 };
+
+                // Reconstruct Map Data if present in DTO
+                if(sceneDto.SceneMap != null)
+                {
+                    var mapDto = sceneDto.SceneMap;
+                    var map = new Map(mapDto.Width, mapDto.Height)
+                    {
+                        TileSize = mapDto.TileSize
+                    };
+
+                    int index = 0;
+                    for(int x = 0; x < mapDto.Width; x++)
+                    {
+                        for(int y = 0; y < mapDto.Height; y++)
+                        {
+                            if(index < mapDto.GridFlattened.Count)
+                            {
+                                map.Grid[x, y] = mapDto.GridFlattened[index++];
+                            }
+                        }
+                    }
+
+                    scene.SceneMap = map;
+                }
 
                 Log.Info($"[LoadScene] Loading YAML Scene: {scene.SceneName}");
 

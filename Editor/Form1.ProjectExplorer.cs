@@ -37,6 +37,9 @@ namespace WinFormsApp1
 
             ToolStripMenuItem createPrefab = new ToolStripMenuItem("New Prefab");
 
+            ToolStripMenuItem createFont = new ToolStripMenuItem("New Font");
+            createFont.Click += CreateNewFont;
+
             //c# block
             ToolStripMenuItem cSharpBlock = new ToolStripMenuItem("C#");
             ToolStripMenuItem createNewComponent = new ToolStripMenuItem("New Component");
@@ -52,20 +55,20 @@ namespace WinFormsApp1
             createNewComponent.DropDownItems.Add(baseComponent);
             createNewComponent.DropDownItems.Add(dataComponent);
 
-            // lua block
-            ToolStripMenuItem luaBlock = new ToolStripMenuItem("Lua");
-            ToolStripMenuItem createNewLuaComponent = new ToolStripMenuItem("New Lua Component");
-            ToolStripMenuItem createNewLuaSystem = new ToolStripMenuItem("New Lua System");
-            ToolStripMenuItem createNewLuaManager = new ToolStripMenuItem("New Lua Manager");
-            ToolStripMenuItem createNewLuaScript = new ToolStripMenuItem("New Lua Script");
-            ToolStripMenuItem baseLuaComponent = new ToolStripMenuItem("Lua Component");
-            ToolStripMenuItem dataLuaComponent = new ToolStripMenuItem("Lua Data Component");
-            luaBlock.DropDownItems.Add(createNewLuaComponent);
-            luaBlock.DropDownItems.Add(createNewLuaSystem);
-            luaBlock.DropDownItems.Add(createNewLuaManager);
-            luaBlock.DropDownItems.Add(createNewLuaScript);
-            createNewLuaComponent.DropDownItems.Add(baseLuaComponent);
-            createNewLuaComponent.DropDownItems.Add(dataLuaComponent);
+            //// lua block
+            //ToolStripMenuItem luaBlock = new ToolStripMenuItem("Lua");
+            //ToolStripMenuItem createNewLuaComponent = new ToolStripMenuItem("New Lua Component");
+            //ToolStripMenuItem createNewLuaSystem = new ToolStripMenuItem("New Lua System");
+            //ToolStripMenuItem createNewLuaManager = new ToolStripMenuItem("New Lua Manager");
+            //ToolStripMenuItem createNewLuaScript = new ToolStripMenuItem("New Lua Script");
+            //ToolStripMenuItem baseLuaComponent = new ToolStripMenuItem("Lua Component");
+            //ToolStripMenuItem dataLuaComponent = new ToolStripMenuItem("Lua Data Component");
+            //luaBlock.DropDownItems.Add(createNewLuaComponent);
+            //luaBlock.DropDownItems.Add(createNewLuaSystem);
+            //luaBlock.DropDownItems.Add(createNewLuaManager);
+            //luaBlock.DropDownItems.Add(createNewLuaScript);
+            //createNewLuaComponent.DropDownItems.Add(baseLuaComponent);
+            //createNewLuaComponent.DropDownItems.Add(dataLuaComponent);
 
             ToolStripLabel cSharpStripLabel = new ToolStripLabel("C#");
             ToolStripLabel luaStripLabel = new ToolStripLabel("Lua");
@@ -80,10 +83,11 @@ namespace WinFormsApp1
             _folderContextMenu.Items.Add(deleteItem);
             _folderContextMenu.Items.Add(new ToolStripSeparator());
             _folderContextMenu.Items.Add(createPrefab);
+            _folderContextMenu.Items.Add(createFont);
             _folderContextMenu.Items.Add(new ToolStripSeparator());
             _folderContextMenu.Items.Add(cSharpBlock);
-            _folderContextMenu.Items.Add(new ToolStripSeparator());
-            _folderContextMenu.Items.Add(luaBlock);
+           // _folderContextMenu.Items.Add(new ToolStripSeparator());
+            //_folderContextMenu.Items.Add(luaBlock);
 
 
             baseComponent.Click += (s, e) => CreateTemplateAndRefresh("Component");
@@ -106,6 +110,66 @@ namespace WinFormsApp1
 
             
             
+        }
+
+        private void CreateNewFont(object? sender, EventArgs e)
+        {
+            TreeNode selectedNode = ProjectFolderTreeView.SelectedNode;
+            if(selectedNode == null)
+                return;
+
+            string targetPath = selectedNode.Tag as string;
+            if(string.IsNullOrEmpty(targetPath))
+                return;
+
+            string destinationDirectory = Directory.Exists(targetPath)
+                ? targetPath
+                : Path.GetDirectoryName(targetPath);
+
+            if(string.IsNullOrEmpty(destinationDirectory) || !Directory.Exists(destinationDirectory))
+                return;
+
+            string fontName = PromptForClassNameDialog(); // Reuse your naming prompt dialog
+            if(string.IsNullOrWhiteSpace(fontName))
+                return;
+
+            // Ensure extension is clean
+            if(!fontName.EndsWith(".spritefont", StringComparison.OrdinalIgnoreCase))
+            {
+                fontName += ".spritefont";
+            }
+
+            string fullPath = Path.Combine(destinationDirectory, fontName);
+
+            // Standard MonoGame SpriteFont XML template
+            string fontXmlContent = @"<?xml version=""1.0"" encoding=""utf-8""?>
+<XnaContent xmlns:Graphics=""Microsoft.Xna.Framework.Content.Pipeline.Graphics"">
+  <Asset Type=""Graphics:FontDescription"">
+    <FontName>Arial</FontName>
+    <Size>48</Size>
+    <Spacing>0</Spacing>
+    <UseKerning>true</UseKerning>
+    <Style>Regular</Style>
+    <CharacterRegions>
+      <CharacterRegion>
+        <Start>&#32;</Start>
+        <End>&#126;</End>
+      </CharacterRegion>
+    </CharacterRegions>
+  </Asset>
+</XnaContent>";
+
+            try
+            {
+                File.WriteAllText(fullPath, fontXmlContent);
+                Log.Info($"[Content Pipeline] Created new spritefont template: {fontName}");
+                PopulateProjectExplorerTree(ProjectFolderTreeView, destinationDirectory);
+            }
+            catch(Exception ex)
+            {
+                Log.Error($"[Font Creation Error] Failed to create font file: {ex.Message}");
+                MessageBox.Show($"Failed to create font: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private string PromptForClassNameDialog()

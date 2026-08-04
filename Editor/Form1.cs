@@ -101,7 +101,7 @@ namespace WinFormsApp1
                 AppendMessageToConsoleBox(severity, message);
             };
             InitializeComponent();
-            
+
             //ControlThemeExtensions.ApplySynthwaveTheme(this);
             this.Activated += Form1_Activated;
 
@@ -254,7 +254,7 @@ namespace WinFormsApp1
 
         private void Form1_Load(object sender, EventArgs e)
         {
-           
+
         }
 
         public void UpdateProgressText(string text)
@@ -329,12 +329,12 @@ namespace WinFormsApp1
         }
 
 
-      
-    
+
+
 
         public void UpdateSceneTextBox(string sceneName)
         {
-           
+
             SceneNameBox.Clear();
 
             SceneNameBox.Text = sceneName;
@@ -1044,7 +1044,7 @@ namespace WinFormsApp1
                         if(Activator.CreateInstance(targetType) is GameComponent newComp)
                         {
                             selectedGo.AddComponent(newComp);
-                            
+
                             Log.Info($"[Editor UI] Attached component '{targetType.Name}' to '{selectedGo.Name}'");
                             NeedsToBeSaved = true;
 
@@ -1199,7 +1199,7 @@ namespace WinFormsApp1
             return anyChildVisible;
         }
 
-       
+
 
         private void toolStripComboBox1_Click(object sender, EventArgs e)
         {
@@ -1277,6 +1277,121 @@ namespace WinFormsApp1
         {
             var viewer = new DatabaseViewer();
             viewer.Show(this);
+        }
+
+        private void resizeMapToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+            var sceneMap = EditorContextManager.ActiveLoadedScene?.SceneMap;
+            if(sceneMap == null)
+                return;
+
+            int newWidth = sceneMap.Width;
+            int newHeight = sceneMap.Height;
+
+            // Prompt user for new dimensions
+            if(ShowMapSizeInputDialog(ref newWidth, ref newHeight))
+            {
+               
+                 EditorContextManager.ActiveLoadedScene.ResizeMap(newWidth, newHeight);
+            }
+
+
+        }
+
+        private void setTileSizeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            var sceneMap = EditorContextManager.ActiveLoadedScene?.SceneMap;
+            if(sceneMap == null)
+                return;
+
+            int currentTileSize = GameWorldManager.TileSize;
+
+            // Prompt user for new tile size
+            if(ShowIntegerInputDialog("Set Tile Size", "Tile Size (Pixels):", ref currentTileSize))
+            {
+                GameWorldManager.TileSize = currentTileSize;
+                sceneMap.TileSize = currentTileSize;
+            }
+
+        }
+
+
+        private bool ShowIntegerInputDialog(string title, string promptText, ref int value)
+        {
+            Form inputForm = new Form()
+            {
+                Width = 300,
+                Height = 150,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = title,
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            Label label = new Label() { Left = 20, Top = 20, Text = promptText, AutoSize = true };
+            NumericUpDown numUpDown = new NumericUpDown() { Left = 20, Top = 50, Width = 240, Minimum = 4, Maximum = 256, Value = value };
+            Button confirmation = new Button() { Text = "OK", Left = 100, Width = 80, Top = 85, DialogResult = DialogResult.OK };
+            Button cancel = new Button() { Text = "Cancel", Left = 185, Width = 75, Top = 85, DialogResult = DialogResult.Cancel };
+
+            confirmation.Click += (sender, e) => { inputForm.Close(); };
+            cancel.Click += (sender, e) => { inputForm.Close(); };
+
+            inputForm.Controls.Add(label);
+            inputForm.Controls.Add(numUpDown);
+            inputForm.Controls.Add(confirmation);
+            inputForm.Controls.Add(cancel);
+            inputForm.AcceptButton = confirmation;
+            inputForm.CancelButton = cancel;
+
+            if(inputForm.ShowDialog() == DialogResult.OK)
+            {
+                value = (int) numUpDown.Value;
+                return true;
+            }
+            return false;
+        }
+
+        // Helper to prompt for Map Dimensions (Width & Height)
+        private bool ShowMapSizeInputDialog(ref int width, ref int height)
+        {
+            Form inputForm = new Form()
+            {
+                Width = 320,
+                Height = 190,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = "Resize Map",
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                MinimizeBox = false
+            };
+
+            Label lblWidth = new Label() { Left = 20, Top = 20, Text = "Width (Tiles):", AutoSize = true };
+            NumericUpDown numWidth = new NumericUpDown() { Left = 120, Top = 18, Width = 150, Minimum = 1, Maximum = 500, Value = width };
+
+            Label lblHeight = new Label() { Left = 20, Top = 55, Text = "Height (Tiles):", AutoSize = true };
+            NumericUpDown numHeight = new NumericUpDown() { Left = 120, Top = 53, Width = 150, Minimum = 1, Maximum = 500, Value = height };
+
+            Button confirmation = new Button() { Text = "OK", Left = 110, Width = 80, Top = 105, DialogResult = DialogResult.OK };
+            Button cancel = new Button() { Text = "Cancel", Left = 195, Width = 75, Top = 105, DialogResult = DialogResult.Cancel };
+
+            inputForm.Controls.Add(lblWidth);
+            inputForm.Controls.Add(numWidth);
+            inputForm.Controls.Add(lblHeight);
+            inputForm.Controls.Add(numHeight);
+            inputForm.Controls.Add(confirmation);
+            inputForm.Controls.Add(cancel);
+            inputForm.AcceptButton = confirmation;
+            inputForm.CancelButton = cancel;
+
+            if(inputForm.ShowDialog() == DialogResult.OK)
+            {
+                width = (int) numWidth.Value;
+                height = (int) numHeight.Value;
+                return true;
+            }
+            return false;
         }
     }
 }

@@ -357,7 +357,7 @@ namespace Engine.Editor
 
                 CheckBox chkDesktop = new CheckBox { Text = "Desktop (Windows/Mac/Linux)", Left = 20, Top = 100, Checked = true, AutoSize = true };
                 CheckBox chkAndroid = new CheckBox { Text = "Android", Left = 20, Top = 125, AutoSize = true };
-                CheckBox chkiOS = new CheckBox { Text = "iOS", Left = 200, Top = 100, AutoSize = true };
+                CheckBox chkiOS = new CheckBox { Text = "iOS", Left = 220, Top = 100, AutoSize = true };
                 CheckBox chkWeb = new CheckBox { Text = "Web (WASM)", Left = 200, Top = 125, AutoSize = true };
 
                 Button btnCreate = new Button

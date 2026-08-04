@@ -9,8 +9,16 @@ namespace Engine.Core.Runtime
 {
     public static class GameWorldManager
     {
+        private static int _tileSize = 32;
+
+        public static int TileSize
+        {
+            get => _tileSize;
+            set => _tileSize = value;
+        }
 
         
+
 
     }
 }

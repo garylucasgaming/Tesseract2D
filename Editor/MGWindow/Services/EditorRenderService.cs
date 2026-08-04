@@ -5,6 +5,7 @@ using Engine.Editor.MGWindow.Services.Engine.Editor.MGWindow.Services;
 using Engine.Editor.Utilities;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 using Color = Microsoft.Xna.Framework.Color;
 
@@ -12,12 +13,15 @@ namespace Engine.Editor.MGWindow.Services
 {
     public class EditorRenderService
     {
-        private const float HandleLength = 50f;
+        private const float BaseHandleLength = 50f;
         private const float ClickTolerance = 8f;
         private static readonly Color ColliderColor = new Color(50, 205, 50, 255); // Lime green
 
-        public void RenderSceneViewport(SpriteBatch spriteBatch, GameScene activeScene, GameObject selectedGo, object selectedComponent, GizmoMode activeMode)
+        public void RenderSceneViewport(SpriteBatch spriteBatch, GameScene activeScene, GameObject selectedGo, object selectedComponent, GizmoMode activeMode, float cameraZoom = 1f)
         {
+            // Calculate inverse zoom so gizmo screen size remains constant regardless of camera zoom
+            float invZoom = 1f / Math.Max(cameraZoom, 0.001f);
+
             // Render basic objects
             foreach(var entity in activeScene.Entities.GetSerializableEntities())
             {
@@ -31,33 +35,34 @@ namespace Engine.Editor.MGWindow.Services
                 Vector2 position = transform.WorldPosition;
                 bool isSelected = (selectedGo != null && entity.Id == selectedGo.Id);
 
-                // Draw central pivot point anchor
+                // Draw central pivot point anchor scaled by invZoom
+                float pivotRadius = (isSelected ? 8f : 5f) * invZoom;
+                int centerPointSize = Math.Max(1, (int) (2f * invZoom));
                 Color centerColor = isSelected ? Color.LimeGreen : new Color(200, 200, 200, 120);
-                GizmoRenderer.DrawCircle(spriteBatch, position, isSelected ? 8 : 5, 12, centerColor);
-                GizmoRenderer.DrawPoint(spriteBatch, position, Color.White, 2);
+
+                GizmoRenderer.DrawCircle(spriteBatch, position, pivotRadius, 12, centerColor, Math.Max(1, (int) (1f * invZoom)));
+                GizmoRenderer.DrawPoint(spriteBatch, position, Color.White, centerPointSize);
 
                 if(isSelected)
                 {
-                    // Render Collider Gizmos if a collider component is active!
                     if(selectedComponent != null && selectedComponent is ColliderComponent)
                     {
-                        RenderColliderGizmo(spriteBatch, transform, selectedComponent);
-                        
+                        RenderColliderGizmo(spriteBatch, transform, selectedComponent, invZoom);
                     }
                     else if(selectedComponent != null && selectedComponent is TransformComponent)
                     {
-                        // Otherwise, draw standard Transform tools based on current Q/W/E selection
-                        DrawTransformGizmos(spriteBatch, transform, position, activeMode);
+                        DrawTransformGizmos(spriteBatch, transform, position, activeMode, invZoom);
                     }
-
-                    
                 }
             }
         }
 
-        private void RenderColliderGizmo(SpriteBatch spriteBatch, TransformComponent transform, object component)
+        private void RenderColliderGizmo(SpriteBatch spriteBatch, TransformComponent transform, object component, float invZoom)
         {
             Vector2 position = transform.WorldPosition;
+            int outlineThickness = Math.Max(1, (int) (2f * invZoom));
+            int handleRadius = (int) (6f * invZoom);
+            int pointSize = (int) (8f * invZoom);
 
             // --- BOX COLLIDER GIZMO ---
             if(component is BoxColliderComponent box)
@@ -70,17 +75,14 @@ namespace Engine.Editor.MGWindow.Services
                 Vector2 bottomLeft = center + new Vector2(-halfSize.X, halfSize.Y);
                 Vector2 bottomRight = center + halfSize;
 
-                // Draw green outline
-                GizmoRenderer.DrawLine(spriteBatch, topLeft, topRight, ColliderColor, 2);
-                GizmoRenderer.DrawLine(spriteBatch, topRight, bottomRight, ColliderColor, 2);
-                GizmoRenderer.DrawLine(spriteBatch, bottomRight, bottomLeft, ColliderColor, 2);
-                GizmoRenderer.DrawLine(spriteBatch, bottomLeft, topLeft, ColliderColor, 2);
+                GizmoRenderer.DrawLine(spriteBatch, topLeft, topRight, ColliderColor, outlineThickness);
+                GizmoRenderer.DrawLine(spriteBatch, topRight, bottomRight, ColliderColor, outlineThickness);
+                GizmoRenderer.DrawLine(spriteBatch, bottomRight, bottomLeft, ColliderColor, outlineThickness);
+                GizmoRenderer.DrawLine(spriteBatch, bottomLeft, topLeft, ColliderColor, outlineThickness);
 
-                // Interaction Handles: Center (for Offset) and Right/Bottom (for resizing size)
-                GizmoRenderer.DrawCircle(spriteBatch, center, 6, 8, Color.Yellow, 2); // Center handle
-                GizmoRenderer.DrawPoint(spriteBatch, center + new Vector2(halfSize.X, 0), Color.DodgerBlue, 8); // Width handle
-                GizmoRenderer.DrawPoint(spriteBatch, center + new Vector2(0, halfSize.Y), Color.DodgerBlue, 8); // Height handle
-                
+                GizmoRenderer.DrawCircle(spriteBatch, center, handleRadius, 8, Color.Yellow, outlineThickness);
+                GizmoRenderer.DrawPoint(spriteBatch, center + new Vector2(halfSize.X, 0), Color.DodgerBlue, pointSize);
+                Editor.Utilities.GizmoRenderer.DrawPoint(spriteBatch, center + new Vector2(0, halfSize.Y), Color.DodgerBlue, pointSize);
             }
 
             // --- CIRCLE COLLIDER GIZMO ---
@@ -88,13 +90,10 @@ namespace Engine.Editor.MGWindow.Services
             {
                 Vector2 center = position + circle.Offset;
 
-                // Draw circle bounds
-                GizmoRenderer.DrawCircle(spriteBatch, center, circle.Radius, 24, ColliderColor, 2);
+                GizmoRenderer.DrawCircle(spriteBatch, center, circle.Radius, 24, ColliderColor, outlineThickness);
 
-                // Interaction Handles: Center (Offset) and Edge (Radius)
-                GizmoRenderer.DrawCircle(spriteBatch, center, 6, 8, Color.Yellow, 2);
-                GizmoRenderer.DrawPoint(spriteBatch, center + new Vector2(circle.Radius, 0), Color.DodgerBlue, 8);
-                
+                GizmoRenderer.DrawCircle(spriteBatch, center, handleRadius, 8, Color.Yellow, outlineThickness);
+                GizmoRenderer.DrawPoint(spriteBatch, center + new Vector2(circle.Radius, 0), Color.DodgerBlue, pointSize);
             }
 
             // --- POLYGON COLLIDER GIZMO ---
@@ -105,29 +104,66 @@ namespace Engine.Editor.MGWindow.Services
 
                 Vector2 center = position + poly.Offset;
 
-                // Draw connecting edge lines
                 for(int i = 0; i < poly.Vertices.Count; i++)
                 {
                     Vector2 p1 = center + poly.Vertices[i];
-                    Vector2 p2 = center + poly.Vertices[(i + 1) % poly.Vertices.Count]; // Loop around to index 0
-
-                    GizmoRenderer.DrawLine(spriteBatch, p1, p2, ColliderColor, 2);
+                    Vector2 p2 = center + poly.Vertices[(i + 1) % poly.Vertices.Count];
+                    GizmoRenderer.DrawLine(spriteBatch, p1, p2, ColliderColor, outlineThickness);
                 }
 
-                // Interaction Handles: Center (Offset) and Vertex point adjusters
-                GizmoRenderer.DrawCircle(spriteBatch, center, 6, 8, Color.Yellow, 2);
+                GizmoRenderer.DrawCircle(spriteBatch, center, handleRadius, 8, Color.Yellow, outlineThickness);
                 for(int i = 0; i < poly.Vertices.Count; i++)
                 {
-                    Vector2 worldVertex = center + poly.Vertices[i];
-                    GizmoRenderer.DrawPoint(spriteBatch, worldVertex, Color.DodgerBlue, 8);
+                    GizmoRenderer.DrawPoint(spriteBatch, center + poly.Vertices[i], Color.DodgerBlue, pointSize);
                 }
-               
             }
-
-           
         }
 
-        private void DrawTransformGizmos(SpriteBatch spriteBatch, TransformComponent transform, Vector2 position, GizmoMode activeMode)
+        public void RenderSceneGridAndBounds(SpriteBatch spriteBatch, GameScene activeScene, float cameraZoom = 1f)
+        {
+            if(activeScene == null || activeScene.SceneMap == null)
+                return;
+
+            var map = activeScene.SceneMap;
+            int tileSize = map.TileSize;
+            int mapWidthPx = map.Width * tileSize;
+            int mapHeightPx = map.Height * tileSize;
+
+            float invZoom = 1f / Math.Max(cameraZoom, 0.001f);
+            int lineThickness = Math.Max(1, (int) (1f * invZoom));
+
+            Color gridColor = new Color(25, 25, 25, 100); // Subtle gray for grid lines
+            Color boundaryColor = new Color(255, 165, 0, 200); // Orange border for scene limits
+
+            // 1. Draw Interior Grid Lines based on Map Dimensions & TileSize
+            for(int x = 0; x <= map.Width; x++)
+            {
+                Vector2 start = new Vector2(x * tileSize, 0);
+                Vector2 end = new Vector2(x * tileSize, mapHeightPx);
+                GizmoRenderer.DrawLine(spriteBatch, start, end, gridColor, lineThickness);
+            }
+
+            for(int y = 0; y <= map.Height; y++)
+            {
+                Vector2 start = new Vector2(0, y * tileSize);
+                Vector2 end = new Vector2(mapWidthPx, y * tileSize);
+                GizmoRenderer.DrawLine(spriteBatch, start, end, gridColor, lineThickness);
+            }
+
+            // 2. Draw Outer Scene Boundary Box (RPGMaker-style hard limit)
+            Vector2 topLeft = Vector2.Zero;
+            Vector2 topRight = new Vector2(mapWidthPx, 0);
+            Vector2 bottomLeft = new Vector2(0, mapHeightPx);
+            Vector2 bottomRight = new Vector2(mapWidthPx, mapHeightPx);
+
+            int boundaryThickness = Math.Max(2, (int) (2f * invZoom));
+            GizmoRenderer.DrawLine(spriteBatch, topLeft, topRight, boundaryColor, boundaryThickness);
+            GizmoRenderer.DrawLine(spriteBatch, topRight, bottomRight, boundaryColor, boundaryThickness);
+            GizmoRenderer.DrawLine(spriteBatch, bottomRight, bottomLeft, boundaryColor, boundaryThickness);
+            GizmoRenderer.DrawLine(spriteBatch, bottomLeft, topLeft, boundaryColor, boundaryThickness);
+        }
+
+        private void DrawTransformGizmos(SpriteBatch spriteBatch, TransformComponent transform, Vector2 position, GizmoMode activeMode, float invZoom)
         {
             Vector2 scale = transform.Scale;
             Vector2 size = transform.Size;
@@ -140,34 +176,42 @@ namespace Engine.Editor.MGWindow.Services
             Vector2 bottomLeft = baseCorner + new Vector2(0, currentHeight);
             Vector2 bottomRight = baseCorner + new Vector2(currentWidth, currentHeight);
 
+            int borderThickness = Math.Max(1, (int) (1f * invZoom));
+
             switch(activeMode)
             {
                 case GizmoMode.Scale:
-                    GizmoRenderer.DrawScaleGizmo(spriteBatch, position, HandleLength, 2);
-                    GizmoRenderer.DrawLine(spriteBatch, baseCorner, topRight, Color.DarkGray, 1);
-                    GizmoRenderer.DrawLine(spriteBatch, baseCorner, bottomLeft, Color.DarkGray, 1);
-                    GizmoRenderer.DrawLine(spriteBatch, bottomLeft, bottomRight, Color.DarkGray, 1);
-                    GizmoRenderer.DrawLine(spriteBatch, topRight, bottomRight, Color.DarkGray, 1);
+                    float handleLength = BaseHandleLength * invZoom;
+                    int gizmoThickness = Math.Max(1, (int) (2f * invZoom));
+                    GizmoRenderer.DrawScaleGizmo(spriteBatch, position, handleLength, gizmoThickness);
+
+                    GizmoRenderer.DrawLine(spriteBatch, baseCorner, topRight, Color.DarkGray, borderThickness);
+                    GizmoRenderer.DrawLine(spriteBatch, baseCorner, bottomLeft, Color.DarkGray, borderThickness);
+                    GizmoRenderer.DrawLine(spriteBatch, bottomLeft, bottomRight, Color.DarkGray, borderThickness);
+                    GizmoRenderer.DrawLine(spriteBatch, topRight, bottomRight, Color.DarkGray, borderThickness);
                     break;
 
                 case GizmoMode.Size:
-                    GizmoRenderer.DrawLine(spriteBatch, baseCorner, topRight, Color.DarkGray, 1);
-                    GizmoRenderer.DrawLine(spriteBatch, baseCorner, bottomLeft, Color.DarkGray, 1);
-                    GizmoRenderer.DrawLine(spriteBatch, bottomLeft, bottomRight, Color.DarkGray, 1);
-                    GizmoRenderer.DrawLine(spriteBatch, topRight, bottomRight, Color.DarkGray, 1);
+                    GizmoRenderer.DrawLine(spriteBatch, baseCorner, topRight, Color.DarkGray, borderThickness);
+                    GizmoRenderer.DrawLine(spriteBatch, baseCorner, bottomLeft, Color.DarkGray, borderThickness);
+                    GizmoRenderer.DrawLine(spriteBatch, bottomLeft, bottomRight, Color.DarkGray, borderThickness);
+                    GizmoRenderer.DrawLine(spriteBatch, topRight, bottomRight, Color.DarkGray, borderThickness);
 
                     Vector2 rightHandleCenter = baseCorner + new Vector2(currentWidth, currentHeight * 0.5f);
                     Vector2 bottomHandleCenter = baseCorner + new Vector2(currentWidth * 0.5f, currentHeight);
                     Vector2 cornerHandleCenter = bottomRight;
 
-                    GizmoRenderer.DrawPoint(spriteBatch, rightHandleCenter, Color.Blue, (int) ClickTolerance);
-                    GizmoRenderer.DrawPoint(spriteBatch, rightHandleCenter, Color.LightBlue, (int) ClickTolerance - 2);
+                    int outerSize = (int) (ClickTolerance * invZoom);
+                    int innerSize = Math.Max(2, outerSize - (int) (2f * invZoom));
 
-                    GizmoRenderer.DrawPoint(spriteBatch, bottomHandleCenter, Color.Blue, (int) ClickTolerance);
-                    GizmoRenderer.DrawPoint(spriteBatch, bottomHandleCenter, Color.LightBlue, (int) ClickTolerance - 2);
+                    GizmoRenderer.DrawPoint(spriteBatch, rightHandleCenter, Color.Blue, outerSize);
+                    GizmoRenderer.DrawPoint(spriteBatch, rightHandleCenter, Color.LightBlue, innerSize);
 
-                    GizmoRenderer.DrawPoint(spriteBatch, cornerHandleCenter, Color.DarkRed, (int) ClickTolerance);
-                    GizmoRenderer.DrawPoint(spriteBatch, cornerHandleCenter, Color.Orange, (int) ClickTolerance - 2);
+                    GizmoRenderer.DrawPoint(spriteBatch, bottomHandleCenter, Color.Blue, outerSize);
+                    GizmoRenderer.DrawPoint(spriteBatch, bottomHandleCenter, Color.LightBlue, innerSize);
+
+                    GizmoRenderer.DrawPoint(spriteBatch, cornerHandleCenter, Color.DarkRed, outerSize);
+                    GizmoRenderer.DrawPoint(spriteBatch, cornerHandleCenter, Color.Orange, innerSize);
                     break;
             }
         }

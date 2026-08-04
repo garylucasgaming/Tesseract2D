@@ -38,13 +38,23 @@ namespace Editor
         {
             get; private set;
         } = new Camera2D();
+
+
+        public MGWindowControl()
+        {
+            this.GraphicsProfile = GraphicsProfile.HiDef;
+            
+        }
         protected override void Initialize()
         {
             GizmoRenderer.Initialize(Editor.GraphicsDevice);
             Globals.Initialize();
-
+           
             EditorCamera = Globals.EditorCamera;
             Globals.SetViewport(Editor.GraphicsDevice.Viewport);
+
+            var viewport = Editor.GraphicsDevice.Viewport;
+            EditorCamera.Position = new Vector2(viewport.Width / 2f, viewport.Height / 2f);
 
             _inputManager = Globals.InputManager;
             _inputService = new EditorInputService(_inputManager, EditorCamera);
@@ -122,20 +132,36 @@ namespace Editor
             //world space render
             Matrix viewMatrix = EditorCamera.GetViewMatrix(Editor.GraphicsDevice.Viewport);
             Editor.spriteBatch.Begin(transformMatrix: viewMatrix);
+
+            if(!EditorContextManager.PlayState)
+            {
+                _renderService.RenderSceneGridAndBounds(Editor.spriteBatch, _activeScene, EditorCamera.Zoom);
+            }
+            
             _activeScene.Systems.Render(Editor.spriteBatch, Editor.Content);
             _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.World);
             if(!EditorContextManager.PlayState)
             {
                 _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.Screen);
             }
-            _renderService.RenderSceneViewport(Editor.spriteBatch, _activeScene, selectedGo, Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance, _inputService.CurrentMode);
+            if(!EditorContextManager.PlayState)
+            {
+                _renderService.RenderSceneViewport(
+                 Editor.spriteBatch,
+                 _activeScene,
+                 selectedGo,
+                 Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance,
+                 _inputService.CurrentMode,
+                 EditorCamera.Zoom
+             );
+            }
             
-            
+
             Editor.spriteBatch.End();
 
             if(EditorContextManager.PlayState)
             {
-                Editor.spriteBatch.Begin();
+                Editor.spriteBatch.Begin(samplerState: SamplerState.PointClamp);
                 _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.Screen);
                 Editor.spriteBatch.End();
             }

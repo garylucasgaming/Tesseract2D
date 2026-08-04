@@ -31,12 +31,11 @@ namespace Engine.Core.Serialization
                 // 2. Define the major engine Root Folder
                 string contentRoot = Path.Combine(projectRoot, "Content");
                 string projectSettingsRoot = Path.Combine(projectRoot, "ProjectSettings");
-                string libraryRoot = Path.Combine(projectRoot, "Library");
+                
                 string tempRoot = Path.Combine(projectRoot, "Temp");
 
                 Directory.CreateDirectory(contentRoot);
                 Directory.CreateDirectory(projectSettingsRoot);
-                Directory.CreateDirectory(libraryRoot);
                 Directory.CreateDirectory(tempRoot);
 
                 // Assets subfolder
@@ -46,7 +45,7 @@ namespace Engine.Core.Serialization
                 // 3. Populate sub-folders inside the Assets directory
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Scripts"));
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Textures"));
-                Directory.CreateDirectory(Path.Combine(assetsRoot, "Materials"));
+                Directory.CreateDirectory(Path.Combine(assetsRoot, "Fonts"));
                 Directory.CreateDirectory(Path.Combine(assetsRoot, "Audio"));
                 string sceneFolder = Path.Combine(assetsRoot, "Scenes");
                 Directory.CreateDirectory(sceneFolder);
