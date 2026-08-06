@@ -43,7 +43,6 @@ namespace Editor
         public MGWindowControl()
         {
             this.GraphicsProfile = GraphicsProfile.HiDef;
-            
         }
         protected override void Initialize()
         {
@@ -60,7 +59,6 @@ namespace Editor
             _inputService = new EditorInputService(_inputManager, EditorCamera);
             _renderService = new EditorRenderService();
             Editor.FPSCounter.Visible = false;
-            
 
             _inputService.OnTransformModified = () =>
             {
@@ -203,6 +201,14 @@ namespace Editor
                 SimulationRunning = false;
                 SimulationPaused = false;
                 _physicsAccumulator = 0.0f; // Flush buffer
+
+                if(_activeScene.Systems != null)
+                {
+                    _activeScene.Systems.ResetSimulationStates();
+                    _activeScene.CleanupRuntimeEntities();
+                    var form = FindForm() as Form1;
+                    form.RefreshEditor();
+                }
                 
                 Log.Info("[Simulation] Simulation stopped.");
             }

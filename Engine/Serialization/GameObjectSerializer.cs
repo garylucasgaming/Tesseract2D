@@ -36,26 +36,11 @@ public static class GameObjectSerializer
         foreach(var compKvp in dto.Components)
         {
             string typeName = compKvp.Key;
-            Type? compType = null;
 
-            foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                try
-                {
-                    compType = assembly.GetTypes()
-                        .FirstOrDefault(t => t.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase) &&
-                                             typeof(GameComponent).IsAssignableFrom(t));
+            // Replaces the multi-assembly loop with the centralized TypeResolver
+            Type? compType = Engine.Core.Utilities.TypeResolver.FindType(typeName, typeof(GameComponent));
 
-                    if(compType != null)
-                        break;
-                }
-                catch
-                {
-                    // Ignore dynamic assemblies that may throw on GetTypes() reflection scan
-                }
-            }
-
-            // Pass 3: Process and instantiate if a matching runtime target is recovered
+            // Process and instantiate if a matching runtime target is recovered
             if(compType != null)
             {
                 if(Activator.CreateInstance(compType) is GameComponent newComp)

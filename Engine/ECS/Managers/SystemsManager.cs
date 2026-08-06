@@ -1,4 +1,5 @@
-﻿using Engine.Core.ECS.Components.UI;
+﻿using Engine.Core.ECS.Components;
+using Engine.Core.ECS.Components.UI;
 using Engine.Core.ECS.Systems;
 using Engine.Core.Runtime;
 using Engine.Core.Serialization;
@@ -168,6 +169,21 @@ namespace Engine.Core.ECS.Managers
             }
         }
 
+        public void ResetSimulationStates()
+        {
+            if(_systemEntityCache.TryGetValue(scriptComponentSystem, out var entities))
+            {
+                foreach(var entity in entities)
+                {
+                    var scriptComp = entity.GetComponent<ScriptComponent>();
+                    if(scriptComp != null)
+                    {
+                        Log.Info("resetting script component state for entity: " + entity.Name);
+                        scriptComp.hasStarted = false; //[cite: 20]
+                    }
+                }
+            }
+        }
         public void RenderUI(SpriteBatch sb, ContentManager cm, UISpace space)
         {
             uiRenderSystem.Initialize(cm);

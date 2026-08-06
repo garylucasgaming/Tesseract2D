@@ -106,7 +106,6 @@ namespace Engine.Core.ECS.Components.UI
                 {
                     ChildElements.Add(uiComp);
 
-                    // Again, broaden this to check for SpriteComponent
                     if(descendant.HasComponent<SpriteComponent>())
                     {
                         var sprite = descendant.GetComponent<SpriteComponent>();
@@ -124,11 +123,13 @@ namespace Engine.Core.ECS.Components.UI
         {
             int currentCount = gameObject != null ? gameObject.GetAllChildren().Count : 0;
 
-            if(currentCount != _lastKnownDescendantCount || !isInitialized)
-            {
-                // LoadSprites already handles calling ReloadChildren(), so we just call this once
-                LoadSprites(cm);
+            // Always validate that our cached ChildElements don't contain destroyed/null game objects,
+            // and force a reload if the count changed or if any child's game object is missing.
+            bool hasStaleElements = ChildElements.Any(c => c == null || c.gameObject == null);
 
+            if(currentCount != _lastKnownDescendantCount || !isInitialized || hasStaleElements)
+            {
+                LoadSprites(cm);
                 _lastKnownDescendantCount = currentCount;
                 isInitialized = true;
             }

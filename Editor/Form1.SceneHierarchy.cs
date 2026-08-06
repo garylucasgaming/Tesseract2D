@@ -16,7 +16,7 @@ namespace WinFormsApp1
     public partial class Form1
     {
         private ContextMenuStrip _hierarchyContextMenu = new ContextMenuStrip();
-
+        private GameObject? _lastSelectedGameObject = null;
         private void InitializeSceneHierarchyMenus()
         {
             SceneHierarchyTreeView.LabelEdit = true;
@@ -437,6 +437,7 @@ namespace WinFormsApp1
             floor.GetComponent<TransformComponent>().WorldPosition = new Microsoft.Xna.Framework.Vector2(300, 80);
 
             EditorContextManager.ActiveLoadedScene = sandbox;
+            AttachSceneEvents(sandbox);
             SceneNameBox.Text = sandbox.SceneName;
             PopulateSceneHierarchyTree(SceneHierarchyTreeView, sandbox);
         }
@@ -547,19 +548,30 @@ namespace WinFormsApp1
 
         private void SceneHierarchyTreeView_AfterSelect(object sender, TreeViewEventArgs e)
         {
-            InspectorFlowPanel.Controls.Clear();
             if(e.Node == null || e.Node.Tag is not GameObject targetGo)
+            {
+                _lastSelectedGameObject = null;
+                InspectorFlowPanel.Controls.Clear();
+                return;
+            }
+
+            // 💡 OPTIMIZATION: If the user clicked the exact same GameObject that is 
+            // already selected and displayed, do nothing and bail out immediately!
+            if(targetGo == _lastSelectedGameObject)
                 return;
 
+            _lastSelectedGameObject = targetGo;
+
             InspectorFlowPanel.SuspendLayout();
+            InspectorFlowPanel.Controls.Clear();
             int targetWidth = InspectorFlowPanel.Width;
 
             // Card 1: Core GameObject Properties (Id, Name, IsActive)
             Panel baseCard = ComponentCardFactory.CreateCard(targetGo.Name, targetGo, targetWidth);
+            baseCard.Tag = targetGo; // Tag it so we know what object it belongs to
             InspectorFlowPanel.Controls.Add(baseCard);
 
-            // Card 2+: Extract the direct, live memory instances stored inside the entity
-            // FIX: Add '.Values' if Components is a Dictionary, or ensure it pulls the raw GameComponent references
+            // Card 2+: Extract direct live memory instances stored inside the entity
             foreach(var component in targetGo.Components.Values)
             {
                 // 1. Get the clean runtime name of the active instance (e.g., "TransformComponent")
@@ -570,7 +582,7 @@ namespace WinFormsApp1
                 InspectorFlowPanel.Controls.Add(componentCard);
             }
 
-            InspectorFlowPanel.ResumeLayout();
+            InspectorFlowPanel.ResumeLayout(true);
         }
     }
 }

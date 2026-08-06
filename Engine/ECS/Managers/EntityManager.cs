@@ -26,7 +26,7 @@ namespace Engine.Core.ECS.Managers
         public event Action<GameObject>? OnEntityRemoved;
         public event Action<GameObject, GameComponent>? OnComponentAdded;
         public event Action<GameObject, GameComponent>? OnComponentRemoved;
-
+        public event Action<GameObject, GameComponent>? OnComponentModified;
 
 
         //this adds an entity to the component bucket, as well as notifies any listeners who care about entities being created. 
@@ -41,6 +41,7 @@ namespace Engine.Core.ECS.Managers
 
             entity.OnComponentAdded += HandleComponentAddedOnEntity;
             entity.OnComponentRemoved += HandleComponentRemovedFromEntity;
+            
 
 
             if(!entity.Components.ContainsKey(typeof(TransformComponent)))
@@ -116,6 +117,14 @@ namespace Engine.Core.ECS.Managers
 
         }
 
+        public void NotifyComponentModified(GameObject entity, GameComponent component)
+        {
+            if(_entities.ContainsKey(entity.Id))
+            {
+                OnComponentModified?.Invoke(entity, component);
+            }
+        }
+
         //whenever an entity gets a component added to it, this meethod is subscribed to it's event and handles the registry update and fire for any listeners who care
         private void HandleComponentAddedOnEntity(GameObject entity, GameComponent component)
         {
@@ -152,7 +161,12 @@ namespace Engine.Core.ECS.Managers
             return _entities.Values.FirstOrDefault(e => e.tags.Contains(tag));
         }
 
-       public bool HasEntity(Guid id)
+        public GameObject? FindByName(string name)
+        {
+            return _entities.Values.FirstOrDefault(e => e.Name == name);
+        }
+
+        public bool HasEntity(Guid id)
         {
             return _entities.ContainsKey(id);
         }

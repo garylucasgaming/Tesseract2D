@@ -103,22 +103,9 @@ namespace Engine.Core.Serialization
 
                 Log.Info($"[DatabaseSerializer] Loading YAML Database of type: {dataBase.DatabaseType}");
 
-                // Look up the component type definition once for the entire file
+                // Look up the component type definition once for the entire file using TypeResolver
                 string typeName = dataBase.DatabaseType;
-                Type? compType = Type.GetType($"Engine.Core.ECS.Components.{typeName}, Engine.Core");
-
-                if(compType == null)
-                {
-                    foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
-                    {
-                        var foundType = assembly.GetType(typeName) ?? assembly.GetType($"Game.Scripts.{typeName}");
-                        if(foundType != null && typeof(DataComponent).IsAssignableFrom(foundType))
-                        {
-                            compType = foundType;
-                            break;
-                        }
-                    }
-                }
+                Type? compType = Engine.Core.Utilities.TypeResolver.FindType(typeName, typeof(DataComponent));
 
                 if(compType == null)
                 {
@@ -129,10 +116,9 @@ namespace Engine.Core.Serialization
                 // Process the homogeneous data rows
                 foreach(var compKvp in dto.DataEntries)
                 {
-                    string entryTitle = compKvp.Key; // Now a human-readable title like "WaterTile"
+                    string entryTitle = compKvp.Key;
                     var propertyMap = compKvp.Value;
 
-                    // 1. Locate and extract the AssetID from INSIDE the property block
                     Guid assetGuid = Guid.Empty;
                     bool assetGuidFound = false;
 
@@ -144,7 +130,6 @@ namespace Engine.Core.Serialization
                         }
                     }
 
-                    // 2. Fallback check: just in case a human forgot or mistyped the ID while raw editing
                     if(!assetGuidFound)
                     {
                         Log.Warning($"[DatabaseSerializer] Entry '{entryTitle}' was missing a valid internal 'AssetID'. Automatically generating a recovery GUID.");
@@ -153,13 +138,8 @@ namespace Engine.Core.Serialization
 
                     if(Activator.CreateInstance(compType) is DataComponent newComp)
                     {
-                        // Populate fields from YAML values
                         ComponentSerializer.ImportComponent(newComp, propertyMap);
-
-                        // Explicitly reassign the file index GUID back into the object identity
                         newComp.AssetID = assetGuid;
-
-                        // Ensure it safely populates the lookup matrix
                         dataBase.ComponentDatabase[newComp.AssetID] = newComp;
                     }
                 }

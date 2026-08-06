@@ -1,4 +1,5 @@
 ﻿using Engine.Core.Serialization;
+using Engine.Core.Utilities;
 using Engine.Editor.Theming;
 using System;
 using System.Collections.Generic;
@@ -122,17 +123,42 @@ namespace Engine.Editor
             // 1. Mount context inside EditorContextManager
             EditorContextManager.OpenProjectContext(projectRootPath);
 
-            // 2. Instantiate and show Form1
-            Form1 editorForm = new Form1();
+            // 💡 2. Explicitly load compiled user script assemblies into memory
+            LoadProjectAssemblies(projectRootPath);
 
-            // Ensure that when Form1 closes, the launcher/app exits cleanly
+            // 3. Instantiate and show Form1
+            Form1 editorForm = new Form1();
             editorForm.FormClosed += (s, e) => Application.Exit();
 
             editorForm.Show();
             editorForm.OnProjectLoaded();
 
-            // 3. Hide the Launcher form
             this.Hide();
+        }
+
+        private void LoadProjectAssemblies(string projectRootPath)
+        {
+            string binPath = Path.Combine(projectRootPath, "bin");
+            if(!Directory.Exists(binPath))
+                return;
+
+            // Scan all built output subfolders for user gameplay DLLs
+            foreach(var dllPath in Directory.GetFiles(binPath, "*.dll", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    var assemblyName = System.Reflection.AssemblyName.GetAssemblyName(dllPath);
+                    if(!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.FullName == assemblyName.FullName))
+                    {
+                        System.Reflection.Assembly.LoadFrom(dllPath);
+                        Log.Info($"[AssemblyLoader] Loaded user script assembly: {assemblyName.Name}");
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Log.Error($"[AssemblyLoader] Could not load assembly at {dllPath}: {ex.Message}");
+                }
+            }
         }
 
         /// <summary>

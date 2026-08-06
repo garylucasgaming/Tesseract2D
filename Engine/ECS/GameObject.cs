@@ -12,6 +12,9 @@ namespace Engine.Core.ECS
     public class GameObject
     {
 
+        [Browsable(false)]
+        public bool IsRuntimeCreated { get; set; } = false;
+
         private bool _isActive = true;
         public string Name { get; set; } = "Game Object";
         public bool isActive { 
@@ -44,6 +47,7 @@ namespace Engine.Core.ECS
         public event Action<GameObject, GameComponent>? OnComponentAdded;
         public event Action<GameObject, GameComponent>? OnComponentRemoved;
         public event Action<GameObject, bool>? ActiveEvent;
+        public event Action<GameObject, GameObject>? ParentChangedEvent;
 
 
         // --- NEW: Hierarchy Tracking Properties ---
@@ -61,7 +65,7 @@ namespace Engine.Core.ECS
         public Guid ParentId { get; set; } = Guid.Empty;
 
 
-        [Browsable(false)]
+        [Browsable(true)]
         public List<GameObject> Children { get; set; } = new List<GameObject>();
 
 
@@ -148,43 +152,40 @@ namespace Engine.Core.ECS
 
         public void SetParent(GameObject? newParent)
         {
+            // Prevent redundant updates if the parent isn't actually changing
+            if(Parent == newParent)
+                return;
 
+            // 1. Clean up old parent relationship if it exists
             if(Parent != null)
             {
                 Parent.Children.Remove(this);
             }
 
+            // 2. Assign the new parent reference and ID (handles null/root-level reset)
+            Parent = newParent;
+            ParentId = newParent?.Id ?? Guid.Empty;
 
             if(newParent != null)
             {
-                Parent = newParent;
-
-                ParentId = newParent.Id;
                 if(!newParent.Children.Contains(this))
                 {
                     newParent.Children.Add(this);
                 }
 
-                if(this is GameObject myGameObject && newParent is GameObject newParentGameObject)
+                var myTransform = this.GetComponent<TransformComponent>();
+                var parentTransform = newParent.GetComponent<TransformComponent>();
+
+                if(myTransform != null && parentTransform != null)
                 {
-
-                    if(myGameObject != null && newParentGameObject != null)
-                    {
-                        // 👇FIX: Synchronize the offsets using the absolute coordinates loaded from JSON!
-                        var myTransform = myGameObject.GetComponent<TransformComponent>();
-                        var parentTransform = newParentGameObject.GetComponent<TransformComponent>();
-
-                        if(myTransform != null && parentTransform != null)
-                        {
-                            // Calculate where I am in world space relative to my new parent's world space
-                            myTransform.XOffset = myTransform.X - parentTransform.X;
-                            myTransform.YOffset = myTransform.Y - parentTransform.Y;
-                        }
-                    }
+                    // Synchronize the offsets using coordinates loaded from JSON/runtime
+                    myTransform.XOffset = myTransform.X - parentTransform.X;
+                    myTransform.YOffset = myTransform.Y - parentTransform.Y;
                 }
-
             }
 
+            // 3. 💡 FIRE THE EVENT HERE so any listeners (like your WinForms UI tree) know to refresh
+            ParentChangedEvent?.Invoke(this, newParent);
         }
 
 
@@ -339,6 +340,8 @@ namespace Engine.Core.ECS
                 }
             }
         }
+
+        
 
         public void Destroy()
         {

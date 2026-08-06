@@ -21,6 +21,9 @@ namespace Engine.Core.ECS.Components.UI
             get; set;
         }
 
+        [Browsable(false)]
+        public ListBoxComponent? ParentListBox { get; set; } = null;
+
         public event Action<ListBoxItemComponent>? ItemClicked;
 
         [Browsable(false)]
@@ -30,7 +33,31 @@ namespace Engine.Core.ECS.Components.UI
             set
             {
                 _isSelected = value;
-                UpdateVisuals();
+                UpdateVisualState();
+            }
+        }
+
+        public string Text
+        {
+            get => Label?.Text ?? string.Empty;
+            set
+            {
+                if(Label != null)
+                {
+                    Label.Text = value;
+                }
+            }
+        }
+
+        public float TextSize
+        {
+            get => Label?.TextSize ?? 12;
+            set
+            {
+                if(Label != null)
+                {
+                    Label.TextSize = value;
+                }
             }
         }
 
@@ -42,30 +69,58 @@ namespace Engine.Core.ECS.Components.UI
 
         public object? DataContext { get; set; } = null;
 
-        public void UpdateItemInput()
+        public override void OnEnabled()
         {
-            if(isClicked)
+            base.OnEnabled();
+
+            if(gameObject.HasComponent<LabelComponent>())
             {
-                ItemClicked?.Invoke(this);
+                Label = gameObject.GetComponent<LabelComponent>();
+            }
+            else
+            {
+                Label = gameObject.AddComponent<LabelComponent>();
+                
             }
 
-            var sprite = gameObject.GetComponent<SpriteComponent>();
-            if(sprite != null && !_isSelected)
+
+            InitLabel();
+            UpdateVisualState();
+        }
+
+        public void InitLabel()
+        {
+            if(Label != null)
             {
-                sprite.Colour = isHovered
-                    ? new Vector3(0.25f, 0.25f, 0.35f) // Hover tint
-                    : new Vector3(0.12f, 0.08f, 0.20f); // Default surface tint
+                Label.FontAssetPath = "defaultFont";
+                Label.gameObject.GetComponent<TransformComponent>().Scale = new Vector2(1f, 1f);
+
             }
         }
 
-        private void UpdateVisuals()
+        private void UpdateVisualState()
         {
-            var sprite = gameObject.GetComponent<SpriteComponent>();
-            if(sprite != null)
+            // Automatically tint the panel sprite to show selection state visually
+            if(Sprite != null)
             {
-                sprite.Colour = _isSelected
-                    ? new Vector3(0.15f, 0.35f, 0.65f) // Selected Synthwave accent
-                    : new Vector3(0.12f, 0.08f, 0.20f); // Default surface tint
+                if(_isSelected)
+                {
+                    Sprite.Colour = new Vector3(0.2f, 0.4f, 0.8f); // Selection highlight tint
+                }
+                else
+                {
+                    Sprite.Colour = new Vector3(1f, 1f, 1f); // Default background tint
+                }
+            }
+        }
+
+        // Call this from your input/mouse interaction system when clicked
+        public void OnClick()
+        {
+            ItemClicked?.Invoke(this);
+            if(ParentListBox != null)
+            {
+                ParentListBox.SelectedIndex = Index;
             }
         }
     }

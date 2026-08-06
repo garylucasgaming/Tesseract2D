@@ -102,32 +102,51 @@ namespace Engine.Core.ECS
             SceneMap = newMap;
         }
 
+        public void CleanupRuntimeEntities()
+        {
+            // Grab all entities currently in the scene
+            var allEntities = Entities.GetSerializableEntities();
+
+            // Find everything flagged as runtime-created
+            var runtimeEntities = allEntities.Where(e => e.IsRuntimeCreated).ToList();
+
+            foreach(var entity in runtimeEntities)
+            {
+                // Call your existing Destroy method to safely unlink components, systems, and parent trees
+                entity.Destroy();
+            }
+
+            Log.Info($"[Scene] Cleaned up {runtimeEntities.Count} runtime-spawned GameObjects.");
+        }
+
+        //centralized factory
+        private GameObject CreateEntityInstance(string name)
+        {
+            var entity = new GameObject
+            {
+                Name = name,
+                ContextScene = this,
+                // Automatically flag as runtime-created if the simulation is active OR if running a deployed build
+                IsRuntimeCreated = EditorContextManager.PlayState
+            };
+
+            return entity;
+        }
         //creates and returns a gameobject
         public GameObject Spawn(string name) 
         {
 
-            var entity = new GameObject
-            {
-                Name = name,
-                ContextScene = this
-            };
-            
+            var entity = CreateEntityInstance(name);
             Entities.AddEntity(entity);
             return entity;
         }
 
         public GameObject Spawn(string name, params GameComponent[] components)
         {
-            var entity = new GameObject
-            {
-                Name = name,
-                ContextScene = this
-            };
+            var entity = CreateEntityInstance(name);
 
-            // 1. Register with the manager first so events are fully wired
             Entities.AddEntity(entity);
 
-            // 2. Add components now; they will correctly bubble up through the event chain
             foreach(var component in components)
             {
                 entity.AddComponent(component);
@@ -139,13 +158,8 @@ namespace Engine.Core.ECS
         // 1. In GameScene.cs, add an overload that handles initial placement:
         public GameObject Spawn(string name, float initialX, float initialY)
         {
-            var entity = new GameObject
-            {
-                Name = name,
-                ContextScene = this
-            };
+            var entity = CreateEntityInstance(name);
 
-            // Explicitly add the component and set coordinates BEFORE adding to systems
             var transform = entity.AddComponent<TransformComponent>();
             transform.X = initialX;
             transform.Y = initialY;
@@ -155,22 +169,26 @@ namespace Engine.Core.ECS
         }
 
         // 1. In GameScene.cs, add an overload that handles initial placement:
+       
         public GameObject Spawn(string name, GameObject parentEntity)
         {
-            var entity = Spawn(name); // Creates entity with Transform at 0,0
+            var entity = CreateEntityInstance(name);
 
-            var childTransform = entity.GetComponent<TransformComponent>();
-            var parentTransform = parentEntity.GetComponent<TransformComponent>();
+            var childTransform = entity.AddComponent<TransformComponent>();
+            var parentTransform = parentEntity?.GetComponent<TransformComponent>();
 
             if(childTransform != null && parentTransform != null)
             {
-                // 👇 MATCH WORLD POSITIONS FIRST, so the offset calculation inside 
-                // SetParent evaluates as: (parentX - parentX) = 0 offset!
                 childTransform.X = parentTransform.X;
                 childTransform.Y = parentTransform.Y;
             }
 
-            entity.SetParent(parentEntity);
+            if(parentEntity != null)
+            {
+                entity.SetParent(parentEntity);
+            }
+
+            Entities.AddEntity(entity);
             return entity;
         }
 

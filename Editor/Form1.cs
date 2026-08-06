@@ -47,6 +47,8 @@ namespace WinFormsApp1
             get; private set;
         }
 
+        private static GameObject? _currentInspectedGameObject = null;
+
         public static GroupBox ActiveInspectorPanel
         {
             get; private set;
@@ -54,7 +56,9 @@ namespace WinFormsApp1
 
         private static bool _needsToBeSaved = false;
         private bool _isSuprressingDirtyFlag = false;
-
+        private GameScene? _trackedScene;
+        private FileSystemWatcher? _scriptWatcher;
+        private MGWindowControl mgWindow;
         public static bool NeedsToBeSaved
         {
             get => _needsToBeSaved;
@@ -103,12 +107,11 @@ namespace WinFormsApp1
             InitializeComponent();
 
             //ControlThemeExtensions.ApplySynthwaveTheme(this);
-            this.Activated += Form1_Activated;
 
             Log.Info("[Editor UI] Initializing editor main form...");
             SetTreeViewTheme(ProjectFolderTreeView.Handle);
             InitializeExplorerIcons();
-
+            mgWindow = mgWindowControl;
             InitializeProjectExplorerMenus();
             InitializeSceneHierarchyMenus();
             ActiveHierarchyTreeView = this.SceneHierarchyTreeView;
@@ -142,6 +145,95 @@ namespace WinFormsApp1
             PopulateProjectExplorerTree(ProjectFolderTreeView);
 
 
+        }
+
+        private void InitializeScriptWatcher()
+        {
+            // Clean up any existing watcher if switching projects
+            _scriptWatcher?.Dispose();
+            _scriptWatcher = null;
+
+            if(string.IsNullOrEmpty(EditorContextManager.CurrentProjectRoot))
+                return;
+
+            string sourceFolder = Path.Combine(EditorContextManager.CurrentProjectRoot, "Source");
+            if(!Directory.Exists(sourceFolder))
+                return;
+
+            _scriptWatcher = new FileSystemWatcher(sourceFolder, "*.cs")
+            {
+                IncludeSubdirectories = true,
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size
+            };
+
+            // Debounce timer or flag to prevent rapid-fire multiple compilation triggers on a single save action
+            DateTime lastTriggerTime = DateTime.MinValue;
+
+            _scriptWatcher.Changed += (s, e) => TriggerScriptRebuildThrottled(ref lastTriggerTime);
+            _scriptWatcher.Created += (s, e) => TriggerScriptRebuildThrottled(ref lastTriggerTime);
+            _scriptWatcher.Renamed += (s, e) => TriggerScriptRebuildThrottled(ref lastTriggerTime);
+
+            _scriptWatcher.EnableRaisingEvents = true;
+            Log.Info("[Script Manager] Background file system watcher active on Source scripts.");
+        }
+
+        private void TriggerScriptRebuildThrottled(ref DateTime lastTriggerTime)
+        {
+            // Prevent multiple rapid triggers if an IDE saves a file in multiple passes (e.g., temp files)
+            lock(this)
+            {
+                if((DateTime.Now - lastTriggerTime).TotalMilliseconds < 1000)
+                    return;
+                lastTriggerTime = DateTime.Now;
+            }
+
+            // Safely invoke the compilation pipeline back on the UI thread
+            this.BeginInvoke(new Action(async () =>
+            {
+                await CompileAndReloadScriptsAsync();
+            }));
+        }
+
+        private async Task CompileAndReloadScriptsAsync()
+        {
+            if(_isCompiling || string.IsNullOrEmpty(EditorContextManager.CurrentProjectRoot))
+                return;
+
+            _isCompiling = true;
+            UpdateProgressText("Code changes detected. Compiling in background...");
+            Log.Info("Code changes detected. Compiling in background...");
+
+            try
+            {
+                BuildResult result = await ScriptCompiler.CompileGameplayProjectAsync(
+                    EditorContextManager.CurrentProjectRoot,
+                    EditorContextManager.CurrentProjectName
+                );
+
+                if(result.Success)
+                {
+                    _scriptManager.LoadGameplayAssembly(result.AssemblyPath);
+                    _lastBuildTimestamp = DateTime.Now;
+
+                    RefreshEditor();
+
+                    UpdateProgressText("Compilation successful! Hot-reloaded gameplay scripts.");
+                    Log.Info("Compilation successful! Hot-reloaded gameplay scripts.");
+                }
+                else
+                {
+                    UpdateProgressText("Build Error! Check console output.");
+                    Log.Error(result.OutputLog);
+                }
+            }
+            catch(Exception ex)
+            {
+                Log.Error($"Compilation exception: {ex.Message}");
+            }
+            finally
+            {
+                _isCompiling = false;
+            }
         }
 
         public void RefreshProjectFolderView()
@@ -185,67 +277,7 @@ namespace WinFormsApp1
             }
         }
 
-        private async void Form1_Activated(object? sender, EventArgs e)
-        {
-            // Avoid triggering multiple compiles if one is already running
-            if(_isCompiling || string.IsNullOrEmpty(EditorContextManager.CurrentProjectRoot))
-                return;
-
-            string sourceFolder = Path.Combine(EditorContextManager.CurrentProjectRoot, "Source");
-            if(!Directory.Exists(sourceFolder))
-                return;
-
-            // 1. Check if any .cs file was modified after our last successful build
-            bool hasModifiedScripts = Directory.GetFiles(sourceFolder, "*.cs", SearchOption.AllDirectories)
-                .Any(filePath => File.GetLastWriteTime(filePath) > _lastBuildTimestamp);
-
-            if(!hasModifiedScripts)
-                return; // Nothing changed, no need to rebuild!
-
-            // 2. Lock compiling flag and record timestamp
-            _isCompiling = true;
-            _lastBuildTimestamp = DateTime.Now;
-
-            // Update status UI
-            UpdateProgressText("Code changes detected. Compiling in background...");
-            Log.Info("Code changes detected. Compiling in background...");
-
-            try
-            {
-                // 3. Trigger background build
-                BuildResult result = await ScriptCompiler.CompileGameplayProjectAsync(
-                    EditorContextManager.CurrentProjectRoot,
-                    EditorContextManager.CurrentProjectName
-                );
-
-                if(result.Success)
-                {
-                    // 4. Hot-swap assembly in RAM
-                    _scriptManager.LoadGameplayAssembly(result.AssemblyPath);
-
-                    // Refresh editor type inspectors / registries
-                    RebuildInspectorPanel(GetSelectedGameObjectFromHierarchy() ?? null);
-                    RefreshProjectFolderView();
-
-                    UpdateProgressText("Compilation successful! Hot-reloaded gameplay scripts.");
-                    Log.Info("Compilation successful! Hot-reloaded gameplay scripts.");
-                }
-                else
-                {
-                    UpdateProgressText("Build Error! Check console output.");
-                    // Print errors to your editor's console panel
-                    Log.Error(result.OutputLog);
-                }
-            }
-            catch(Exception ex)
-            {
-                Log.Error($"Compilation exception: {ex.Message}");
-            }
-            finally
-            {
-                _isCompiling = false;
-            }
-        }
+       
 
         private static void PropertyGrid_PropertyValueChanged(object sender, PropertyValueChangedEventArgs e)
         {
@@ -254,6 +286,15 @@ namespace WinFormsApp1
 
         private void Form1_Load(object sender, EventArgs e)
         {
+
+        }
+
+        public void RefreshEditor()
+        {
+            PopulateSceneHierarchyTree(SceneHierarchyTreeView, EditorContextManager.ActiveLoadedScene);
+            RefreshProjectFolderView();
+            RebuildInspectorPanel(GetSelectedGameObjectFromHierarchy());
+
 
         }
 
@@ -302,10 +343,12 @@ namespace WinFormsApp1
 
                         // Set the context and populate your UI nodes with the genuine saved data
                         EditorContextManager.ActiveLoadedScene = loadedScene;
+                        AttachSceneEvents(loadedScene);
                         UpdateSceneTextBox(EditorContextManager.ActiveLoadedScene.SceneName);
                         RunContentBuilder();
                         UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
-                        PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
+                        RefreshEditor();
+                        InitializeScriptWatcher();
 
                     }
                     catch(Exception ex)
@@ -554,7 +597,7 @@ namespace WinFormsApp1
                         UpdateSceneTextBox(EditorContextManager.ActiveLoadedScene.SceneName);
                         EditorContextManager.ActiveLoadedScene.resetContextSceneInManagers();
                         UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
-                        PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
+                        RefreshEditor();
                     }
                     catch(Exception ex)
                     {
@@ -586,10 +629,11 @@ namespace WinFormsApp1
 
                 // Set the context and populate your UI nodes with the genuine saved data
                 EditorContextManager.ActiveLoadedScene = loadedScene;
+                AttachSceneEvents(loadedScene);
                 UpdateSceneTextBox(EditorContextManager.ActiveLoadedScene.SceneName);
                 EditorContextManager.ActiveLoadedScene.resetContextSceneInManagers();
                 UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
-                PopulateSceneHierarchyTree(SceneHierarchyTreeView, loadedScene);
+                RefreshEditor();
             }
             catch(Exception ex)
             {
@@ -793,12 +837,86 @@ namespace WinFormsApp1
                 ResetTreeNodes(node.Nodes);
             }
         }
+
+        private void AttachSceneEvents(GameScene scene)
+        {
+            if(_trackedScene != null)
+            {
+                DetachSceneEvents(_trackedScene);
+            }
+
+            _trackedScene = scene;
+            if(_trackedScene?.Entities != null)
+            {
+                _trackedScene.Entities.OnEntityCreated += OnEngineEntityCreated;
+                _trackedScene.Entities.OnEntityRemoved += OnEngineEntityRemoved;
+            }
+           
+        }
+
+       
+
+        private void DetachSceneEvents(GameScene scene)
+        {
+            if(scene?.Entities != null)
+            {
+                scene.Entities.OnEntityCreated -= OnEngineEntityCreated;
+                scene.Entities.OnEntityRemoved -= OnEngineEntityRemoved;
+            }
+        }
+
+        private void OnEngineEntityCreated(GameObject entity)
+        {
+            // Ensure execution happens on the UI thread since code spawning can occur off-thread
+            if(SceneHierarchyTreeView.InvokeRequired)
+            {
+                SceneHierarchyTreeView.BeginInvoke(new Action(() => OnEngineEntityCreated(entity)));
+                return;
+            }
+
+            GameScene activeScene = EditorContextManager.ActiveLoadedScene;
+            if(activeScene != null)
+            {
+                PopulateSceneHierarchyTree(SceneHierarchyTreeView, activeScene);
+                
+            }
+        }
+
+        private void OnEngineEntityRemoved(GameObject entity)
+        {
+            if(SceneHierarchyTreeView.InvokeRequired)
+            {
+                SceneHierarchyTreeView.BeginInvoke(new Action(() => OnEngineEntityRemoved(entity)));
+                return;
+            }
+
+            GameScene activeScene = EditorContextManager.ActiveLoadedScene;
+            if(activeScene != null)
+            {
+                PopulateSceneHierarchyTree(SceneHierarchyTreeView, activeScene);
+            }
+        }
         public static void RebuildInspectorPanel(GameObject targetGo)
         {
             if(ActiveInspectorPanel == null)
                 return;
-            if(targetGo == null)
+
+            // 💡 OPTIMIZATION: If the user clicked the exact same GameObject that is already 
+            // being inspected, do not tear down and rebuild the UI! Just refresh grids and exit.
+            if(targetGo == _currentInspectedGameObject && ActiveInspectorPanel.Controls.OfType<FlowLayoutPanel>().Any())
+            {
+                var existingFlowLayout = ActiveInspectorPanel.Controls.OfType<FlowLayoutPanel>().First();
+                RefreshAllPropertyGrids(existingFlowLayout);
                 return;
+            }
+
+            _currentInspectedGameObject = targetGo;
+
+            if(targetGo == null)
+            {
+                ActiveInspectorPanel.Controls.Clear();
+                return;
+            }
 
             ActiveInspectorPanel.SuspendLayout();
 
@@ -813,7 +931,6 @@ namespace WinFormsApp1
                     AutoScroll = true
                 };
 
-                // 💡 Automatically stretch cards to fill width when the Inspector panel is resized
                 flowLayout.Resize += (s, e) =>
                 {
                     flowLayout.SuspendLayout();
@@ -831,82 +948,52 @@ namespace WinFormsApp1
                 ActiveInspectorPanel.Controls.Add(flowLayout);
             }
 
-            int expectedCount = 1; // Start at 1 for the root GameObject Properties card
-            if(targetGo != null)
-            {
-                expectedCount += targetGo.Components.Count;
-            }
-
-            // Check if the panel is already showing this exact GameObject
-            if(flowLayout.Controls.Count == expectedCount && flowLayout.Controls.Count > 0 && flowLayout.Controls[0].Tag == targetGo)
-            {
-                RefreshAllPropertyGrids(flowLayout);
-                ActiveInspectorPanel.ResumeLayout(true);
-                return;
-            }
-
-            // --- Destructive Rebuild Area (Only hit on additions, removals, or shifting targets) ---
+            // --- Destructive Rebuild Area (Only hit when switching to a DIFFERENT GameObject) ---
             flowLayout.SuspendLayout();
 
-            // 1. CAPTURE SCROLL POSITION
             int previousScrollY = Math.Abs(flowLayout.AutoScrollPosition.Y);
-
-            // 2. CAPTURE SELECTION
             object? previouslySelected = Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance;
 
-            // 3. IF TARGET CHANGED: Wipe selection completely. If same target, keep reference.
-            bool targetChanged = flowLayout.Controls.Count > 0 && flowLayout.Controls[0].Tag != targetGo;
-            if(targetChanged)
-            {
-                Engine.Editor.WinFormsApp1.ComponentCardFactory.ClearSelection();
-                previouslySelected = null;
-            }
+            Engine.Editor.WinFormsApp1.ComponentCardFactory.ClearSelection();
+            previouslySelected = null;
 
             flowLayout.Controls.Clear();
 
-            if(targetGo != null)
-            {
-                // Calculate actual usable client width inside the flow panel
-                int cardWidth = flowLayout.ClientSize.Width - 10;
-                if(cardWidth < 120)
-                    cardWidth = flowLayout.Width - 10;
-                if(cardWidth < 120)
-                    cardWidth = 200;
+            int cardWidth = flowLayout.ClientSize.Width - 10;
+            if(cardWidth < 120)
+                cardWidth = flowLayout.Width - 10;
+            if(cardWidth < 120)
+                cardWidth = 200;
 
-                // Draw GameObject properties at the top
-                Panel goCard = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard(
-                    "GameObject Properties",
-                    targetGo,
+            // Draw GameObject properties card at the top
+            Panel goCard = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard(
+                "GameObject Properties",
+                targetGo,
+                cardWidth,
+                previouslySelected
+            );
+            goCard.Tag = targetGo;
+            flowLayout.Controls.Add(goCard);
+
+            // Populate component cards
+            foreach(var kvp in targetGo.Components)
+            {
+                string name = kvp.Key.Name;
+                object instance = kvp.Value;
+
+                Panel card = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard(
+                    name,
+                    instance,
                     cardWidth,
                     previouslySelected
                 );
-
-                goCard.Tag = targetGo;
-                flowLayout.Controls.Add(goCard);
-
-                // Populate components
-                foreach(var kvp in targetGo.Components)
-                {
-                    string name = kvp.Key.Name;
-                    object instance = kvp.Value;
-
-                    Panel card = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard(
-                        name,
-                        instance,
-                        cardWidth,
-                        previouslySelected
-                    );
-                    flowLayout.Controls.Add(card);
-                }
+                flowLayout.Controls.Add(card);
             }
 
             flowLayout.ResumeLayout(true);
-
-            // 4. RESTORE SCROLL POSITION
             flowLayout.AutoScrollPosition = new Point(0, previousScrollY);
             HookPropertyGridChanges(ActiveInspectorPanel);
             ActiveInspectorPanel.ResumeLayout(true);
-
         }
         /// <summary>
         /// Recursively finds and refreshes all PropertyGrid controls inside the inspector's panel.
@@ -1149,12 +1236,15 @@ namespace WinFormsApp1
 
                         EditorContextManager.ActiveLoadedScene = revertedScene;
                         EditorContextManager.ActiveLoadedScene.resetContextSceneInManagers();
+
+                        // 💡 FIX: Re-attach the scene events to the new scene's entity manager!
+                        AttachSceneEvents(revertedScene);
+
                         // Repopulate the main tree view panel UI
                         if(Form1.ActiveHierarchyTreeView != null)
                         {
                             Form1.ActiveHierarchyTreeView.BeginInvoke(new Action(() =>
                             {
-                                // 💡 FIX: Find the live instance of Form1 that owns this TreeView control
                                 if(Form1.ActiveHierarchyTreeView.FindForm() is Form1 mainForm)
                                 {
                                     mainForm.PopulateSceneHierarchyTree(Form1.ActiveHierarchyTreeView, revertedScene);
@@ -1174,7 +1264,6 @@ namespace WinFormsApp1
                 }
             }
         }
-
         private bool FilterTreeNodes(TreeNodeCollection nodes, string filter)
         {
             bool anyChildVisible = false;
