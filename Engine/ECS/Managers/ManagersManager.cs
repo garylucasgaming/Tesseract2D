@@ -53,6 +53,14 @@ namespace Engine.Core.ECS.Managers
             return Managers;
         }
 
+        public void RemoveManager(GameManager managerInstance)
+        {
+            if(managerInstance == null)
+                return;
+
+            Managers.Remove(managerInstance);
+        }
+
         #endregion
     }
 }

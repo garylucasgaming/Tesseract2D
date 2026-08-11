@@ -1,0 +1,39 @@
+# Custom 2D Game Engine & Editor - IDE Agent Architecture Manifest
+
+## 1. Core Architecture & Design Philosophy
+* **Pure Engine Core vs. Consumers:** The engine is built strictly as a standalone library to build games (`Engine.Core`). **The engine knows nothing about the editor and never will.** 
+* **Build Targets:** The editor (`engine.editor`) and platform targets (`engine.desktop`, `engine.web`, `engine.android`, etc.) are simply distinct wrapper build targets that consume the engine library.
+* **API Philosophy:** Blends high-performance data-oriented ECS patterns with a developer-friendly, helper-rich API inspired by classic Unity (robust GameObjects with convenient helper methods to keep system logic clean and concise).
+* **API Notes:** While the engine feels similar in code to Unity Syntax, it does not USE Unity API, and any Unity Specific Syntax should be avoided unless inherent to the engine itself. 
+
+## 2. Entity Component System (ECS)
+* **Hierarchy:** 
+  * `GameObject` (Entity): Holds component dictionaries and rich helper functions.
+  * `GameComponent`: Pure data/logic building blocks.
+  * `GameSystem`: Isolated execution units processing matched entities.
+* **Scene & Managers:** 
+  * `GameScene` manages active managers and systems.
+  * `EntityManager`: Maintains master O(1) entity dictionaries and event broadcasts (`OnEntityCreated`, `OnEntityRemoved`, `OnComponentAdded`, `OnComponentRemoved`).
+  * `SystemManager`: Coordinates systems and uses a custom `QueryBuilder` with high-speed component-type buckets (`Dictionary<Type, List<GameObject>>`) to avoid redundant system iteration.
+* **Future Manager Layer:** Upcoming global layer (`GameWorldManager`, `SceneManager`, `InputManager`) to handle global game states and scene transitions.
+
+## 3. Rendering, UI & Asset Pipeline
+* **MonoGame Framework:** Built on **MonoGame 3.8.5 Preview**, leveraging a custom content builder hooked into project folders to automatically process assets into XNB files or binary output.
+* **UI Architecture:** Custom UI system built directly on top of ECS `SpriteComponent` wrappers (utilizing `SpriteBatch.Draw`). UI rendering is structurally separated from world rendering to cleanly isolate Screen-Space vs. World-Space UI.
+* **Asset Loading:** Standard MonoGame `Content.Load` wrapped cleanly inside helper methods across custom components and systems.
+
+## 4. Serialization & Data Architecture
+* **Format:** **YAML** is used exclusively for all serializable project data.
+* **Hierarchical Serializers:** Serialization is modularized into distinct, chained serializers (`SceneSerializer` -> `GameObjectSerializer` -> `ComponentSerializer`). This design natively supports prefab saving and loading by targeting the `GameObject` serializer directly.
+* **Scene Files:** Projects load `.scene` files containing flat lists of serialized GameObjects and components.
+* **Databases & DataComponents (ScriptableObject Equivalent):**
+  * `DataComponent`: Pure data components designed for rapid iteration and templating.
+  * `Database`: Holds dictionaries of `DataComponent` references, serving as a unified source of truth.
+  * Features a custom spreadsheet-style WinForms window editor built specifically to manage `Database` and `DataComponent` variations effortlessly.
+
+## 5. Editor Tooling & WinForms Integration
+* **Viewport Integration:** Utilizes **MonoGame.Forms** to embed the MonoGame rendering window seamlessly inside Windows Forms containers.
+* **UI Structure:** 
+  * Scene Hierarchy uses tree views mapped directly to scene entities.
+  * Inspector panels use dynamic `FlowLayoutPanel` architectures populated via `ComponentCardFactory` and 'FilteredPropertyWrappers' to render live component properties.
+* **Threading & Events:** All background processing or simulation thread updates targeting editor UI controls must utilize safe cross-threading invocation patterns (e.g., `BeginInvoke`). Scene loading and resetting routines (`LoadCleanScene`) must always explicitly re-attach scene-level event handlers to prevent stale memory bindings.

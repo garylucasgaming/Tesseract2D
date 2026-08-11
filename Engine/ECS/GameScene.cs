@@ -35,6 +35,13 @@ namespace Engine.Core.ECS
 
         public PhysicsManager Physics { get; private set; } = null!;
 
+        private List<Map> _sceneMaps = new List<Map>();
+
+        public List<Map> SceneMaps
+        {
+            get => _sceneMaps;
+            set => _sceneMaps = value;
+        }
         public Map SceneMap
         {
             get => _sceneMap;
@@ -57,7 +64,11 @@ namespace Engine.Core.ECS
         public GameScene()
         {
             InitializeManagers();
-           
+            if(!_sceneMaps.Contains(_sceneMap))
+            {
+                _sceneMaps.Add(_sceneMap);
+            }
+
         }
 
         
@@ -196,6 +207,29 @@ namespace Engine.Core.ECS
         {
             go.ContextScene = this;
             Entities.AddEntity(go);
+        }
+
+        /// <summary>
+        /// Adds a new map to the scene's map collection and makes it active.
+        /// </summary>
+        public Map AddNewMap(int width, int height)
+        {
+            var newMap = new Map(width, height);
+            _sceneMaps.Add(newMap);
+            SceneMap = newMap;
+            return newMap;
+        }
+
+        /// <summary>
+        /// Removes a map from the scene, ensuring at least one map remains.
+        /// </summary>
+        public void RemoveMap(Map mapToRemove)
+        {
+            if(_sceneMaps.Count > 1 && _sceneMaps.Contains(mapToRemove))
+                {
+                _sceneMaps.Remove(mapToRemove);
+                SceneMap = _sceneMaps.Last();
+            }
         }
 
 

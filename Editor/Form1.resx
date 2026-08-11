@@ -149,15 +149,6 @@
         GYANY7WNWDycDMCGsSnGhqFxgQpAEtgMgEoTBsPEAGwYKo0EGBgAMACkrMWZPQwAAAAASUVORK5CYII=
 </value>
   </data>
-  <data name="ScreenMapSizeDropDown.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
-    <value>
-        iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8
-        YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAACRSURBVDhPY/j27dt/SjDYACcnJ7IwigEf3n8kCZNswPNb
-        J/+f6DYF0yA+yQac6Db5f6hWCmwIiE+mC0wIu2DS2Vf/F1x6DefjwlgNyNr34r/0wkdgTMgQDAOQNRNj
-        CIoBOg0rMTTDMLIhIHbriZeYBmDTiIxBGkEYxge5liQDsGGQqykyAISpZwAlmIEywMAAAAc1/Jwvt6sN
-        AAAAAElFTkSuQmCC
-</value>
-  </data>
   <metadata name="toolStrip1.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>132, 17</value>
   </metadata>
@@ -191,6 +182,28 @@
 </value>
   </data>
   <data name="RemoveSystemButton.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8
+        YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFvSURBVDhPnVM9S8RAEM0fEPwBFlYWVoKV3XVWgpWFlYVg
+        G9AfEP0Bam8RbA4LRSy0Oji08ECEw0YQBUlxOUQlSr7Kdd5kxmxko+CDgb2dee/ezE48IEmSyTzPw6Io
+        DEVCZ58TP0D3gdRw0O9lTfjRVc9056c44uFNnSSUZTlNhOHdwb45nJkwj+cnyAeSZoH+7e4OJxFnSwvm
+        YxyTMXbm43y5tc451JHYqVArqAMVQFxvb3I7r08PLIg7iMAJhIVaARdI3B+FDRH8G1rCWV2hHaE10SaC
+        gMjny9gQuSPlbsiw2KotAFFqM5QyN3TSLgfHndnf7WdZNkfkBIOzifYMLlYXeYBCqaFkl20Q7FeQl9kT
+        agVY622sNMhYGCrktybba6iBAxWmeXwvmafbpeF6a7hM0/QZObQ0GgwoLXlboHVRCLjDxqIeLb2Poj4n
+        3uKId1xs18otwAzwLWBzSTBQZR/xF1mBucANQq7+C8/7Aox80GZF0QWkAAAAAElFTkSuQmCC
+</value>
+  </data>
+  <metadata name="toolStrip3.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
+    <value>342, 17</value>
+  </metadata>
+  <data name="AddMapButton.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+    <value>
+        iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8
+        YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAABISURBVDhPY8AGvn379h8bhkoTBiDFFl0mKHg4GwCSwIax
+        GYANY7WNWDycDMCGsSnGhqFxgQpAEtgMgEoTBsPEAGwYKo0EGBgAMACkrMWZPQwAAAAASUVORK5CYII=
+</value>
+  </data>
+  <data name="RemoveMapButton.Image" type="System.Drawing.Bitmap, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
     <value>
         iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8
         YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAFvSURBVDhPnVM9S8RAEM0fEPwBFlYWVoKV3XVWgpWFlYVg

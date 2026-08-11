@@ -56,7 +56,7 @@
             helpToolStripMenuItem = new ToolStripMenuItem();
             documentationToolStripMenuItem = new ToolStripMenuItem();
             SceneHierarchyPanel = new GroupBox();
-            TabPage = new TabControl();
+            MapTabPage = new TabControl();
             SceneHierarchyTab = new TabPage();
             SceneHierarchyTreeView = new TreeView();
             HierarchyToolStrip = new ToolStrip();
@@ -64,9 +64,6 @@
             LoadSceneButton = new ToolStripButton();
             CreateNewSceneButton = new ToolStripButton();
             SceneNameBox = new ToolStripTextBox();
-            ScreenMapSizeDropDown = new ToolStripDropDownButton();
-            resizeMapToolStripMenuItem = new ToolStripMenuItem();
-            setTileSizeToolStripMenuItem = new ToolStripMenuItem();
             sceneHierarchySearchBar = new Editor.TextSearchBarControl();
             ManagersTab = new TabPage();
             ManagerListView = new ListView();
@@ -78,6 +75,12 @@
             toolStrip2 = new ToolStrip();
             AddSystemDropdownButton = new ToolStripDropDownButton();
             RemoveSystemButton = new ToolStripButton();
+            MapTabP = new TabPage();
+            splitContainer4 = new SplitContainer();
+            MapGridDataView = new DataGridView();
+            toolStrip3 = new ToolStrip();
+            AddMapButton = new ToolStripButton();
+            RemoveMapButton = new ToolStripButton();
             PropertiesWindow = new GroupBox();
             InspectorFlowPanel = new FlowLayoutPanel();
             propertiesToolStrip = new ToolStrip();
@@ -105,13 +108,19 @@
             splitContainer3 = new SplitContainer();
             menuStrip1.SuspendLayout();
             SceneHierarchyPanel.SuspendLayout();
-            TabPage.SuspendLayout();
+            MapTabPage.SuspendLayout();
             SceneHierarchyTab.SuspendLayout();
             HierarchyToolStrip.SuspendLayout();
             ManagersTab.SuspendLayout();
             toolStrip1.SuspendLayout();
             SystemsTab.SuspendLayout();
             toolStrip2.SuspendLayout();
+            MapTabP.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize) splitContainer4).BeginInit();
+            splitContainer4.Panel1.SuspendLayout();
+            splitContainer4.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize) MapGridDataView).BeginInit();
+            toolStrip3.SuspendLayout();
             PropertiesWindow.SuspendLayout();
             propertiesToolStrip.SuspendLayout();
             tabControl1.SuspendLayout();
@@ -143,7 +152,7 @@
             menuStrip1.Items.AddRange(new ToolStripItem[] { menuToolStripMenuItem, editToolStripMenuItem, assetsToolStripMenuItem, windowToolStripMenuItem, helpToolStripMenuItem });
             menuStrip1.Location = new Point(0, 0);
             menuStrip1.Name = "menuStrip1";
-            menuStrip1.Size = new Size(738, 24);
+            menuStrip1.Size = new Size(679, 24);
             menuStrip1.TabIndex = 0;
             menuStrip1.Text = "menuStrip1";
             // 
@@ -350,27 +359,28 @@
             // SceneHierarchyPanel
             // 
             SceneHierarchyPanel.BackColor = SystemColors.Control;
-            SceneHierarchyPanel.Controls.Add(TabPage);
+            SceneHierarchyPanel.Controls.Add(MapTabPage);
             SceneHierarchyPanel.Dock = DockStyle.Fill;
             SceneHierarchyPanel.ForeColor = SystemColors.ControlText;
             SceneHierarchyPanel.Location = new Point(0, 0);
             SceneHierarchyPanel.Name = "SceneHierarchyPanel";
-            SceneHierarchyPanel.Size = new Size(238, 681);
+            SceneHierarchyPanel.Size = new Size(319, 681);
             SceneHierarchyPanel.TabIndex = 1;
             SceneHierarchyPanel.TabStop = false;
             SceneHierarchyPanel.Text = "Scene Hierarchy";
             // 
-            // TabPage
+            // MapTabPage
             // 
-            TabPage.Controls.Add(SceneHierarchyTab);
-            TabPage.Controls.Add(ManagersTab);
-            TabPage.Controls.Add(SystemsTab);
-            TabPage.Dock = DockStyle.Fill;
-            TabPage.Location = new Point(3, 19);
-            TabPage.Name = "TabPage";
-            TabPage.SelectedIndex = 0;
-            TabPage.Size = new Size(232, 659);
-            TabPage.TabIndex = 4;
+            MapTabPage.Controls.Add(SceneHierarchyTab);
+            MapTabPage.Controls.Add(ManagersTab);
+            MapTabPage.Controls.Add(SystemsTab);
+            MapTabPage.Controls.Add(MapTabP);
+            MapTabPage.Dock = DockStyle.Fill;
+            MapTabPage.Location = new Point(3, 19);
+            MapTabPage.Name = "MapTabPage";
+            MapTabPage.SelectedIndex = 0;
+            MapTabPage.Size = new Size(313, 659);
+            MapTabPage.TabIndex = 4;
             // 
             // SceneHierarchyTab
             // 
@@ -380,7 +390,7 @@
             SceneHierarchyTab.Location = new Point(4, 24);
             SceneHierarchyTab.Name = "SceneHierarchyTab";
             SceneHierarchyTab.Padding = new Padding(3);
-            SceneHierarchyTab.Size = new Size(224, 631);
+            SceneHierarchyTab.Size = new Size(305, 631);
             SceneHierarchyTab.TabIndex = 0;
             SceneHierarchyTab.Text = "Scene";
             SceneHierarchyTab.UseVisualStyleBackColor = true;
@@ -394,7 +404,7 @@
             SceneHierarchyTreeView.LabelEdit = true;
             SceneHierarchyTreeView.Location = new Point(3, 53);
             SceneHierarchyTreeView.Name = "SceneHierarchyTreeView";
-            SceneHierarchyTreeView.Size = new Size(218, 575);
+            SceneHierarchyTreeView.Size = new Size(299, 575);
             SceneHierarchyTreeView.TabIndex = 1;
             SceneHierarchyTreeView.ItemDrag += SceneHierarchyTreeView_ItemDrag;
             SceneHierarchyTreeView.DragDrop += SceneHierarchyTreeView_DragDrop;
@@ -403,10 +413,10 @@
             // HierarchyToolStrip
             // 
             HierarchyToolStrip.BackColor = SystemColors.Control;
-            HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton, CreateNewSceneButton, SceneNameBox, ScreenMapSizeDropDown });
+            HierarchyToolStrip.Items.AddRange(new ToolStripItem[] { SaveSceneButton, LoadSceneButton, CreateNewSceneButton, SceneNameBox });
             HierarchyToolStrip.Location = new Point(3, 28);
             HierarchyToolStrip.Name = "HierarchyToolStrip";
-            HierarchyToolStrip.Size = new Size(218, 25);
+            HierarchyToolStrip.Size = new Size(299, 25);
             HierarchyToolStrip.TabIndex = 2;
             HierarchyToolStrip.Text = "toolStrip2";
             // 
@@ -448,38 +458,13 @@
             SceneNameBox.Size = new Size(75, 25);
             SceneNameBox.TextChanged += SceneNameBox_TextChanged;
             // 
-            // ScreenMapSizeDropDown
-            // 
-            ScreenMapSizeDropDown.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            ScreenMapSizeDropDown.DropDownItems.AddRange(new ToolStripItem[] { resizeMapToolStripMenuItem, setTileSizeToolStripMenuItem });
-            ScreenMapSizeDropDown.Image = (Image) resources.GetObject("ScreenMapSizeDropDown.Image");
-            ScreenMapSizeDropDown.ImageTransparentColor = Color.Magenta;
-            ScreenMapSizeDropDown.Name = "ScreenMapSizeDropDown";
-            ScreenMapSizeDropDown.Size = new Size(44, 22);
-            ScreenMapSizeDropDown.Text = "Map";
-            ScreenMapSizeDropDown.ToolTipText = "Map";
-            // 
-            // resizeMapToolStripMenuItem
-            // 
-            resizeMapToolStripMenuItem.Name = "resizeMapToolStripMenuItem";
-            resizeMapToolStripMenuItem.Size = new Size(180, 22);
-            resizeMapToolStripMenuItem.Text = "ResizeMap";
-            resizeMapToolStripMenuItem.Click += resizeMapToolStripMenuItem_Click;
-            // 
-            // setTileSizeToolStripMenuItem
-            // 
-            setTileSizeToolStripMenuItem.Name = "setTileSizeToolStripMenuItem";
-            setTileSizeToolStripMenuItem.Size = new Size(180, 22);
-            setTileSizeToolStripMenuItem.Text = "SetTileSize";
-            setTileSizeToolStripMenuItem.Click += setTileSizeToolStripMenuItem_Click;
-            // 
             // sceneHierarchySearchBar
             // 
             sceneHierarchySearchBar.BackColor = SystemColors.Control;
             sceneHierarchySearchBar.Dock = DockStyle.Top;
             sceneHierarchySearchBar.Location = new Point(3, 3);
             sceneHierarchySearchBar.Name = "sceneHierarchySearchBar";
-            sceneHierarchySearchBar.Size = new Size(218, 25);
+            sceneHierarchySearchBar.Size = new Size(299, 25);
             sceneHierarchySearchBar.TabIndex = 3;
             sceneHierarchySearchBar.Load += textSearchBarControl1_Load;
             // 
@@ -490,7 +475,7 @@
             ManagersTab.Location = new Point(4, 24);
             ManagersTab.Name = "ManagersTab";
             ManagersTab.Padding = new Padding(3);
-            ManagersTab.Size = new Size(224, 631);
+            ManagersTab.Size = new Size(305, 631);
             ManagersTab.TabIndex = 1;
             ManagersTab.Text = "Managers";
             ManagersTab.UseVisualStyleBackColor = true;
@@ -502,7 +487,7 @@
             ManagerListView.ForeColor = SystemColors.ControlText;
             ManagerListView.Location = new Point(3, 28);
             ManagerListView.Name = "ManagerListView";
-            ManagerListView.Size = new Size(218, 600);
+            ManagerListView.Size = new Size(299, 600);
             ManagerListView.TabIndex = 0;
             ManagerListView.UseCompatibleStateImageBehavior = false;
             // 
@@ -512,7 +497,7 @@
             toolStrip1.Items.AddRange(new ToolStripItem[] { AddManagerDropdownButton, RemoveManagerButton });
             toolStrip1.Location = new Point(3, 3);
             toolStrip1.Name = "toolStrip1";
-            toolStrip1.Size = new Size(218, 25);
+            toolStrip1.Size = new Size(299, 25);
             toolStrip1.TabIndex = 1;
             toolStrip1.Text = "toolStrip1";
             // 
@@ -540,7 +525,7 @@
             SystemsTab.Controls.Add(toolStrip2);
             SystemsTab.Location = new Point(4, 24);
             SystemsTab.Name = "SystemsTab";
-            SystemsTab.Size = new Size(224, 631);
+            SystemsTab.Size = new Size(305, 631);
             SystemsTab.TabIndex = 2;
             SystemsTab.Text = "Systems";
             SystemsTab.UseVisualStyleBackColor = true;
@@ -552,7 +537,7 @@
             SystemListView.ForeColor = SystemColors.ControlText;
             SystemListView.Location = new Point(0, 25);
             SystemListView.Name = "SystemListView";
-            SystemListView.Size = new Size(224, 606);
+            SystemListView.Size = new Size(305, 606);
             SystemListView.TabIndex = 1;
             SystemListView.UseCompatibleStateImageBehavior = false;
             // 
@@ -562,7 +547,7 @@
             toolStrip2.Items.AddRange(new ToolStripItem[] { AddSystemDropdownButton, RemoveSystemButton });
             toolStrip2.Location = new Point(0, 0);
             toolStrip2.Name = "toolStrip2";
-            toolStrip2.Size = new Size(224, 25);
+            toolStrip2.Size = new Size(305, 25);
             toolStrip2.TabIndex = 0;
             toolStrip2.Text = "toolStrip2";
             // 
@@ -584,6 +569,69 @@
             RemoveSystemButton.Size = new Size(23, 22);
             RemoveSystemButton.Text = "RemoveSystemButton";
             // 
+            // MapTabP
+            // 
+            MapTabP.Controls.Add(splitContainer4);
+            MapTabP.Controls.Add(toolStrip3);
+            MapTabP.Location = new Point(4, 24);
+            MapTabP.Name = "MapTabP";
+            MapTabP.Padding = new Padding(3);
+            MapTabP.Size = new Size(305, 631);
+            MapTabP.TabIndex = 3;
+            MapTabP.Text = "Maps";
+            MapTabP.UseVisualStyleBackColor = true;
+            // 
+            // splitContainer4
+            // 
+            splitContainer4.Dock = DockStyle.Fill;
+            splitContainer4.Location = new Point(3, 28);
+            splitContainer4.Name = "splitContainer4";
+            splitContainer4.Orientation = Orientation.Horizontal;
+            // 
+            // splitContainer4.Panel1
+            // 
+            splitContainer4.Panel1.Controls.Add(MapGridDataView);
+            splitContainer4.Size = new Size(299, 600);
+            splitContainer4.SplitterDistance = 300;
+            splitContainer4.TabIndex = 1;
+            // 
+            // MapGridDataView
+            // 
+            MapGridDataView.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
+            MapGridDataView.Dock = DockStyle.Fill;
+            MapGridDataView.Location = new Point(0, 0);
+            MapGridDataView.Name = "MapGridDataView";
+            MapGridDataView.Size = new Size(299, 300);
+            MapGridDataView.TabIndex = 0;
+            // 
+            // toolStrip3
+            // 
+            toolStrip3.Items.AddRange(new ToolStripItem[] { AddMapButton, RemoveMapButton });
+            toolStrip3.Location = new Point(3, 3);
+            toolStrip3.Name = "toolStrip3";
+            toolStrip3.Size = new Size(299, 25);
+            toolStrip3.TabIndex = 2;
+            toolStrip3.Text = "toolStrip3";
+            // 
+            // AddMapButton
+            // 
+            AddMapButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            AddMapButton.Image = (Image) resources.GetObject("AddMapButton.Image");
+            AddMapButton.ImageTransparentColor = Color.Magenta;
+            AddMapButton.Name = "AddMapButton";
+            AddMapButton.Size = new Size(23, 22);
+            AddMapButton.Text = "AddMapButton";
+            // 
+            // RemoveMapButton
+            // 
+            RemoveMapButton.CheckOnClick = true;
+            RemoveMapButton.DisplayStyle = ToolStripItemDisplayStyle.Image;
+            RemoveMapButton.Image = (Image) resources.GetObject("RemoveMapButton.Image");
+            RemoveMapButton.ImageTransparentColor = Color.Magenta;
+            RemoveMapButton.Name = "RemoveMapButton";
+            RemoveMapButton.Size = new Size(23, 22);
+            RemoveMapButton.Text = "RemoveMapButton";
+            // 
             // PropertiesWindow
             // 
             PropertiesWindow.AutoSize = true;
@@ -596,7 +644,7 @@
             PropertiesWindow.ForeColor = SystemColors.ControlText;
             PropertiesWindow.Location = new Point(0, 0);
             PropertiesWindow.Name = "PropertiesWindow";
-            PropertiesWindow.Size = new Size(280, 681);
+            PropertiesWindow.Size = new Size(258, 681);
             PropertiesWindow.TabIndex = 2;
             PropertiesWindow.TabStop = false;
             PropertiesWindow.Text = "Properties";
@@ -608,7 +656,7 @@
             InspectorFlowPanel.FlowDirection = FlowDirection.TopDown;
             InspectorFlowPanel.Location = new Point(3, 44);
             InspectorFlowPanel.Name = "InspectorFlowPanel";
-            InspectorFlowPanel.Size = new Size(274, 634);
+            InspectorFlowPanel.Size = new Size(252, 634);
             InspectorFlowPanel.TabIndex = 0;
             InspectorFlowPanel.WrapContents = false;
             // 
@@ -618,7 +666,7 @@
             propertiesToolStrip.Items.AddRange(new ToolStripItem[] { AddComponentButton, RemoveComponentButton });
             propertiesToolStrip.Location = new Point(3, 19);
             propertiesToolStrip.Name = "propertiesToolStrip";
-            propertiesToolStrip.Size = new Size(274, 25);
+            propertiesToolStrip.Size = new Size(252, 25);
             propertiesToolStrip.TabIndex = 1;
             propertiesToolStrip.Text = "toolStrip3";
             // 
@@ -647,7 +695,7 @@
             tabControl1.Location = new Point(0, 24);
             tabControl1.Name = "tabControl1";
             tabControl1.SelectedIndex = 0;
-            tabControl1.Size = new Size(738, 461);
+            tabControl1.Size = new Size(679, 461);
             tabControl1.TabIndex = 3;
             // 
             // SceneView
@@ -657,7 +705,7 @@
             SceneView.Location = new Point(4, 24);
             SceneView.Name = "SceneView";
             SceneView.Padding = new Padding(3);
-            SceneView.Size = new Size(730, 433);
+            SceneView.Size = new Size(671, 433);
             SceneView.TabIndex = 0;
             SceneView.Text = "Scene View";
             SceneView.UseVisualStyleBackColor = true;
@@ -671,7 +719,7 @@
             mgWindowControl.Name = "mgWindowControl";
             mgWindowControl.SimulationPaused = false;
             mgWindowControl.SimulationRunning = false;
-            mgWindowControl.Size = new Size(724, 402);
+            mgWindowControl.Size = new Size(665, 402);
             mgWindowControl.TabIndex = 0;
             mgWindowControl.Text = "mgWindowControl2";
             // 
@@ -683,7 +731,7 @@
             SceneToolStrip.Items.AddRange(new ToolStripItem[] { StartSimulationButton, PauseSimulationButton, StopSimulationButton, progressBarTextBox });
             SceneToolStrip.Location = new Point(3, 405);
             SceneToolStrip.Name = "SceneToolStrip";
-            SceneToolStrip.Size = new Size(724, 25);
+            SceneToolStrip.Size = new Size(665, 25);
             SceneToolStrip.TabIndex = 4;
             SceneToolStrip.Text = "toolStrip1";
             // 
@@ -733,7 +781,7 @@
             tabControl2.Location = new Point(0, 0);
             tabControl2.Name = "tabControl2";
             tabControl2.SelectedIndex = 0;
-            tabControl2.Size = new Size(738, 192);
+            tabControl2.Size = new Size(679, 192);
             tabControl2.TabIndex = 1;
             // 
             // ProjectFolderTabPage
@@ -744,7 +792,7 @@
             ProjectFolderTabPage.Location = new Point(4, 24);
             ProjectFolderTabPage.Name = "ProjectFolderTabPage";
             ProjectFolderTabPage.Padding = new Padding(3);
-            ProjectFolderTabPage.Size = new Size(730, 164);
+            ProjectFolderTabPage.Size = new Size(671, 164);
             ProjectFolderTabPage.TabIndex = 0;
             ProjectFolderTabPage.Text = "Project Folder";
             // 
@@ -757,7 +805,7 @@
             ProjectFolderTreeView.HotTracking = true;
             ProjectFolderTreeView.Location = new Point(3, 3);
             ProjectFolderTreeView.Name = "ProjectFolderTreeView";
-            ProjectFolderTreeView.Size = new Size(724, 158);
+            ProjectFolderTreeView.Size = new Size(665, 158);
             ProjectFolderTreeView.TabIndex = 1;
             // 
             // ConsoleTabPage
@@ -767,7 +815,7 @@
             ConsoleTabPage.Location = new Point(4, 24);
             ConsoleTabPage.Name = "ConsoleTabPage";
             ConsoleTabPage.Padding = new Padding(3);
-            ConsoleTabPage.Size = new Size(730, 164);
+            ConsoleTabPage.Size = new Size(671, 164);
             ConsoleTabPage.TabIndex = 1;
             ConsoleTabPage.Text = "Editor Console";
             ConsoleTabPage.UseVisualStyleBackColor = true;
@@ -779,7 +827,7 @@
             ConsoleTextBox.Location = new Point(3, 27);
             ConsoleTextBox.Name = "ConsoleTextBox";
             ConsoleTextBox.ReadOnly = true;
-            ConsoleTextBox.Size = new Size(724, 134);
+            ConsoleTextBox.Size = new Size(665, 134);
             ConsoleTextBox.TabIndex = 2;
             ConsoleTextBox.Text = "";
             // 
@@ -789,7 +837,7 @@
             consoleSearchBar.Dock = DockStyle.Top;
             consoleSearchBar.Location = new Point(3, 3);
             consoleSearchBar.Name = "consoleSearchBar";
-            consoleSearchBar.Size = new Size(724, 25);
+            consoleSearchBar.Size = new Size(665, 25);
             consoleSearchBar.TabIndex = 1;
             consoleSearchBar.SearchTextChanged += consoleSearchBar_SearchTextChanged;
             consoleSearchBar.Load += consoleSearchBar_Load;
@@ -802,7 +850,7 @@
             panel1.Dock = DockStyle.Fill;
             panel1.Location = new Point(0, 0);
             panel1.Name = "panel1";
-            panel1.Size = new Size(738, 485);
+            panel1.Size = new Size(679, 485);
             panel1.TabIndex = 4;
             // 
             // panel2
@@ -811,7 +859,7 @@
             panel2.Dock = DockStyle.Fill;
             panel2.Location = new Point(0, 0);
             panel2.Name = "panel2";
-            panel2.Size = new Size(238, 681);
+            panel2.Size = new Size(319, 681);
             panel2.TabIndex = 5;
             // 
             // panel3
@@ -820,7 +868,7 @@
             panel3.Dock = DockStyle.Fill;
             panel3.Location = new Point(0, 0);
             panel3.Name = "panel3";
-            panel3.Size = new Size(280, 681);
+            panel3.Size = new Size(258, 681);
             panel3.TabIndex = 6;
             // 
             // splitContainer1
@@ -837,7 +885,7 @@
             // 
             splitContainer1.Panel2.Controls.Add(splitContainer2);
             splitContainer1.Size = new Size(1264, 681);
-            splitContainer1.SplitterDistance = 238;
+            splitContainer1.SplitterDistance = 319;
             splitContainer1.TabIndex = 5;
             // 
             // splitContainer2
@@ -853,8 +901,8 @@
             // splitContainer2.Panel2
             // 
             splitContainer2.Panel2.Controls.Add(panel3);
-            splitContainer2.Size = new Size(1022, 681);
-            splitContainer2.SplitterDistance = 738;
+            splitContainer2.Size = new Size(941, 681);
+            splitContainer2.SplitterDistance = 679;
             splitContainer2.TabIndex = 0;
             // 
             // splitContainer3
@@ -871,7 +919,7 @@
             // splitContainer3.Panel2
             // 
             splitContainer3.Panel2.Controls.Add(tabControl2);
-            splitContainer3.Size = new Size(738, 681);
+            splitContainer3.Size = new Size(679, 681);
             splitContainer3.SplitterDistance = 485;
             splitContainer3.TabIndex = 0;
             // 
@@ -891,7 +939,7 @@
             menuStrip1.ResumeLayout(false);
             menuStrip1.PerformLayout();
             SceneHierarchyPanel.ResumeLayout(false);
-            TabPage.ResumeLayout(false);
+            MapTabPage.ResumeLayout(false);
             SceneHierarchyTab.ResumeLayout(false);
             SceneHierarchyTab.PerformLayout();
             HierarchyToolStrip.ResumeLayout(false);
@@ -904,6 +952,14 @@
             SystemsTab.PerformLayout();
             toolStrip2.ResumeLayout(false);
             toolStrip2.PerformLayout();
+            MapTabP.ResumeLayout(false);
+            MapTabP.PerformLayout();
+            splitContainer4.Panel1.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize) splitContainer4).EndInit();
+            splitContainer4.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize) MapGridDataView).EndInit();
+            toolStrip3.ResumeLayout(false);
+            toolStrip3.PerformLayout();
             PropertiesWindow.ResumeLayout(false);
             PropertiesWindow.PerformLayout();
             propertiesToolStrip.ResumeLayout(false);
@@ -991,7 +1047,7 @@
         private Editor.TextSearchBarControl sceneHierarchySearchBar;
         private Editor.TextSearchBarControl consoleSearchBar;
         private RichTextBox ConsoleTextBox;
-        private TabControl TabPage;
+        private TabControl MapTabPage;
         private TabPage SceneHierarchyTab;
         private TabPage ManagersTab;
         private TabPage SystemsTab;
@@ -1011,8 +1067,11 @@
         private ToolStripButton RemoveManagerButton;
         private ToolStripDropDownButton AddSystemDropdownButton;
         private ToolStripButton RemoveSystemButton;
-        private ToolStripDropDownButton ScreenMapSizeDropDown;
-        private ToolStripMenuItem resizeMapToolStripMenuItem;
-        private ToolStripMenuItem setTileSizeToolStripMenuItem;
+        private TabPage MapTabP;
+        private SplitContainer splitContainer4;
+        private ToolStrip toolStrip3;
+        private DataGridView MapGridDataView;
+        private ToolStripButton AddMapButton;
+        private ToolStripButton RemoveMapButton;
     }
 }

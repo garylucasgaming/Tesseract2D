@@ -1,6 +1,8 @@
 using Editor;
 using Engine.Content.Builder;
 using Engine.Core.ECS;
+using Engine.Core.ECS.Systems;
+using Engine.Core.GamePlay;
 using Engine.Core.Runtime;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
@@ -38,6 +40,13 @@ namespace WinFormsApp1
              new System.Collections.Generic.List<(LogSeverity, string)>();
 
 
+
+        private Panel tilesetCanvasPanel;
+        private PictureBox tilesetPictureBox;
+        private NumericUpDown tileValueNumeric;
+        private Label selectedTileLabel;
+        private int selectedTileIndex = -1;
+        private System.Drawing.Bitmap currentTilesetBitmap = null;
         private readonly System.Collections.Generic.List<string> _uiScreenNames = new System.Collections.Generic.List<string>();
         private ScriptAssemblyManager _scriptManager = new ScriptAssemblyManager();
         private DateTime _lastBuildTimestamp = DateTime.MinValue;
@@ -118,6 +127,7 @@ namespace WinFormsApp1
             ActiveInspectorPanel = this.PropertiesWindow;
             UpdateEditorTitle();
             InitializePropertiesToolstripEvents();
+            InitializeSceneManagementTabs();
         }
 
         private void TextSearchBarControl1_TextChanged(object sender, EventArgs e)
@@ -294,6 +304,9 @@ namespace WinFormsApp1
             PopulateSceneHierarchyTree(SceneHierarchyTreeView, EditorContextManager.ActiveLoadedScene);
             RefreshProjectFolderView();
             RebuildInspectorPanel(GetSelectedGameObjectFromHierarchy());
+            RefreshMapsTab();
+            RefreshManagersTab();
+            RefreshSystemsTab();
 
 
         }
@@ -896,14 +909,13 @@ namespace WinFormsApp1
                 PopulateSceneHierarchyTree(SceneHierarchyTreeView, activeScene);
             }
         }
-        public static void RebuildInspectorPanel(GameObject targetGo)
+        public static void RebuildInspectorPanel(GameObject targetGo, bool forceRebuild = false)
         {
             if(ActiveInspectorPanel == null)
                 return;
 
-            // 💡 OPTIMIZATION: If the user clicked the exact same GameObject that is already 
-            // being inspected, do not tear down and rebuild the UI! Just refresh grids and exit.
-            if(targetGo == _currentInspectedGameObject && ActiveInspectorPanel.Controls.OfType<FlowLayoutPanel>().Any())
+            // 💡 OPTIMIZATION: Short-circuit only if it's the same object AND a forced rebuild isn't requested
+            if(!forceRebuild && targetGo == _currentInspectedGameObject && ActiveInspectorPanel.Controls.OfType<FlowLayoutPanel>().Any())
             {
                 var existingFlowLayout = ActiveInspectorPanel.Controls.OfType<FlowLayoutPanel>().First();
                 RefreshAllPropertyGrids(existingFlowLayout);
@@ -1070,6 +1082,654 @@ namespace WinFormsApp1
                 Log.Error($"[Script Manager Startup Exception]: {ex.Message}");
             }
         }
+
+
+        private void InitializeSceneManagementTabs()
+        {
+            InitializeMapsTab();
+            InitializeManagersTab();
+            InitializeSystemsTab();
+            InitializeTilesetMetadataTab();
+        }
+        private void InitializeMapsTab()
+        {
+            // Configure DataGridView for Map List
+            MapGridDataView.AutoGenerateColumns = false;
+            MapGridDataView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
+            MapGridDataView.MultiSelect = false;
+            MapGridDataView.ReadOnly = false;
+
+            MapGridDataView.Columns.Clear();
+
+            // 1. Map Name Column
+            MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "MapName",
+                HeaderText = "Map Name",
+                Name = "ColMapName"
+            });
+
+            // 2. Layer Order Column
+            MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "LayerOrder",
+                HeaderText = "Layer Order",
+                Name = "ColLayerOrder"
+            });
+
+            // 3. Width Column
+            MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "Width",
+                HeaderText = "Width (Tiles)",
+                Name = "ColWidth"
+            });
+
+            // 4. Height Column
+            MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "Height",
+                HeaderText = "Height (Tiles)",
+                Name = "ColHeight"
+            });
+
+            // 5. Tile Size Column
+            MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                DataPropertyName = "TileSize",
+                HeaderText = "Tile Size",
+                Name = "ColTileSize"
+            });
+
+
+            // 6. Tileset Path ComboBox Column
+            var tilesetColumn = new DataGridViewComboBoxColumn
+            {
+                DataPropertyName = "TileSetPath",
+                HeaderText = "Tileset",
+                Name = "ColTilesetPath",
+                DisplayMember = "DisplayName",
+                ValueMember = "FilePath"
+            };
+            MapGridDataView.Columns.Add(tilesetColumn);
+
+
+            // hookup events
+            AddMapButton.Click += AddMapButton_Click;
+            RemoveMapButton.Click += RemoveMapButton_Click;
+            MapGridDataView.SelectionChanged += MapGridDataView_SelectionChanged;
+
+            MapGridDataView.CurrentCellDirtyStateChanged += (s, e) =>
+            {
+                if(MapGridDataView.IsCurrentCellDirty)
+                {
+                    MapGridDataView.CommitEdit(DataGridViewDataErrorContexts.Commit);
+                }
+            };
+
+            // Mark project as dirty and refresh viewport whenever any cell value is modified
+            MapGridDataView.CellValueChanged += (s, e) =>
+            {
+                NeedsToBeSaved = true;
+                mgWindowControl?.Invalidate();
+
+                // Refresh the tileset preview and metadata panel when the tileset dropdown changes
+                if(e.ColumnIndex >= 0 && MapGridDataView.Columns[e.ColumnIndex].Name == "ColTilesetPath")
+                {
+                    RefreshTilesetMetadataPanel();
+                }
+            };
+        }
+        private void MapGridDataView_SelectionChanged(object sender, EventArgs e)
+        {
+            var scene = EditorContextManager.ActiveLoadedScene;
+            if(scene == null || MapGridDataView.SelectedRows.Count == 0)
+                return;
+
+            if(MapGridDataView.SelectedRows[0].DataBoundItem is Map selectedMap)
+            {
+                scene.SceneMap = selectedMap;
+
+                // Optional: Force a viewport repaint or refresh inspector properties if needed
+                mgWindowControl?.Invalidate();
+            }
+            RefreshTilesetMetadataPanel();
+        }
+        private void RefreshMapsTab()
+        {
+            var scene = EditorContextManager.ActiveLoadedScene;
+            if(scene == null)
+                return;
+
+            // Scan content directory for available tileset image files
+            string contentDirectory = EditorContextManager.ContentPath;
+            var tilesetOptions = new System.Collections.Generic.List<object>();
+
+            // Add a default blank/none option to prevent binding errors
+            tilesetOptions.Add(new
+            {
+                DisplayName = "(None)",
+                FilePath = string.Empty
+            });
+
+            if(Directory.Exists(contentDirectory))
+            {
+                string[] imageFiles = Directory.GetFiles(contentDirectory, "*.png", SearchOption.AllDirectories);
+                foreach(string filePath in imageFiles)
+                {
+                    string relativePath = Path.GetRelativePath(contentDirectory, filePath).Replace('\\', '/');
+                    string fileName = Path.GetFileName(filePath); // Displays just file name[cite: 16]
+                    tilesetOptions.Add(new
+                    {
+                        DisplayName = fileName,
+                        FilePath = relativePath
+                    });
+                }
+            }
+
+            // Populate the ComboBox column data source
+            if(MapGridDataView.Columns["ColTilesetPath"] is DataGridViewComboBoxColumn cbColumn)
+            {
+                cbColumn.DataSource = tilesetOptions;
+                cbColumn.DisplayMember = "DisplayName";
+                cbColumn.ValueMember = "FilePath";
+            }
+
+            var currentSelectedMap = GetSelectedMap();
+
+            // Bind the SceneMaps list to the DataGridView
+            MapGridDataView.DataSource = null;
+            MapGridDataView.DataSource = scene.SceneMaps;
+
+            // Restore previous selection if possible
+            if(currentSelectedMap != null)
+            {
+                foreach(DataGridViewRow row in MapGridDataView.Rows)
+                {
+                    if(row.DataBoundItem == currentSelectedMap)
+                    {
+                        row.Selected = true;
+                        break;
+                    }
+                }
+            }
+        }
+        private void AddMapButton_Click(object sender, EventArgs e)
+        {
+            var scene = EditorContextManager.ActiveLoadedScene;
+            if(scene == null)
+                return;
+
+            int width = 25;
+            int height = 19;
+            if(ShowMapSizeInputDialog(ref width, ref height))
+            {
+                var newMap = new Map(width, height);
+                scene.SceneMaps.Add(newMap);
+                NeedsToBeSaved = true;
+                RefreshMapsTab();
+            }
+        }
+        private void RemoveMapButton_Click(object sender, EventArgs e)
+        {
+            var scene = EditorContextManager.ActiveLoadedScene;
+            if(scene == null || MapGridDataView.SelectedRows.Count == 0)
+                return;
+
+            var selectedMap = MapGridDataView.SelectedRows[0].DataBoundItem as Map;
+            if(selectedMap != null)
+            {
+                if(scene.SceneMaps.Count <= 1)
+                {
+                    MessageBox.Show("A scene must contain at least one map.", "Action Blocked", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                scene.SceneMaps.Remove(selectedMap);
+                if(scene.SceneMap == selectedMap)
+                {
+                    scene.SceneMap = scene.SceneMaps[0]; // Fallback to another map
+                }
+                NeedsToBeSaved = true;
+                RefreshMapsTab();
+            }
+        }
+        private void InitializeManagersTab()
+        {
+            // managersListView setup
+            ManagerListView.View = View.Details;
+            ManagerListView.FullRowSelect = true;
+            ManagerListView.Columns.Clear();
+            ManagerListView.Columns.Add("Manager Type", 200, HorizontalAlignment.Left);
+            ManagerListView.Columns.Add("Assembly", 250, HorizontalAlignment.Left);
+
+            // Wire up Add Manager Dropdown
+            if(AddManagerDropdownButton != null)
+            {
+                AddManagerDropdownButton.DropDown = new ContextMenuStrip();
+                AddManagerDropdownButton.DropDownOpening += (s, e) =>
+                {
+                    AddManagerDropdownButton.DropDownItems.Clear();
+                    var scene = EditorContextManager.ActiveLoadedScene;
+                    if(scene == null)
+                        return;
+
+                    var managerTypes = new System.Collections.Generic.List<Type>();
+
+                    // Scan core and user assemblies for GameManager subclasses
+                    var coreAssembly = typeof(GameManager).Assembly;
+                    managerTypes.AddRange(coreAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(GameManager)) && !t.IsAbstract));
+
+                    if(_scriptManager.CurrentAssembly != null)
+                    {
+                        try
+                        {
+                            var userTypes = _scriptManager.CurrentAssembly.GetTypes()
+                                .Where(t => t.IsSubclassOf(typeof(GameManager)) && !t.IsAbstract);
+                            managerTypes.AddRange(userTypes);
+                        }
+                        catch(Exception ex)
+                        {
+                            Log.Error($"[Manager Scan Error]: {ex.Message}");
+                        }
+                    }
+
+                    foreach(var type in managerTypes)
+                    {
+                        var item = new ToolStripMenuItem(type.Name);
+                        bool alreadyExists = scene.Managers.GetRegisteredManagers().Any(m => m.GetType() == type);
+
+                        if(alreadyExists)
+                        {
+                            item.Enabled = false;
+                            item.Text += " (Already Added)";
+                        }
+
+                        item.Click += (subSender, subArgs) =>
+                        {
+                            if(Activator.CreateInstance(type) is GameManager newManager)
+                            {
+                                newManager.ContextScene = scene;
+                                scene.Managers.AddManager(newManager);
+                                NeedsToBeSaved = true;
+                                RefreshManagersTab();
+                                Log.Info($"[Editor UI] Added manager '{type.Name}' to scene.");
+                            }
+                        };
+
+                        AddManagerDropdownButton.DropDownItems.Add(item);
+                    }
+                };
+            }
+
+            // Wire up Remove Manager Button
+            if(RemoveManagerButton != null)
+            {
+                RemoveManagerButton.Click += (s, e) =>
+                {
+                    var scene = EditorContextManager.ActiveLoadedScene;
+                    if(scene == null || ManagerListView.SelectedItems.Count == 0)
+                        return;
+
+                    var managerInstance = ManagerListView.SelectedItems[0].Tag as GameManager;
+                    if(managerInstance != null)
+                    {
+                        scene.Managers.RemoveManager(managerInstance);
+                        NeedsToBeSaved = true;
+                        RefreshManagersTab();
+                        Log.Info($"[Editor UI] Removed manager '{managerInstance.GetType().Name}' from scene.");
+                    }
+                };
+            }
+        }
+        private void RefreshManagersTab()
+        {
+            if(EditorContextManager.ActiveLoadedScene == null)
+                return;
+
+            ManagerListView.Items.Clear();
+            var managers = EditorContextManager.ActiveLoadedScene.Managers.GetRegisteredManagers();
+
+            foreach(var manager in managers)
+            {
+                var listViewItem = new ListViewItem(manager.GetType().Name);
+                listViewItem.SubItems.Add(manager.GetType().Assembly.GetName().Name ?? "Unknown");
+                listViewItem.Tag = manager;
+                ManagerListView.Items.Add(listViewItem);
+            }
+        }
+        private void InitializeSystemsTab()
+        {
+            // systemsListView setup
+            SystemListView.View = View.Details;
+            SystemListView.FullRowSelect = true;
+            SystemListView.Columns.Clear();
+            SystemListView.Columns.Add("System Type", 200, HorizontalAlignment.Left);
+            SystemListView.Columns.Add("Update Policy", 120, HorizontalAlignment.Left);
+
+            // Wire up Add System Dropdown
+            if(AddSystemDropdownButton != null)
+            {
+                AddSystemDropdownButton.DropDown = new ContextMenuStrip();
+                AddSystemDropdownButton.DropDownOpening += (s, e) =>
+                {
+                    AddSystemDropdownButton.DropDownItems.Clear();
+                    var scene = EditorContextManager.ActiveLoadedScene;
+                    if(scene == null)
+                        return;
+
+                    var systemTypes = new System.Collections.Generic.List<Type>();
+
+                    var coreAssembly = typeof(GameSystem).Assembly;
+                    systemTypes.AddRange(coreAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(GameSystem)) && !t.IsAbstract));
+
+                    if(_scriptManager.CurrentAssembly != null)
+                    {
+                        try
+                        {
+                            var userTypes = _scriptManager.CurrentAssembly.GetTypes()
+                                .Where(t => t.IsSubclassOf(typeof(GameSystem)) && !t.IsAbstract);
+                            systemTypes.AddRange(userTypes);
+                        }
+                        catch(Exception ex)
+                        {
+                            Log.Error($"[System Scan Error]: {ex.Message}");
+                        }
+                    }
+
+                    foreach(var type in systemTypes)
+                    {
+                        var item = new ToolStripMenuItem(type.Name);
+                        bool alreadyExists = scene.Systems._systemEntityCache.Keys.Any(s => s.GetType() == type);
+
+                        if(alreadyExists)
+                        {
+                            item.Enabled = false;
+                            item.Text += " (Already Added)";
+                        }
+
+                        item.Click += (subSender, subArgs) =>
+                        {
+                            if(Activator.CreateInstance(type) is GameSystem newSystem)
+                            {
+                                newSystem.ContextScene = scene;
+                                scene.Systems.AddSystem(newSystem);
+                                NeedsToBeSaved = true;
+                                RefreshSystemsTab();
+                                Log.Info($"[Editor UI] Added system '{type.Name}' to scene.");
+                            }
+                        };
+
+                        AddSystemDropdownButton.DropDownItems.Add(item);
+                    }
+                };
+            }
+
+            // Wire up Remove System Button
+            if(RemoveSystemButton != null)
+            {
+                RemoveSystemButton.Click += (s, e) =>
+                {
+                    var scene = EditorContextManager.ActiveLoadedScene;
+                    if(scene == null || SystemListView.SelectedItems.Count == 0)
+                        return;
+
+                    var systemInstance = SystemListView.SelectedItems[0].Tag as GameSystem;
+                    if(systemInstance != null)
+                    {
+                        // Prevent removing core engine structural systems if desired
+                        if(systemInstance is TransformSystem || systemInstance is SpriteRenderSystem || systemInstance is PhysicsSystem || systemInstance is ScriptComponentSystem || systemInstance is UIInputSystem || systemInstance is UILayoutSystem || systemInstance is UIRenderSystem)
+                        {
+                            MessageBox.Show("Core engine systems cannot be removed.", "Action Blocked", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        scene.Systems.RemoveSystem(systemInstance);
+                        NeedsToBeSaved = true;
+                        RefreshSystemsTab();
+                        Log.Info($"[Editor UI] Removed system '{systemInstance.GetType().Name}' from scene.");
+                    }
+                };
+            }
+        }
+
+        private void RefreshSystemsTab()
+        {
+            if(EditorContextManager.ActiveLoadedScene == null)
+                return;
+
+            SystemListView.Items.Clear();
+            var systems = EditorContextManager.ActiveLoadedScene.Systems._systemEntityCache.Keys;
+
+            foreach(var system in systems)
+            {
+                var listViewItem = new ListViewItem(system.GetType().Name);
+                listViewItem.SubItems.Add(system.UpdatePolicy.ToString());
+                listViewItem.Tag = system;
+                SystemListView.Items.Add(listViewItem);
+            }
+        }
+
+        private void InitializeTilesetMetadataTab()
+        {
+            splitContainer4.Panel2.Controls.Clear();
+
+            // Main layout container for Panel2 (Split into Image Viewer on left, Controls on right)
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 1
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30F));
+
+            // Left Side: Scrollable Canvas for the Tileset Image
+            tilesetCanvasPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true,
+                BackColor = System.Drawing.Color.FromArgb(45, 45, 48)
+            };
+
+            tilesetPictureBox = new PictureBox
+            {
+                SizeMode = PictureBoxSizeMode.AutoSize,
+                BackColor = System.Drawing.Color.Transparent
+            };
+            tilesetPictureBox.Paint += TilesetPictureBox_Paint;
+            tilesetPictureBox.MouseClick += TilesetPictureBox_MouseClick;
+
+            tilesetCanvasPanel.Controls.Add(tilesetPictureBox);
+            layout.Controls.Add(tilesetCanvasPanel, 0, 0);
+
+            // Right Side: Property Editing Controls
+            var propPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.TopDown,
+                Padding = new Padding(10),
+                WrapContents = false
+            };
+
+            propPanel.Controls.Add(new Label { Text = "Tileset Tile Properties", Font = new System.Drawing.Font("Segoe UI", 10, System.Drawing.FontStyle.Bold), AutoSize = true, ForeColor = System.Drawing.Color.White });
+
+            // FIX: Assign to the class-level field instead of declaring a local variable with 'var'
+            selectedTileLabel = new Label { Text = "Selected Tile: None", AutoSize = true, ForeColor = System.Drawing.Color.LightGray, Margin = new Padding(0, 10, 0, 5) };
+            propPanel.Controls.Add(selectedTileLabel);
+
+            var valueLabel = new Label { Text = "Custom Int Value:", AutoSize = true, ForeColor = System.Drawing.Color.LightGray };
+            propPanel.Controls.Add(valueLabel);
+
+            // FIX: Assign to the class-level field instead of declaring a local variable with 'var'
+            tileValueNumeric = new NumericUpDown
+            {
+                Minimum = -9999,
+                Maximum = 9999,
+                Width = 120,
+                Enabled = false
+            };
+            tileValueNumeric.ValueChanged += TileValueNumeric_ValueChanged;
+            propPanel.Controls.Add(tileValueNumeric);
+
+            layout.Controls.Add(propPanel, 1, 0);
+            splitContainer4.Panel2.Controls.Add(layout);
+        }
+        private void RefreshTilesetMetadataPanel()
+        {
+            var map = GetSelectedMap();
+            if(map == null || string.IsNullOrEmpty(map.TileSetPath))
+            {
+                if(currentTilesetBitmap != null)
+                {
+                    currentTilesetBitmap.Dispose();
+                    currentTilesetBitmap = null;
+                }
+                tilesetPictureBox.Image = null;
+                selectedTileIndex = -1;
+                selectedTileLabel.Text = "Selected Tile: None";
+                tileValueNumeric.Enabled = false;
+                return;
+            }
+
+            string fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", map.TileSetPath);
+            if(File.Exists(fullPath))
+            {
+                try
+                {
+                    // Load bitmap safely without locking the file handle
+                    using(var tempBmp = new System.Drawing.Bitmap(fullPath))
+                    {
+                        currentTilesetBitmap?.Dispose();
+                        currentTilesetBitmap = new System.Drawing.Bitmap(tempBmp);
+                    }
+                    tilesetPictureBox.Image = currentTilesetBitmap;
+                }
+                catch(Exception ex)
+                {
+                    Log.Error($"[Editor] Failed to load tileset image: {ex.Message}");
+                    tilesetPictureBox.Image = null;
+                }
+            }
+            else
+            {
+                tilesetPictureBox.Image = null;
+            }
+
+            selectedTileIndex = -1;
+            selectedTileLabel.Text = "Selected Tile: None";
+            tileValueNumeric.Enabled = false;
+            tilesetPictureBox.Invalidate();
+        }
+
+        private void TilesetPictureBox_Paint(object sender, PaintEventArgs e)
+        {
+            var map = GetSelectedMap();
+            if(map == null || currentTilesetBitmap == null || map.TileSize <= 0)
+                return;
+
+            int tileSize = map.TileSize;
+            int cols = currentTilesetBitmap.Width / tileSize;
+            int rows = currentTilesetBitmap.Height / tileSize;
+
+            using(var gridPen = new Pen(System.Drawing.Color.FromArgb(100, 255, 255, 255), 1))
+            {
+                // Draw grid lines
+                for(int x = 0; x <= currentTilesetBitmap.Width; x += tileSize)
+                {
+                    e.Graphics.DrawLine(gridPen, x, 0, x, currentTilesetBitmap.Height);
+                }
+                for(int y = 0; y <= currentTilesetBitmap.Height; y += tileSize)
+                {
+                    e.Graphics.DrawLine(gridPen, 0, y, currentTilesetBitmap.Width, y);
+                }
+            }
+
+            // Highlight selected tile if valid
+            if(selectedTileIndex >= 0)
+            {
+                int col = selectedTileIndex % cols;
+                int row = selectedTileIndex / cols;
+                var rect = new System.Drawing.Rectangle(col * tileSize, row * tileSize, tileSize, tileSize);
+
+                using(var highlightPen = new Pen(System.Drawing.Color.Yellow, 2))
+                {
+                    e.Graphics.DrawRectangle(highlightPen, rect);
+                }
+
+                // Draw assigned value indicator if present
+                if(map.TileProperties != null && map.TileProperties.TryGetValue(selectedTileIndex, out int val))
+                {
+                    using(var brush = new System.Drawing.SolidBrush(System.Drawing.Color.Yellow))
+                    {
+                        e.Graphics.DrawString(val.ToString(), System.Drawing.SystemFonts.DefaultFont, brush, rect.X + 2, rect.Y + 2);
+                    }
+                }
+            }
+        }
+
+        private void TilesetPictureBox_MouseClick(object sender, MouseEventArgs e)
+        {
+            var map = GetSelectedMap();
+            if(map == null || currentTilesetBitmap == null || map.TileSize <= 0)
+                return;
+
+            int tileSize = map.TileSize;
+            int cols = currentTilesetBitmap.Width / tileSize;
+            int maxCols = currentTilesetBitmap.Width / tileSize;
+            int maxRows = currentTilesetBitmap.Height / tileSize;
+
+            int clickedCol = e.X / tileSize;
+            int clickedRow = e.Y / tileSize;
+
+            if(clickedCol >= 0 && clickedCol < maxCols && clickedRow >= 0 && clickedRow < maxRows)
+            {
+                selectedTileIndex = clickedRow * cols + clickedCol;
+                selectedTileLabel.Text = $"Selected Tile Index: {selectedTileIndex}";
+
+                tileValueNumeric.Enabled = true;
+
+                // Load existing value from map dictionary if configured
+                if(map.TileProperties != null && map.TileProperties.TryGetValue(selectedTileIndex, out int existingVal))
+                {
+                    tileValueNumeric.Value = existingVal;
+                }
+                else
+                {
+                    tileValueNumeric.Value = 0;
+                }
+
+                tilesetPictureBox.Invalidate();
+            }
+        }
+
+        private void TileValueNumeric_ValueChanged(object sender, EventArgs e)
+        {
+            var map = GetSelectedMap();
+            if(map == null || selectedTileIndex < 0)
+                return;
+
+            int val = (int) tileValueNumeric.Value;
+
+            if(map.TileProperties == null)
+            {
+                map.TileProperties = new Dictionary<int, int>();
+            }
+
+            if(val == 0)
+            {
+                // Clean up memory if set back to default 0
+                map.TileProperties.Remove(selectedTileIndex);
+            }
+            else
+            {
+                map.TileProperties[selectedTileIndex] = val;
+            }
+
+            NeedsToBeSaved = true;
+            tilesetPictureBox.Invalidate();
+        }
+
         private void InitializePropertiesToolstripEvents()
         {
             // Create the master context menu container once
@@ -1133,10 +1793,10 @@ namespace WinFormsApp1
                             selectedGo.AddComponent(newComp);
 
                             Log.Info($"[Editor UI] Attached component '{targetType.Name}' to '{selectedGo.Name}'");
-                            NeedsToBeSaved = true;
+                            //NeedsToBeSaved = true;
 
                             // Rebuild and refresh the card view layout panel
-                            RebuildInspectorPanel(selectedGo);
+                            RebuildInspectorPanel(selectedGo, forceRebuild: true);
                         }
                     };
 
@@ -1169,7 +1829,7 @@ namespace WinFormsApp1
                     NeedsToBeSaved = true;
 
                     Engine.Editor.WinFormsApp1.ComponentCardFactory.ClearSelection();
-                    RebuildInspectorPanel(selectedGo);
+                    RebuildInspectorPanel(selectedGo, forceRebuild : true);
                 }
             };
         }
@@ -1368,41 +2028,15 @@ namespace WinFormsApp1
             viewer.Show(this);
         }
 
-        private void resizeMapToolStripMenuItem_Click(object sender, EventArgs e)
+        private Map GetSelectedMap()
         {
-
-            var sceneMap = EditorContextManager.ActiveLoadedScene?.SceneMap;
-            if(sceneMap == null)
-                return;
-
-            int newWidth = sceneMap.Width;
-            int newHeight = sceneMap.Height;
-
-            // Prompt user for new dimensions
-            if(ShowMapSizeInputDialog(ref newWidth, ref newHeight))
+            if(MapGridDataView.SelectedRows.Count > 0 &&
+                MapGridDataView.SelectedRows[0].DataBoundItem is Map selectedMap)
             {
-               
-                 EditorContextManager.ActiveLoadedScene.ResizeMap(newWidth, newHeight);
+                return selectedMap;
             }
 
-
-        }
-
-        private void setTileSizeToolStripMenuItem_Click(object sender, EventArgs e)
-        {
-            var sceneMap = EditorContextManager.ActiveLoadedScene?.SceneMap;
-            if(sceneMap == null)
-                return;
-
-            int currentTileSize = GameWorldManager.TileSize;
-
-            // Prompt user for new tile size
-            if(ShowIntegerInputDialog("Set Tile Size", "Tile Size (Pixels):", ref currentTileSize))
-            {
-                GameWorldManager.TileSize = currentTileSize;
-                sceneMap.TileSize = currentTileSize;
-            }
-
+            return null;
         }
 
 

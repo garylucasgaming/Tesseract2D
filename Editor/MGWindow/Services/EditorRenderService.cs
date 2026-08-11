@@ -124,7 +124,7 @@ namespace Engine.Editor.MGWindow.Services
             if(activeScene == null || activeScene.SceneMap == null)
                 return;
 
-            var map = activeScene.SceneMap;
+            var map = activeScene.SceneMap; // This now correctly points to the selected map!
             int tileSize = map.TileSize;
             int mapWidthPx = map.Width * tileSize;
             int mapHeightPx = map.Height * tileSize;
@@ -132,10 +132,10 @@ namespace Engine.Editor.MGWindow.Services
             float invZoom = 1f / Math.Max(cameraZoom, 0.001f);
             int lineThickness = Math.Max(1, (int) (1f * invZoom));
 
-            Color gridColor = new Color(25, 25, 25, 100); // Subtle gray for grid lines
-            Color boundaryColor = new Color(255, 165, 0, 200); // Orange border for scene limits
+            Color gridColor = new Color(25, 25, 25, 100);
+            Color boundaryColor = new Color(255, 165, 0, 200);
 
-            // 1. Draw Interior Grid Lines based on Map Dimensions & TileSize
+            // 1. Draw Interior Grid Lines
             for(int x = 0; x <= map.Width; x++)
             {
                 Vector2 start = new Vector2(x * tileSize, 0);
@@ -150,7 +150,7 @@ namespace Engine.Editor.MGWindow.Services
                 GizmoRenderer.DrawLine(spriteBatch, start, end, gridColor, lineThickness);
             }
 
-            // 2. Draw Outer Scene Boundary Box (RPGMaker-style hard limit)
+            // 2. Draw Outer Scene Boundary Box
             Vector2 topLeft = Vector2.Zero;
             Vector2 topRight = new Vector2(mapWidthPx, 0);
             Vector2 bottomLeft = new Vector2(0, mapHeightPx);
@@ -162,7 +162,6 @@ namespace Engine.Editor.MGWindow.Services
             GizmoRenderer.DrawLine(spriteBatch, bottomRight, bottomLeft, boundaryColor, boundaryThickness);
             GizmoRenderer.DrawLine(spriteBatch, bottomLeft, topLeft, boundaryColor, boundaryThickness);
         }
-
         private void DrawTransformGizmos(SpriteBatch spriteBatch, TransformComponent transform, Vector2 position, GizmoMode activeMode, float invZoom)
         {
             Vector2 scale = transform.Scale;

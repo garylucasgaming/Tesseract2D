@@ -12,7 +12,7 @@ namespace Engine.Core.Runtime
     {
 
         
-        public GameScene ContextScene { get; internal set; } = null!; // A reference to the specific scene this manager is attached to. This gives the manager access to the entities and systems it orchestrates.
+        public GameScene ContextScene { get; set; } = null!; // A reference to the specific scene this manager is attached to. This gives the manager access to the entities and systems it orchestrates.
 
         public bool IsActive { get; set; } = true; // Dictates whether this manager should execute its internal logic updates.
 
