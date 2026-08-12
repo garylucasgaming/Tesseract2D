@@ -30,7 +30,7 @@ namespace Engine.Core.Serialization
 
         public static bool PlayState { get; set; }
 
-        
+        public static int SelectedTileIndex { get; set; } = -1;
 
         /// <summary>
         /// Helper flag to easily check if the editor has completed its loading sequence.

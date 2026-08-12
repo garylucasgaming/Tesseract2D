@@ -11,7 +11,6 @@ namespace Engine.Core.GamePlay
 {
     public class Map
     {
-
         private int[,] _grid;
         private int _tileSize = 32;
         private string _tileSetPath = "";
@@ -19,12 +18,7 @@ namespace Engine.Core.GamePlay
         private int _LayerOrder = 0;
         private bool _isEnabled = true;
 
-        /// <summary>
-        /// this is for linking up the grid values to a sprite tileset, so that the grid values can be used to determine which sprite to render for each tile in the grid
-        /// </summary>
         private Dictionary<int, int> _tileProperties = new Dictionary<int, int>();
-
-      
 
         public string MapName
         {
@@ -82,18 +76,19 @@ namespace Engine.Core.GamePlay
 
         public Map(int width, int height)
         {
-            // Pull default tile size from your new GameWorldManager
             _tileSize = GameWorldManager.TileSize;
             _grid = new int[width, height];
         }
 
-
         public void Resize(int newWidth, int newHeight)
         {
             var newGrid = new int[newWidth, newHeight];
-            for(int x = 0; x < Math.Min(Width, newWidth); x++)
+            int minWidth = Math.Min(_grid.GetLength(0), newWidth);
+            int minHeight = Math.Min(_grid.GetLength(1), newHeight);
+
+            for(int x = 0; x < minWidth; x++)
             {
-                for(int y = 0; y < Math.Min(Height, newHeight); y++)
+                for(int y = 0; y < minHeight; y++)
                 {
                     newGrid[x, y] = _grid[x, y];
                 }
@@ -101,7 +96,43 @@ namespace Engine.Core.GamePlay
             _grid = newGrid;
         }
 
+        public int GetGridValue(int x, int y)
+        {
+            if(x >= 0 && x < Width && y >= 0 && y < Height)
+                return _grid[x, y];
+            return 0;
+        }
 
+        public void SetGridValue(int x, int y, int value)
+        {
+            if(x >= 0 && x < Width && y >= 0 && y < Height)
+                _grid[x, y] = value;
+        }
+
+        /// <summary>
+        /// Queries the grid value at (x, y) and looks up the corresponding tile index key in TileProperties.
+        /// </summary>
+        public int GetTileAt(int x, int y)
+        {
+            int gridVal = GetGridValue(x, y);
+            foreach(var kvp in _tileProperties)
+            {
+                if(kvp.Value == gridVal)
+                {
+                    return kvp.Key;
+                }
+            }
+            return gridVal;
+        }
+
+        public int GetCustomValueForTile(int tileIndex)
+        {
+            if(_tileProperties.ContainsKey(tileIndex))
+            {
+                return _tileProperties[tileIndex];
+            }
+            return tileIndex;
+        }
     }
 }
 

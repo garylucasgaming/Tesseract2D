@@ -1,6 +1,7 @@
 ﻿using Engine.Core.ECS;
 using Engine.Core.ECS.Components;
 using Engine.Core.Runtime;
+using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using Engine.Editor.MGWindow.Services.Engine.Editor.MGWindow.Services;
 using Engine.Editor.Utilities;
@@ -10,6 +11,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System;
 using System.ComponentModel;
+using WinFormsApp1;
 using Keys = Microsoft.Xna.Framework.Input.Keys;
 
 namespace Engine.Editor.MGWindow.Services
@@ -18,9 +20,10 @@ namespace Engine.Editor.MGWindow.Services
     {
         public enum GizmoMode
         {
-            Translate, // Q
-            Scale,     // W
-            Size,      // E
+            Translate, // 1
+            Scale,     // 2
+            Size,      // 3
+            TilePaint, //4 tile painting tool
             ColliderBox,
             ColliderCircle,
             ColliderPolygon
@@ -146,14 +149,49 @@ namespace Engine.Editor.MGWindow.Services
         /// </summary>
         public void Update(float deltaTime)
         {
+            // 1. Camera controls should always be active
             HandleCameraControls(deltaTime);
+
+            KeyboardState currentKeyboardState = Keyboard.GetState();
+
+            // 2. Allow mode hotkeys (1, 2, 3, 4) to be pressed at any time, 
+            // regardless of whether a GameObject is selected.
+            if(currentKeyboardState.IsKeyDown(Keys.D1) && !_prevKeyboardState.IsKeyDown(Keys.D1) && CurrentMode != GizmoMode.Translate)
+            {
+                CurrentMode = GizmoMode.Translate;
+                Log.Info("[Editor] Gizmo Mode changed to: Translate (1)");
+            }
+            else if(currentKeyboardState.IsKeyDown(Keys.D2) && !_prevKeyboardState.IsKeyDown(Keys.D2) && CurrentMode != GizmoMode.Scale)
+            {
+                CurrentMode = GizmoMode.Scale;
+                Log.Info("[Editor] Gizmo Mode changed to: Scale (2)");
+            }
+            else if(currentKeyboardState.IsKeyDown(Keys.D3) && !_prevKeyboardState.IsKeyDown(Keys.D3) && CurrentMode != GizmoMode.Size)
+            {
+                CurrentMode = GizmoMode.Size;
+                Log.Info("[Editor] Gizmo Mode changed to: Size (3)");
+            }
+            else if(currentKeyboardState.IsKeyDown(Keys.D4) && !_prevKeyboardState.IsKeyDown(Keys.D4) && CurrentMode != GizmoMode.TilePaint)
+            {
+                CurrentMode = GizmoMode.TilePaint;
+                Log.Info("[Editor] Gizmo Mode changed to: TilePaint (4)");
+            }
+
+            _prevKeyboardState = currentKeyboardState;
+
+            // 3. If we are currently in TilePaint mode, we don't need a selected GameObject or component checks.
+            if(CurrentMode == GizmoMode.TilePaint)
+            {
+                return;
+            }
+
+            // 4. Transform and Gizmo modes require a selected GameObject
             if(_selectedGo == null)
                 return;
 
-            // 1. Check which component is actively focused in WinForms
+            // 5. Check which component is actively focused in WinForms for colliders
             object selectedComponent = ComponentCardFactory.SelectedComponentInstance;
 
-            // 2. Set the mode automatically if a collider is selected
             if(selectedComponent is BoxColliderComponent)
             {
                 CurrentMode = GizmoMode.ColliderBox;
@@ -166,35 +204,7 @@ namespace Engine.Editor.MGWindow.Services
             {
                 CurrentMode = GizmoMode.ColliderPolygon;
             }
-            else if(selectedComponent is TransformComponent)
-            {
-                // 3. Fallback: Transform or other component is active. Listen to 123 hotkeys.
-
-             
-
-                KeyboardState currentKeyboardState = Keyboard.GetState();
-                
-                // Check for key down transitions (on key press, not hold)
-                if(currentKeyboardState.IsKeyDown(Keys.D1) && !_prevKeyboardState.IsKeyDown(Keys.Q) && CurrentMode != GizmoMode.Translate)
-                {
-                    CurrentMode = GizmoMode.Translate;
-                    Log.Info("[Editor] Gizmo Mode changed to: Translate (1)");
-                }
-                else if(currentKeyboardState.IsKeyDown(Keys.D2) && !_prevKeyboardState.IsKeyDown(Keys.W) && CurrentMode != GizmoMode.Scale)
-                {
-                    CurrentMode = GizmoMode.Scale;
-                    Log.Info("[Editor] Gizmo Mode changed to: Scale (2)");
-                }
-                else if(currentKeyboardState.IsKeyDown(Keys.D3) && !_prevKeyboardState.IsKeyDown(Keys.E) && CurrentMode != GizmoMode.Size)
-                {
-                    CurrentMode = GizmoMode.Size;
-                    Log.Info("[Editor] Gizmo Mode changed to: Size (3)");
-                }
-
-                _prevKeyboardState = currentKeyboardState;
-            }
         }
-
         private void HandleCameraControls(float deltaTime)
         {
             KeyboardState keyState = Keyboard.GetState();
@@ -264,6 +274,14 @@ namespace Engine.Editor.MGWindow.Services
         {
             if(_activeScene == null)
                 return;
+
+            if(CurrentMode == GizmoMode.TilePaint)
+            {
+                PaintTileAtMouse(screenMousePos);
+                _isDragging = true; // Enable drag-painting
+                _activeAxis = SelectedAxis.None;
+                return;
+            }
 
             Vector2 worldMousePos = Camera.ScreenToWorld(screenMousePos, CurrentViewport);
 
@@ -460,6 +478,15 @@ namespace Engine.Editor.MGWindow.Services
 
         private void HandleMouseMoved(Vector2 currentMousePos, Vector2 mouseDelta)
         {
+            // --- TILE PAINT DRAG PAINTING ---
+            if(_isDragging && CurrentMode == GizmoMode.TilePaint)
+            {
+                PaintTileAtMouse(currentMousePos);
+                return;
+            }
+
+            if(!_isDragging || _selectedGo == null)
+                return;
             if(!_isDragging || _selectedGo == null)
                 return;
             Vector2 currentWorldMousePos = Camera.ScreenToWorld(currentMousePos, CurrentViewport);
@@ -589,8 +616,40 @@ namespace Engine.Editor.MGWindow.Services
                     break;
             }
         }
+
+        private void PaintTileAtMouse(Vector2 screenMousePos)
+        {
+            if(_activeScene == null || _activeScene.SceneMap == null)
+                return;
+
+            var map = _activeScene.SceneMap;
+            Vector2 worldMousePos = Camera.ScreenToWorld(screenMousePos, CurrentViewport);
+            int tileSize = map.TileSize;
+
+            int tileX = (int) Math.Floor(worldMousePos.X / tileSize);
+            int tileY = (int) Math.Floor(worldMousePos.Y / tileSize);
+
+            if(tileX >= 0 && tileX < map.Width && tileY >= 0 && tileY < map.Height)
+            {
+                int selectedTileIndex = EditorContextManager.SelectedTileIndex;
+                if(selectedTileIndex >= 0)
+                {
+                    // Cleanly delegate the lookup logic to the Map class
+                    int valueToStore = map.GetCustomValueForTile(selectedTileIndex);
+
+                    map.SetGridValue(tileX, tileY, valueToStore);
+                    Form1.NeedsToBeSaved = true;
+                }
+            }
+        }
         private void HandleMouseLeftUp(Vector2 mousePos)
         {
+            if(CurrentMode == GizmoMode.TilePaint)
+            {
+                _isDragging = false;
+                _activeAxis = SelectedAxis.None;
+                return;
+            }
             if(_isDragging)
             {
                 _isDragging = false;

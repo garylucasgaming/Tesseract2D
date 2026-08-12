@@ -1595,6 +1595,7 @@ namespace WinFormsApp1
                 }
                 tilesetPictureBox.Image = null;
                 selectedTileIndex = -1;
+                EditorContextManager.SelectedTileIndex = selectedTileIndex;
                 selectedTileLabel.Text = "Selected Tile: None";
                 tileValueNumeric.Enabled = false;
                 return;
@@ -1703,6 +1704,7 @@ namespace WinFormsApp1
             if(clickedCol >= 0 && clickedCol < maxCols && clickedRow >= 0 && clickedRow < maxRows)
             {
                 selectedTileIndex = clickedRow * cols + clickedCol;
+                EditorContextManager.SelectedTileIndex = selectedTileIndex;
                 selectedTileLabel.Text = $"Selected Tile Index: {selectedTileIndex}";
 
                 tileValueNumeric.Enabled = true;
