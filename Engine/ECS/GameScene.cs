@@ -1,9 +1,13 @@
 ﻿using Engine.Core.ECS.Components;
 using Engine.Core.ECS.Managers;
+using Engine.Core.Gameplay;
 using Engine.Core.GamePlay;
 using Engine.Core.Runtime;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
+using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+using nkast.Aether.Physics2D.Dynamics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,6 +24,8 @@ namespace Engine.Core.ECS
         private int _loadOrder;
 
         private Map _sceneMap = new Map(25,19);
+
+        private readonly TileMapRenderSystem _tileMapRenderer = new TileMapRenderSystem();
 
         // Identification properties for the Editor UI to read
         public string SceneName { get; set; } = "Untitled Scene";
@@ -249,6 +255,11 @@ namespace Engine.Core.ECS
         public void TickUpdate(float fixeddeltaTime, bool playModeActive = false)
         {
            Systems.TickUpdate(fixeddeltaTime, playModeActive);
+        }
+
+        public void Render(SpriteBatch sb, ContentManager cm)
+        {
+            _tileMapRenderer.Render(sb, cm, _sceneMaps);
         }
 
         #endregion

@@ -13,10 +13,11 @@ namespace Engine.Core.GamePlay
     {
 
         private int[,] _grid;
-        private int _tileSize;
+        private int _tileSize = 32;
         private string _tileSetPath = "";
         private string _MapName = "Untitled Map";
         private int _LayerOrder = 0;
+        private bool _isEnabled = true;
 
         /// <summary>
         /// this is for linking up the grid values to a sprite tileset, so that the grid values can be used to determine which sprite to render for each tile in the grid
@@ -73,7 +74,11 @@ namespace Engine.Core.GamePlay
             get => _tileProperties;
             set => _tileProperties = value;
         }
-
+        public bool IsEnabled
+        {
+            get => _isEnabled;
+            set => _isEnabled = value;
+        }
 
         public Map(int width, int height)
         {

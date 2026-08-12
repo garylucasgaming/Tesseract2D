@@ -135,7 +135,8 @@ namespace Editor
             {
                 _renderService.RenderSceneGridAndBounds(Editor.spriteBatch, _activeScene, EditorCamera.Zoom);
             }
-            
+
+            _activeScene.Render(Editor.spriteBatch, Editor.Content);
             _activeScene.Systems.Render(Editor.spriteBatch, Editor.Content);
             _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.World);
             if(!EditorContextManager.PlayState)

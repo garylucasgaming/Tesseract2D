@@ -1109,7 +1109,15 @@ namespace WinFormsApp1
                 Name = "ColMapName"
             });
 
-            // 2. Layer Order Column
+            //2. Enabled Column (CheckBox)
+            MapGridDataView.Columns.Add(new DataGridViewCheckBoxColumn
+            {
+                DataPropertyName = "IsEnabled",
+                HeaderText = "Enabled",
+                Name = "ColIsEnabled"
+            });
+
+            // 3. Layer Order Column
             MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "LayerOrder",
@@ -1117,7 +1125,7 @@ namespace WinFormsApp1
                 Name = "ColLayerOrder"
             });
 
-            // 3. Width Column
+            // 4. Width Column
             MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "Width",
@@ -1125,7 +1133,7 @@ namespace WinFormsApp1
                 Name = "ColWidth"
             });
 
-            // 4. Height Column
+            // 5. Height Column
             MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "Height",
@@ -1133,7 +1141,7 @@ namespace WinFormsApp1
                 Name = "ColHeight"
             });
 
-            // 5. Tile Size Column
+            // 6. Tile Size Column
             MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "TileSize",
@@ -1142,7 +1150,7 @@ namespace WinFormsApp1
             });
 
 
-            // 6. Tileset Path ComboBox Column
+            // 7. Tileset Path ComboBox Column
             var tilesetColumn = new DataGridViewComboBoxColumn
             {
                 DataPropertyName = "TileSetPath",
@@ -1176,6 +1184,7 @@ namespace WinFormsApp1
                 // Refresh the tileset preview and metadata panel when the tileset dropdown changes
                 if(e.ColumnIndex >= 0 && MapGridDataView.Columns[e.ColumnIndex].Name == "ColTilesetPath")
                 {
+                   
                     RefreshTilesetMetadataPanel();
                 }
             };
@@ -1548,17 +1557,16 @@ namespace WinFormsApp1
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.TopDown,
-                Padding = new Padding(10),
                 WrapContents = false
             };
 
             propPanel.Controls.Add(new Label { Text = "Tileset Tile Properties", Font = new System.Drawing.Font("Segoe UI", 10, System.Drawing.FontStyle.Bold), AutoSize = true, ForeColor = System.Drawing.Color.White });
 
             // FIX: Assign to the class-level field instead of declaring a local variable with 'var'
-            selectedTileLabel = new Label { Text = "Selected Tile: None", AutoSize = true, ForeColor = System.Drawing.Color.LightGray, Margin = new Padding(0, 10, 0, 5) };
+            selectedTileLabel = new Label { Text = "Selected Tile: None", AutoSize = true, ForeColor = System.Drawing.Color.Black };
             propPanel.Controls.Add(selectedTileLabel);
 
-            var valueLabel = new Label { Text = "Custom Int Value:", AutoSize = true, ForeColor = System.Drawing.Color.LightGray };
+            var valueLabel = new Label { Text = "Custom Int Value:", AutoSize = true, ForeColor = System.Drawing.Color.Black };
             propPanel.Controls.Add(valueLabel);
 
             // FIX: Assign to the class-level field instead of declaring a local variable with 'var'
@@ -1566,7 +1574,7 @@ namespace WinFormsApp1
             {
                 Minimum = -9999,
                 Maximum = 9999,
-                Width = 120,
+                Width = 80,
                 Enabled = false
             };
             tileValueNumeric.ValueChanged += TileValueNumeric_ValueChanged;
@@ -1592,7 +1600,7 @@ namespace WinFormsApp1
                 return;
             }
 
-            string fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", map.TileSetPath);
+            string fullPath = Path.Combine(EditorContextManager.ContentPath, map.TileSetPath);
             if(File.Exists(fullPath))
             {
                 try
@@ -1621,6 +1629,8 @@ namespace WinFormsApp1
             tileValueNumeric.Enabled = false;
             tilesetPictureBox.Invalidate();
         }
+
+        private bool _isSuppressingTileValueChange = false;
 
         private void TilesetPictureBox_Paint(object sender, PaintEventArgs e)
         {
@@ -1657,12 +1667,20 @@ namespace WinFormsApp1
                     e.Graphics.DrawRectangle(highlightPen, rect);
                 }
 
-                // Draw assigned value indicator if present
+                // Key = Tile Index, Value = Assigned Custom Int
+                int assignedVal = 0;
+                bool hasVal = false;
                 if(map.TileProperties != null && map.TileProperties.TryGetValue(selectedTileIndex, out int val))
+                {
+                    assignedVal = val;
+                    hasVal = true;
+                }
+
+                if(hasVal)
                 {
                     using(var brush = new System.Drawing.SolidBrush(System.Drawing.Color.Yellow))
                     {
-                        e.Graphics.DrawString(val.ToString(), System.Drawing.SystemFonts.DefaultFont, brush, rect.X + 2, rect.Y + 2);
+                        e.Graphics.DrawString(assignedVal.ToString(), System.Drawing.SystemFonts.DefaultFont, brush, rect.X + 2, rect.Y + 2);
                     }
                 }
             }
@@ -1689,15 +1707,16 @@ namespace WinFormsApp1
 
                 tileValueNumeric.Enabled = true;
 
-                // Load existing value from map dictionary if configured
-                if(map.TileProperties != null && map.TileProperties.TryGetValue(selectedTileIndex, out int existingVal))
+                // Key = Tile Index, Value = Assigned Custom Int
+                int existingVal = 0;
+                if(map.TileProperties != null && map.TileProperties.TryGetValue(selectedTileIndex, out int val))
                 {
-                    tileValueNumeric.Value = existingVal;
+                    existingVal = val;
                 }
-                else
-                {
-                    tileValueNumeric.Value = 0;
-                }
+
+                _isSuppressingTileValueChange = true;
+                tileValueNumeric.Value = existingVal;
+                _isSuppressingTileValueChange = false;
 
                 tilesetPictureBox.Invalidate();
             }
@@ -1705,6 +1724,9 @@ namespace WinFormsApp1
 
         private void TileValueNumeric_ValueChanged(object sender, EventArgs e)
         {
+            if(_isSuppressingTileValueChange)
+                return;
+
             var map = GetSelectedMap();
             if(map == null || selectedTileIndex < 0)
                 return;
@@ -1716,15 +1738,8 @@ namespace WinFormsApp1
                 map.TileProperties = new Dictionary<int, int>();
             }
 
-            if(val == 0)
-            {
-                // Clean up memory if set back to default 0
-                map.TileProperties.Remove(selectedTileIndex);
-            }
-            else
-            {
-                map.TileProperties[selectedTileIndex] = val;
-            }
+            // Store the value directly in the dictionary, including 0!
+            map.TileProperties[selectedTileIndex] = val;
 
             NeedsToBeSaved = true;
             tilesetPictureBox.Invalidate();

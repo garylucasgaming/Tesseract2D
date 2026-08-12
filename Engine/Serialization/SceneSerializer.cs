@@ -15,6 +15,8 @@ namespace Engine.Core.Serialization
 {
     public class MapDataDto
     {
+
+        public string MapName { get; set; } = string.Empty;
         public int Width
         {
             get; set;
@@ -35,6 +37,10 @@ namespace Engine.Core.Serialization
         {
             get; set;
         } = string.Empty;
+
+        public bool IsEnabled { get; set; } = true;
+
+        public Dictionary<int, int> TileProperties { get; set; } = new Dictionary<int, int>();
         public List<int> GridFlattened { get; set; } = new List<int>();
     }
 
@@ -140,12 +146,16 @@ namespace Engine.Core.Serialization
             {
                 var mapDto = new MapDataDto
                 {
+                    MapName = map.MapName,
                     Width = map.Width,
                     Height = map.Height,
                     TileSize = map.TileSize,
                     LayerOrder = map.LayerOrder,
                     TilesetPath = map.TileSetPath ?? string.Empty,
-                    GridFlattened = new List<int>(map.Width * map.Height)
+                    TileProperties = map.TileProperties != null ? new Dictionary<int, int>(map.TileProperties) : new Dictionary<int, int>(),
+                    GridFlattened = new List<int>(map.Width * map.Height),
+                    IsEnabled = map.IsEnabled
+
                 };
 
                 for(int x = 0; x < map.Width; x++)
@@ -170,11 +180,14 @@ namespace Engine.Core.Serialization
                 var activeMap = scene.SceneMap;
                 sceneDto.SceneMap = new MapDataDto
                 {
+                    MapName = activeMap.MapName,
                     Width = activeMap.Width,
                     Height = activeMap.Height,
                     TileSize = activeMap.TileSize,
                     LayerOrder = activeMap.LayerOrder,
                     TilesetPath = activeMap.TileSetPath ?? string.Empty,
+                    IsEnabled = activeMap.IsEnabled,
+                    TileProperties = activeMap.TileProperties != null ? new Dictionary<int, int>(activeMap.TileProperties) : new Dictionary<int, int>(),
                     GridFlattened = new List<int>(activeMap.Width * activeMap.Height)
                 };
                 for(int x = 0; x < activeMap.Width; x++)
@@ -244,9 +257,12 @@ namespace Engine.Core.Serialization
                     {
                         var map = new Map(mapDto.Width, mapDto.Height)
                         {
+                            MapName = mapDto.MapName ?? string.Empty,
                             TileSize = mapDto.TileSize,
                             LayerOrder = mapDto.LayerOrder,
-                            TileSetPath = mapDto.TilesetPath ?? string.Empty
+                            IsEnabled = mapDto.IsEnabled,
+                            TileSetPath = mapDto.TilesetPath ?? string.Empty,
+                            TileProperties = mapDto.TileProperties != null ? new Dictionary<int, int>(mapDto.TileProperties) : new Dictionary<int, int>()
                         };
 
                         int index = 0;
@@ -278,9 +294,12 @@ namespace Engine.Core.Serialization
                     var mapDto = sceneDto.SceneMap;
                     var map = new Map(mapDto.Width, mapDto.Height)
                     {
+                        MapName = mapDto.MapName ?? string.Empty,
                         TileSize = mapDto.TileSize,
                         LayerOrder = mapDto.LayerOrder,
-                        TileSetPath = mapDto.TilesetPath ?? string.Empty
+                        IsEnabled = mapDto.IsEnabled,
+                        TileSetPath = mapDto.TilesetPath ?? string.Empty,
+                        TileProperties = mapDto.TileProperties != null ? new Dictionary<int, int>(mapDto.TileProperties) : new Dictionary<int, int>()
                     };
 
                     int index = 0;
