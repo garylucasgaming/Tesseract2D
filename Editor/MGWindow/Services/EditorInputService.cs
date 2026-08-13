@@ -619,10 +619,10 @@ namespace Engine.Editor.MGWindow.Services
 
         private void PaintTileAtMouse(Vector2 screenMousePos)
         {
-            if(_activeScene == null || _activeScene.SceneMap == null)
+            if(_activeScene == null || _activeScene.SceneMaps == null || _activeScene.SceneMaps.Count == 0)
                 return;
 
-            var map = _activeScene.SceneMap;
+            var map = _activeScene.ActiveMap;
             Vector2 worldMousePos = Camera.ScreenToWorld(screenMousePos, CurrentViewport);
             int tileSize = map.TileSize;
 
@@ -634,9 +634,7 @@ namespace Engine.Editor.MGWindow.Services
                 int selectedTileIndex = EditorContextManager.SelectedTileIndex;
                 if(selectedTileIndex >= 0)
                 {
-                    // Cleanly delegate the lookup logic to the Map class
                     int valueToStore = map.GetCustomValueForTile(selectedTileIndex);
-
                     map.SetGridValue(tileX, tileY, valueToStore);
                     Form1.NeedsToBeSaved = true;
                 }

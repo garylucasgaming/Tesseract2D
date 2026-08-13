@@ -1,6 +1,8 @@
 using Editor;
 using Engine.Content.Builder;
+using Engine.Core.Collections;
 using Engine.Core.ECS;
+using Engine.Core.ECS.Components;
 using Engine.Core.ECS.Systems;
 using Engine.Core.GamePlay;
 using Engine.Core.Runtime;
@@ -18,6 +20,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using System.Windows.Forms;
 using static System.Environment;
 
@@ -39,7 +42,10 @@ namespace WinFormsApp1
         private readonly System.Collections.Generic.List<(LogSeverity Severity, string Message)> _masterLogHistory =
              new System.Collections.Generic.List<(LogSeverity, string)>();
 
-
+        private ComboBox tileDatabaseComboBox;
+        private ComboBox tileDataComponentComboBox;
+        private bool _isSuppressingDatabaseChange = false;
+        private bool _isSuppressingComponentChange = false;
 
         private Panel tilesetCanvasPanel;
         private PictureBox tilesetPictureBox;
@@ -115,8 +121,6 @@ namespace WinFormsApp1
             };
             InitializeComponent();
 
-            //ControlThemeExtensions.ApplySynthwaveTheme(this);
-
             Log.Info("[Editor UI] Initializing editor main form...");
             SetTreeViewTheme(ProjectFolderTreeView.Handle);
             InitializeExplorerIcons();
@@ -153,13 +157,10 @@ namespace WinFormsApp1
             SceneSerializer.SaveScene(newScene, scenePath);
             LoadScene(newScene, scenePath);
             PopulateProjectExplorerTree(ProjectFolderTreeView);
-
-
         }
 
         private void InitializeScriptWatcher()
         {
-            // Clean up any existing watcher if switching projects
             _scriptWatcher?.Dispose();
             _scriptWatcher = null;
 
@@ -176,7 +177,6 @@ namespace WinFormsApp1
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size
             };
 
-            // Debounce timer or flag to prevent rapid-fire multiple compilation triggers on a single save action
             DateTime lastTriggerTime = DateTime.MinValue;
 
             _scriptWatcher.Changed += (s, e) => TriggerScriptRebuildThrottled(ref lastTriggerTime);
@@ -189,7 +189,6 @@ namespace WinFormsApp1
 
         private void TriggerScriptRebuildThrottled(ref DateTime lastTriggerTime)
         {
-            // Prevent multiple rapid triggers if an IDE saves a file in multiple passes (e.g., temp files)
             lock(this)
             {
                 if((DateTime.Now - lastTriggerTime).TotalMilliseconds < 1000)
@@ -197,7 +196,6 @@ namespace WinFormsApp1
                 lastTriggerTime = DateTime.Now;
             }
 
-            // Safely invoke the compilation pipeline back on the UI thread
             this.BeginInvoke(new Action(async () =>
             {
                 await CompileAndReloadScriptsAsync();
@@ -248,9 +246,9 @@ namespace WinFormsApp1
 
         public void RefreshProjectFolderView()
         {
-
             PopulateProjectExplorerTree(ProjectFolderTreeView);
         }
+
         public static void SetTreeViewTheme(IntPtr treeHandle)
         {
             SetWindowTheme(treeHandle, "explorer", null);
@@ -276,7 +274,6 @@ namespace WinFormsApp1
             {
                 if(child is PropertyGrid grid)
                 {
-                    // Unsubscribe first to prevent double-subscription issues
                     grid.PropertyValueChanged -= PropertyGrid_PropertyValueChanged;
                     grid.PropertyValueChanged += PropertyGrid_PropertyValueChanged;
                 }
@@ -286,8 +283,6 @@ namespace WinFormsApp1
                 }
             }
         }
-
-       
 
         private static void PropertyGrid_PropertyValueChanged(object sender, PropertyValueChangedEventArgs e)
         {
@@ -307,8 +302,6 @@ namespace WinFormsApp1
             RefreshMapsTab();
             RefreshManagersTab();
             RefreshSystemsTab();
-
-
         }
 
         public void UpdateProgressText(string text)
@@ -323,14 +316,12 @@ namespace WinFormsApp1
             if(EditorContextManager.IsProjectLoaded)
             {
                 InitializeAndLoadGameplayAssembly();
-                // TODO  set the loaded scene to the project manifests last used scene, default to first scene in scene folder if one exists, if one doesn't exist create a base scene file
 
                 string absoluteBinContentPath = Path.Combine(EditorContextManager.BinPath, "Content");
                 mgWindowControl.Editor.Content.RootDirectory = absoluteBinContentPath;
 
                 string targetScenePath = Path.Combine(EditorContextManager.ScenesPath, "Main.scene");
 
-                // 2. CHECK: If the file exists, load it! Otherwise, fall back to generating a clean slate template.
                 if(File.Exists(targetScenePath))
                 {
                     _isSuprressingDirtyFlag = true;
@@ -338,23 +329,10 @@ namespace WinFormsApp1
                     {
                         Log.Info($"[Editor UI] Found existing workspace state file. Deserializing active layout tree...");
 
-                        // Read the file structure straight back into memory
-
-
-
-                        // TODO parse the loaded scenes entities into loadedScene?
-
-
-
-                        //yaml serialization. 
                         var loadedScene = new GameScene();
                         loadedScene = SceneSerializer.LoadScene(targetScenePath);
                         loadedScene.resetContextSceneInManagers();
-                        //gism serialization
-                        //GameScene loadedScene = GISMSceneSerializer.LoadScene(targetScenePath);
 
-
-                        // Set the context and populate your UI nodes with the genuine saved data
                         EditorContextManager.ActiveLoadedScene = loadedScene;
                         AttachSceneEvents(loadedScene);
                         UpdateSceneTextBox(EditorContextManager.ActiveLoadedScene.SceneName);
@@ -362,7 +340,6 @@ namespace WinFormsApp1
                         UpdateSceneHierarchyTitle(EditorContextManager.ActiveLoadedScene.SceneName);
                         RefreshEditor();
                         InitializeScriptWatcher();
-
                     }
                     catch(Exception ex)
                     {
@@ -384,18 +361,11 @@ namespace WinFormsApp1
             PopulateProjectExplorerTree(ProjectFolderTreeView);
         }
 
-
-
-
-
         public void UpdateSceneTextBox(string sceneName)
         {
-
             SceneNameBox.Clear();
-
             SceneNameBox.Text = sceneName;
         }
-
 
         private void RunContentBuilder()
         {
@@ -414,16 +384,13 @@ namespace WinFormsApp1
                         SourceDirectory = EditorContextManager.AssetsPath,
                         OutputDirectory = Path.Combine(EditorContextManager.ContentPath, "Bin"),
                         Platform = TargetPlatform.DesktopGL
-
                     };
 
                     builder.Run(args);
 
-                    // Invoke back to the UI thread if you need to update a status bar or "Ready" icon
                     this.Invoke(new Action(() =>
                     {
                         Log.Info("[Content Builder] Content build complete.");
-                        // Update UI status here
                         ProjectFolderTreeView.Refresh();
                     }));
                 }
@@ -432,9 +399,7 @@ namespace WinFormsApp1
                     Log.Error($"[Content Build Error] {ex.Message}");
                 }
             });
-
         }
-
 
         private void UpdateSceneHierarchyTitle(string sceneName)
         {
@@ -448,7 +413,6 @@ namespace WinFormsApp1
             if(targetComponent == null || ActiveInspectorPanel == null)
                 return;
 
-            // Call a recursive worker to handle any nested container depths safely
             FindAndRefreshGrid(ActiveInspectorPanel, targetComponent);
         }
 
@@ -456,24 +420,23 @@ namespace WinFormsApp1
         {
             foreach(Control child in parent.Controls)
             {
-                // 1. Check if this control is a PropertyGrid and matches our instance
                 if(child is PropertyGrid grid && grid.Tag == targetComponent)
                 {
                     grid.Refresh();
-                    return true; // Match found and repainted, bubble out!
+                    return true;
                 }
 
-                // 2. If it's a container holding controls, drill down into it
                 if(child.HasChildren)
                 {
                     if(FindAndRefreshGrid(child, targetComponent))
                     {
-                        return true; // Propagation short-circuit
+                        return true;
                     }
                 }
             }
             return false;
         }
+
         private string PromptUserForProjectName()
         {
             Form prompt = new Form()
@@ -516,7 +479,6 @@ namespace WinFormsApp1
             return prompt.ShowDialog() == DialogResult.OK ? textBox.Text : string.Empty;
         }
 
-        // --- Core Global Menu Strip Items ---
         private void onCreateProjectToolStripMenuItem_Click(object sender, EventArgs e)
         {
             using(var folderDialog = new FolderBrowserDialog())
@@ -572,10 +534,6 @@ namespace WinFormsApp1
             }
         }
 
-
-
-
-
         private void LoadScene()
         {
             if(!EditorContextManager.IsProjectLoaded)
@@ -590,7 +548,6 @@ namespace WinFormsApp1
                 folderDialog.Filter = "Scene files (*.scene)|*.scene|All files (*.*)|*.*";
                 folderDialog.RestoreDirectory = true;
 
-
                 if(folderDialog.ShowDialog() == DialogResult.OK)
                 {
                     string targetScenePath = folderDialog.FileName;
@@ -600,12 +557,9 @@ namespace WinFormsApp1
                     {
                         Log.Info($"[Editor UI] Found existing Scene file. Deserializing active layout tree...");
 
-                        //yaml serialization. 
                         var loadedScene = new GameScene();
                         loadedScene = SceneSerializer.LoadScene(targetScenePath);
 
-
-                        // Set the context and populate your UI nodes with the genuine saved data
                         EditorContextManager.ActiveLoadedScene = loadedScene;
                         UpdateSceneTextBox(EditorContextManager.ActiveLoadedScene.SceneName);
                         EditorContextManager.ActiveLoadedScene.resetContextSceneInManagers();
@@ -620,7 +574,7 @@ namespace WinFormsApp1
                     finally
                     {
                         _isSuprressingDirtyFlag = false;
-                        NeedsToBeSaved = false; // Reset to clean state
+                        NeedsToBeSaved = false;
                     }
                 }
             }
@@ -628,19 +582,14 @@ namespace WinFormsApp1
 
         private void LoadScene(GameScene sceneToLoad, string targetScenePath)
         {
-
-
             UpdateEditorTitle();
             try
             {
                 Log.Info($"[Editor UI] Found existing Scene file. Deserializing active layout tree...");
 
-                //yaml serialization. 
                 var loadedScene = sceneToLoad;
                 loadedScene = SceneSerializer.LoadScene(targetScenePath);
 
-
-                // Set the context and populate your UI nodes with the genuine saved data
                 EditorContextManager.ActiveLoadedScene = loadedScene;
                 AttachSceneEvents(loadedScene);
                 UpdateSceneTextBox(EditorContextManager.ActiveLoadedScene.SceneName);
@@ -653,8 +602,6 @@ namespace WinFormsApp1
                 Log.Error($"[Editor UI Error] Scene file was found but failed to deserialize. Falling back to default layout. Reason: {ex.Message}");
                 LoadDefaultSandboxScene();
             }
-
-
         }
 
         public static void SaveScene()
@@ -675,22 +622,15 @@ namespace WinFormsApp1
             {
                 Log.Info("[Editor UI] Initiating scene hierarchy persistence pipeline...");
 
-                // 1. Build the path matching your project context rules
                 string sceneFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.scene";
-                //string GISMFileName = $"{EditorContextManager.ActiveLoadedScene.SceneName}.gism";
-                //string GISMTargetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Scenes", GISMFileName);
                 string targetScenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Assets", "Scenes", sceneFileName);
 
-                // 2. Ensure directories exist safely on disk
                 string directoryCheck = Path.GetDirectoryName(targetScenePath);
                 if(!string.IsNullOrEmpty(directoryCheck) && !Directory.Exists(directoryCheck))
                 {
                     Directory.CreateDirectory(directoryCheck);
                 }
 
-                // 3.  EXECUTE YOUR EXACT NATIVE ENGINE SERIALIZER 
-                // We pass the live scene layout and target destination directly
-                //GISMSceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, GISMTargetScenePath);
                 SceneSerializer.SaveScene(EditorContextManager.ActiveLoadedScene, targetScenePath);
 
                 Log.Info($"Project workspace and active scene layout saved successfully.");
@@ -699,29 +639,22 @@ namespace WinFormsApp1
             }
             catch(Exception ex)
             {
-                // Failures during save are already logged by SceneSerializer, but this provides a UI safety fallback
                 Log.Warning($"Failed to save project layout safely to disk:\n{ex.Message}");
             }
         }
 
-
-
-
-
         public void onSaveProjectToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
-
             try
             {
                 SaveScene();
             }
             catch(Exception ex)
             {
-                // Failures during save are already logged by SceneSerializer, but this provides a UI safety fallback
                 MessageBox.Show($"Failed to save project layout safely to disk:\n{ex.Message}", "IO Save Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
         private void AppendMessageToConsoleBox(LogSeverity severity, string formattedText)
         {
             if(ConsoleTextBox.InvokeRequired)
@@ -730,24 +663,19 @@ namespace WinFormsApp1
                 return;
             }
 
-            // 1. Permanently keep track of this entry for subsequent search filtering
-            // Note: Storing as a named tuple matching your historical layout
             _masterLogHistory.Add((Severity: severity, Message: formattedText));
 
-            // 2. Only append directly to the view if it passes the current active search filter
-            // FIX: Using the exposed .SearchQuery property from your TextSearchBarControl
             string activeFilter = consoleSearchBar.SearchQuery;
 
             if(string.IsNullOrEmpty(activeFilter) || formattedText.Contains(activeFilter, StringComparison.CurrentCultureIgnoreCase))
             {
                 ConsoleTextBox.BeginUpdate();
 
-                // 3. Select the color based on severity rules
                 System.Drawing.Color logColor;
                 switch(severity)
                 {
                     case LogSeverity.Info:
-                        logColor = System.Drawing.Color.DarkGreen; // Stands out nicely on dark/light themes
+                        logColor = System.Drawing.Color.DarkGreen;
                         break;
                     case LogSeverity.Warning:
                         logColor = System.Drawing.Color.DarkGoldenrod;
@@ -757,21 +685,18 @@ namespace WinFormsApp1
                         break;
                     case LogSeverity.Print:
                     default:
-                        logColor = ConsoleTextBox.ForeColor; // Default system text color
+                        logColor = ConsoleTextBox.ForeColor;
                         break;
                 }
 
-                // 4. Position selection at the end, assign color, and append the string
                 ConsoleTextBox.SelectionStart = ConsoleTextBox.TextLength;
                 ConsoleTextBox.SelectionLength = 0;
                 ConsoleTextBox.SelectionColor = logColor;
 
                 ConsoleTextBox.AppendText(formattedText + Environment.NewLine);
 
-                // 5. Reset selection back to standard color so future non-colored text stays clean
                 ConsoleTextBox.SelectionColor = ConsoleTextBox.ForeColor;
 
-                // Auto-scroll mechanics
                 ConsoleTextBox.SelectionStart = ConsoleTextBox.TextLength;
                 ConsoleTextBox.ScrollToCaret();
 
@@ -787,14 +712,12 @@ namespace WinFormsApp1
                 return;
             }
 
-            // 1. Locate the Gum project directory within the active workspace
             string gumProjectDir = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "GumProject");
             if(!Directory.Exists(gumProjectDir))
             {
                 Directory.CreateDirectory(gumProjectDir);
             }
 
-            // 2. Find the .gumx project file
             string[] gumFiles = Directory.GetFiles(gumProjectDir, "*.gumx");
             string gumFilePath = string.Empty;
 
@@ -804,7 +727,6 @@ namespace WinFormsApp1
             }
             else
             {
-                // Fallback: Generate a default .gumx if none exists yet
                 string projectName = EditorContextManager.CurrentProjectName ?? Path.GetFileName(EditorContextManager.CurrentProjectRoot);
                 gumFilePath = Path.Combine(gumProjectDir, $"{projectName}.gumx");
 
@@ -823,7 +745,6 @@ namespace WinFormsApp1
 
             try
             {
-                // 3. Launch the Gum editor via shell execution (opens the .gumx file directly in the standalone Gum application)
                 var startInfo = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = gumFilePath,
@@ -840,7 +761,6 @@ namespace WinFormsApp1
             }
         }
 
-        // Tree Shared Searching Utilities
         private void ResetTreeNodes(TreeNodeCollection nodes)
         {
             foreach(TreeNode node in nodes)
@@ -864,10 +784,7 @@ namespace WinFormsApp1
                 _trackedScene.Entities.OnEntityCreated += OnEngineEntityCreated;
                 _trackedScene.Entities.OnEntityRemoved += OnEngineEntityRemoved;
             }
-           
         }
-
-       
 
         private void DetachSceneEvents(GameScene scene)
         {
@@ -880,7 +797,6 @@ namespace WinFormsApp1
 
         private void OnEngineEntityCreated(GameObject entity)
         {
-            // Ensure execution happens on the UI thread since code spawning can occur off-thread
             if(SceneHierarchyTreeView.InvokeRequired)
             {
                 SceneHierarchyTreeView.BeginInvoke(new Action(() => OnEngineEntityCreated(entity)));
@@ -891,7 +807,6 @@ namespace WinFormsApp1
             if(activeScene != null)
             {
                 PopulateSceneHierarchyTree(SceneHierarchyTreeView, activeScene);
-                
             }
         }
 
@@ -909,12 +824,12 @@ namespace WinFormsApp1
                 PopulateSceneHierarchyTree(SceneHierarchyTreeView, activeScene);
             }
         }
+
         public static void RebuildInspectorPanel(GameObject targetGo, bool forceRebuild = false)
         {
             if(ActiveInspectorPanel == null)
                 return;
 
-            // 💡 OPTIMIZATION: Short-circuit only if it's the same object AND a forced rebuild isn't requested
             if(!forceRebuild && targetGo == _currentInspectedGameObject && ActiveInspectorPanel.Controls.OfType<FlowLayoutPanel>().Any())
             {
                 var existingFlowLayout = ActiveInspectorPanel.Controls.OfType<FlowLayoutPanel>().First();
@@ -960,7 +875,6 @@ namespace WinFormsApp1
                 ActiveInspectorPanel.Controls.Add(flowLayout);
             }
 
-            // --- Destructive Rebuild Area (Only hit when switching to a DIFFERENT GameObject) ---
             flowLayout.SuspendLayout();
 
             int previousScrollY = Math.Abs(flowLayout.AutoScrollPosition.Y);
@@ -977,7 +891,6 @@ namespace WinFormsApp1
             if(cardWidth < 120)
                 cardWidth = 200;
 
-            // Draw GameObject properties card at the top
             Panel goCard = Engine.Editor.WinFormsApp1.ComponentCardFactory.CreateCard(
                 "GameObject Properties",
                 targetGo,
@@ -987,7 +900,6 @@ namespace WinFormsApp1
             goCard.Tag = targetGo;
             flowLayout.Controls.Add(goCard);
 
-            // Populate component cards
             foreach(var kvp in targetGo.Components)
             {
                 string name = kvp.Key.Name;
@@ -1007,9 +919,7 @@ namespace WinFormsApp1
             HookPropertyGridChanges(ActiveInspectorPanel);
             ActiveInspectorPanel.ResumeLayout(true);
         }
-        /// <summary>
-        /// Recursively finds and refreshes all PropertyGrid controls inside the inspector's panel.
-        /// </summary>
+
         private static void RefreshAllPropertyGrids(Control parent)
         {
             foreach(Control child in parent.Controls)
@@ -1024,13 +934,12 @@ namespace WinFormsApp1
                 }
             }
         }
-        // Simple context helper mapping your Hierarchy tree to live memory references
+
         private GameObject? GetSelectedGameObjectFromHierarchy()
         {
             if(SceneHierarchyTreeView.SelectedNode == null)
                 return null;
 
-            // Presuming you stored your GameObject reference inside the TreeNode's Tag property
             return SceneHierarchyTreeView.SelectedNode.Tag as GameObject;
         }
 
@@ -1048,14 +957,12 @@ namespace WinFormsApp1
 
             try
             {
-                // Temporarily clear the SynchronizationContext to prevent UI thread deadlocks when calling .Result
                 var oldContext = System.Threading.SynchronizationContext.Current;
                 BuildResult result;
                 try
                 {
                     System.Threading.SynchronizationContext.SetSynchronizationContext(null);
 
-                    // Execute and wait synchronously and safely
                     result = ScriptCompiler.CompileGameplayProjectAsync(
                         EditorContextManager.CurrentProjectRoot,
                         EditorContextManager.CurrentProjectName
@@ -1083,7 +990,6 @@ namespace WinFormsApp1
             }
         }
 
-
         private void InitializeSceneManagementTabs()
         {
             InitializeMapsTab();
@@ -1091,9 +997,9 @@ namespace WinFormsApp1
             InitializeSystemsTab();
             InitializeTilesetMetadataTab();
         }
+
         private void InitializeMapsTab()
         {
-            // Configure DataGridView for Map List
             MapGridDataView.AutoGenerateColumns = false;
             MapGridDataView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             MapGridDataView.MultiSelect = false;
@@ -1101,7 +1007,6 @@ namespace WinFormsApp1
 
             MapGridDataView.Columns.Clear();
 
-            // 1. Map Name Column
             MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "MapName",
@@ -1109,7 +1014,6 @@ namespace WinFormsApp1
                 Name = "ColMapName"
             });
 
-            //2. Enabled Column (CheckBox)
             MapGridDataView.Columns.Add(new DataGridViewCheckBoxColumn
             {
                 DataPropertyName = "IsEnabled",
@@ -1117,7 +1021,6 @@ namespace WinFormsApp1
                 Name = "ColIsEnabled"
             });
 
-            // 3. Layer Order Column
             MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "LayerOrder",
@@ -1125,7 +1028,6 @@ namespace WinFormsApp1
                 Name = "ColLayerOrder"
             });
 
-            // 4. Width Column
             MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "Width",
@@ -1133,7 +1035,6 @@ namespace WinFormsApp1
                 Name = "ColWidth"
             });
 
-            // 5. Height Column
             MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "Height",
@@ -1141,7 +1042,6 @@ namespace WinFormsApp1
                 Name = "ColHeight"
             });
 
-            // 6. Tile Size Column
             MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
             {
                 DataPropertyName = "TileSize",
@@ -1149,8 +1049,39 @@ namespace WinFormsApp1
                 Name = "ColTileSize"
             });
 
+            // --- Tile Database ComboBox Column (Bound to String Name/Path) ---
+            var tileDatabaseColumn = new DataGridViewComboBoxColumn
+            {
+                DataPropertyName = "TileDatabaseName", // Bound to string instead of Database object
+                HeaderText = "Tile Database",
+                Name = "ColTileDatabase",
+                DisplayMember = "DisplayName",
+                ValueMember = "FilePath"
+            };
 
-            // 7. Tileset Path ComboBox Column
+            var dbOptions = new List<DatabaseOption>();
+            dbOptions.Add(new DatabaseOption { DisplayName = "(None)", FilePath = string.Empty });
+
+            string contentDirectory = EditorContextManager.ContentPath;
+            if(Directory.Exists(contentDirectory))
+            {
+                string[] dbFiles = Directory.GetFiles(contentDirectory, "*.database", SearchOption.AllDirectories);
+                foreach(string file in dbFiles)
+                {
+                    string relPath = Path.GetRelativePath(contentDirectory, file).Replace('\\', '/');
+                    // Strip .database extension for the stored string name
+                    if(relPath.EndsWith(".database", StringComparison.OrdinalIgnoreCase))
+                    {
+                        relPath = relPath.Substring(0, relPath.Length - 9);
+                    }
+                    string name = Path.GetFileName(file);
+                    dbOptions.Add(new DatabaseOption { DisplayName = name, FilePath = relPath });
+                }
+            }
+            tileDatabaseColumn.DataSource = dbOptions;
+            MapGridDataView.Columns.Add(tileDatabaseColumn);
+
+            // --- Tileset ComboBox Column ---
             var tilesetColumn = new DataGridViewComboBoxColumn
             {
                 DataPropertyName = "TileSetPath",
@@ -1161,8 +1092,6 @@ namespace WinFormsApp1
             };
             MapGridDataView.Columns.Add(tilesetColumn);
 
-
-            // hookup events
             AddMapButton.Click += AddMapButton_Click;
             RemoveMapButton.Click += RemoveMapButton_Click;
             MapGridDataView.SelectionChanged += MapGridDataView_SelectionChanged;
@@ -1175,16 +1104,45 @@ namespace WinFormsApp1
                 }
             };
 
-            // Mark project as dirty and refresh viewport whenever any cell value is modified
+            // Automatically resolve and assign the Database reference whenever TileDatabaseName changes
             MapGridDataView.CellValueChanged += (s, e) =>
             {
                 NeedsToBeSaved = true;
                 mgWindowControl?.Invalidate();
 
-                // Refresh the tileset preview and metadata panel when the tileset dropdown changes
+                if(e.ColumnIndex >= 0 && MapGridDataView.Columns[e.ColumnIndex].Name == "ColTileDatabase")
+                {
+                    if(MapGridDataView.Rows[e.RowIndex].DataBoundItem is Map map)
+                    {
+                        var scene = EditorContextManager.ActiveLoadedScene;
+                        if(scene != null)
+                        {
+                            if(string.IsNullOrEmpty(map.TileDatabaseName))
+                            {
+                                map.TileDatabase = null;
+                            }
+                            else
+                            {
+                                // Append .database back when resolving the file path
+                                string absolutePath = Path.Combine(EditorContextManager.ContentPath, map.TileDatabaseName + ".database");
+                                string dbName = Path.GetFileNameWithoutExtension(map.TileDatabaseName);
+
+                                Database? matchedDb = scene.Database.Databases.FirstOrDefault(db =>
+                                    db.Name.Equals(dbName, StringComparison.OrdinalIgnoreCase));
+
+                                if(matchedDb == null && File.Exists(absolutePath))
+                                {
+                                    matchedDb = scene.Database.LoadDatabase(absolutePath);
+                                }
+
+                                map.TileDatabase = matchedDb;
+                            }
+                        }
+                    }
+                }
+
                 if(e.ColumnIndex >= 0 && MapGridDataView.Columns[e.ColumnIndex].Name == "ColTilesetPath")
                 {
-                   
                     RefreshTilesetMetadataPanel();
                 }
             };
@@ -1192,29 +1150,34 @@ namespace WinFormsApp1
         private void MapGridDataView_SelectionChanged(object sender, EventArgs e)
         {
             var scene = EditorContextManager.ActiveLoadedScene;
-            if(scene == null || MapGridDataView.SelectedRows.Count == 0)
+            if(scene == null || MapGridDataView == null)
+                return;
+
+            if(MapGridDataView.SelectedRows.Count == 0 || MapGridDataView.CurrentRow == null || MapGridDataView.CurrentRow.Index < 0)
                 return;
 
             if(MapGridDataView.SelectedRows[0].DataBoundItem is Map selectedMap)
             {
-                scene.SceneMap = selectedMap;
-
-                // Optional: Force a viewport repaint or refresh inspector properties if needed
+                int index = scene.SceneMaps.IndexOf(selectedMap);
+                if(index >= 0)
+                {
+                    scene.ActiveMapIndex = index;
+                }
                 mgWindowControl?.Invalidate();
             }
+
             RefreshTilesetMetadataPanel();
         }
+
         private void RefreshMapsTab()
         {
             var scene = EditorContextManager.ActiveLoadedScene;
             if(scene == null)
                 return;
 
-            // Scan content directory for available tileset image files
             string contentDirectory = EditorContextManager.ContentPath;
             var tilesetOptions = new System.Collections.Generic.List<object>();
 
-            // Add a default blank/none option to prevent binding errors
             tilesetOptions.Add(new
             {
                 DisplayName = "(None)",
@@ -1227,7 +1190,7 @@ namespace WinFormsApp1
                 foreach(string filePath in imageFiles)
                 {
                     string relativePath = Path.GetRelativePath(contentDirectory, filePath).Replace('\\', '/');
-                    string fileName = Path.GetFileName(filePath); // Displays just file name[cite: 16]
+                    string fileName = Path.GetFileName(filePath);
                     tilesetOptions.Add(new
                     {
                         DisplayName = fileName,
@@ -1236,7 +1199,6 @@ namespace WinFormsApp1
                 }
             }
 
-            // Populate the ComboBox column data source
             if(MapGridDataView.Columns["ColTilesetPath"] is DataGridViewComboBoxColumn cbColumn)
             {
                 cbColumn.DataSource = tilesetOptions;
@@ -1246,11 +1208,11 @@ namespace WinFormsApp1
 
             var currentSelectedMap = GetSelectedMap();
 
-            // Bind the SceneMaps list to the DataGridView
+            MapGridDataView.SelectionChanged -= MapGridDataView_SelectionChanged;
             MapGridDataView.DataSource = null;
             MapGridDataView.DataSource = scene.SceneMaps;
+            MapGridDataView.SelectionChanged += MapGridDataView_SelectionChanged;
 
-            // Restore previous selection if possible
             if(currentSelectedMap != null)
             {
                 foreach(DataGridViewRow row in MapGridDataView.Rows)
@@ -1263,6 +1225,7 @@ namespace WinFormsApp1
                 }
             }
         }
+
         private void AddMapButton_Click(object sender, EventArgs e)
         {
             var scene = EditorContextManager.ActiveLoadedScene;
@@ -1279,6 +1242,7 @@ namespace WinFormsApp1
                 RefreshMapsTab();
             }
         }
+
         private void RemoveMapButton_Click(object sender, EventArgs e)
         {
             var scene = EditorContextManager.ActiveLoadedScene;
@@ -1295,24 +1259,19 @@ namespace WinFormsApp1
                 }
 
                 scene.SceneMaps.Remove(selectedMap);
-                if(scene.SceneMap == selectedMap)
-                {
-                    scene.SceneMap = scene.SceneMaps[0]; // Fallback to another map
-                }
                 NeedsToBeSaved = true;
                 RefreshMapsTab();
             }
         }
+
         private void InitializeManagersTab()
         {
-            // managersListView setup
             ManagerListView.View = View.Details;
             ManagerListView.FullRowSelect = true;
             ManagerListView.Columns.Clear();
             ManagerListView.Columns.Add("Manager Type", 200, HorizontalAlignment.Left);
             ManagerListView.Columns.Add("Assembly", 250, HorizontalAlignment.Left);
 
-            // Wire up Add Manager Dropdown
             if(AddManagerDropdownButton != null)
             {
                 AddManagerDropdownButton.DropDown = new ContextMenuStrip();
@@ -1325,7 +1284,6 @@ namespace WinFormsApp1
 
                     var managerTypes = new System.Collections.Generic.List<Type>();
 
-                    // Scan core and user assemblies for GameManager subclasses
                     var coreAssembly = typeof(GameManager).Assembly;
                     managerTypes.AddRange(coreAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(GameManager)) && !t.IsAbstract));
 
@@ -1371,7 +1329,6 @@ namespace WinFormsApp1
                 };
             }
 
-            // Wire up Remove Manager Button
             if(RemoveManagerButton != null)
             {
                 RemoveManagerButton.Click += (s, e) =>
@@ -1391,6 +1348,7 @@ namespace WinFormsApp1
                 };
             }
         }
+
         private void RefreshManagersTab()
         {
             if(EditorContextManager.ActiveLoadedScene == null)
@@ -1407,16 +1365,15 @@ namespace WinFormsApp1
                 ManagerListView.Items.Add(listViewItem);
             }
         }
+
         private void InitializeSystemsTab()
         {
-            // systemsListView setup
             SystemListView.View = View.Details;
             SystemListView.FullRowSelect = true;
             SystemListView.Columns.Clear();
             SystemListView.Columns.Add("System Type", 200, HorizontalAlignment.Left);
             SystemListView.Columns.Add("Update Policy", 120, HorizontalAlignment.Left);
 
-            // Wire up Add System Dropdown
             if(AddSystemDropdownButton != null)
             {
                 AddSystemDropdownButton.DropDown = new ContextMenuStrip();
@@ -1474,7 +1431,6 @@ namespace WinFormsApp1
                 };
             }
 
-            // Wire up Remove System Button
             if(RemoveSystemButton != null)
             {
                 RemoveSystemButton.Click += (s, e) =>
@@ -1486,7 +1442,6 @@ namespace WinFormsApp1
                     var systemInstance = SystemListView.SelectedItems[0].Tag as GameSystem;
                     if(systemInstance != null)
                     {
-                        // Prevent removing core engine structural systems if desired
                         if(systemInstance is TransformSystem || systemInstance is SpriteRenderSystem || systemInstance is PhysicsSystem || systemInstance is ScriptComponentSystem || systemInstance is UIInputSystem || systemInstance is UILayoutSystem || systemInstance is UIRenderSystem)
                         {
                             MessageBox.Show("Core engine systems cannot be removed.", "Action Blocked", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -1523,17 +1478,15 @@ namespace WinFormsApp1
         {
             splitContainer4.Panel2.Controls.Clear();
 
-            // Main layout container for Panel2 (Split into Image Viewer on left, Controls on right)
             var layout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
                 RowCount = 1
             };
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 70F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 30F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 65F));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 35F));
 
-            // Left Side: Scrollable Canvas for the Tileset Image
             tilesetCanvasPanel = new Panel
             {
                 Dock = DockStyle.Fill,
@@ -1552,24 +1505,22 @@ namespace WinFormsApp1
             tilesetCanvasPanel.Controls.Add(tilesetPictureBox);
             layout.Controls.Add(tilesetCanvasPanel, 0, 0);
 
-            // Right Side: Property Editing Controls
             var propPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.TopDown,
-                WrapContents = false
+                WrapContents = false,
+                AutoScroll = true
             };
 
             propPanel.Controls.Add(new Label { Text = "Tileset Tile Properties", Font = new System.Drawing.Font("Segoe UI", 10, System.Drawing.FontStyle.Bold), AutoSize = true, ForeColor = System.Drawing.Color.White });
 
-            // FIX: Assign to the class-level field instead of declaring a local variable with 'var'
             selectedTileLabel = new Label { Text = "Selected Tile: None", AutoSize = true, ForeColor = System.Drawing.Color.Black };
             propPanel.Controls.Add(selectedTileLabel);
 
             var valueLabel = new Label { Text = "Custom Int Value:", AutoSize = true, ForeColor = System.Drawing.Color.Black };
             propPanel.Controls.Add(valueLabel);
 
-            // FIX: Assign to the class-level field instead of declaring a local variable with 'var'
             tileValueNumeric = new NumericUpDown
             {
                 Minimum = -9999,
@@ -1580,9 +1531,162 @@ namespace WinFormsApp1
             tileValueNumeric.ValueChanged += TileValueNumeric_ValueChanged;
             propPanel.Controls.Add(tileValueNumeric);
 
+            // --- Database & DataComponent Assignment Controls ---
+            propPanel.Controls.Add(new Label { Text = "Tile Database:", AutoSize = true, ForeColor = System.Drawing.Color.Black, Margin = new Padding(0, 10, 0, 0) });
+            tileDatabaseComboBox = new ComboBox
+            {
+                Width = 160,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Enabled = false
+            };
+            tileDatabaseComboBox.SelectedIndexChanged += TileDatabaseComboBox_SelectedIndexChanged;
+            propPanel.Controls.Add(tileDatabaseComboBox);
+
+            propPanel.Controls.Add(new Label { Text = "Data Component:", AutoSize = true, ForeColor = System.Drawing.Color.Black, Margin = new Padding(0, 5, 0, 0) });
+            tileDataComponentComboBox = new ComboBox
+            {
+                Width = 160,
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Enabled = false
+            };
+            tileDataComponentComboBox.SelectedIndexChanged += TileDataComponentComboBox_SelectedIndexChanged;
+            propPanel.Controls.Add(tileDataComponentComboBox);
+
             layout.Controls.Add(propPanel, 1, 0);
             splitContainer4.Panel2.Controls.Add(layout);
         }
+
+        private void PopulateDatabaseDropdown(Map map)
+        {
+            _isSuppressingDatabaseChange = true;
+            tileDatabaseComboBox.Items.Clear();
+            tileDatabaseComboBox.Items.Add(new DatabaseOption { DisplayName = "(None)", FilePath = string.Empty });
+
+            string contentDirectory = EditorContextManager.ContentPath;
+            if(Directory.Exists(contentDirectory))
+            {
+                string[] dbFiles = Directory.GetFiles(contentDirectory, "*.database", SearchOption.AllDirectories);
+                foreach(string file in dbFiles)
+                {
+                    string relPath = Path.GetRelativePath(contentDirectory, file).Replace('\\', '/');
+                    if(relPath.EndsWith(".database", StringComparison.OrdinalIgnoreCase))
+                    {
+                        relPath = relPath.Substring(0, relPath.Length - 9);
+                    }
+                    string name = Path.GetFileName(file);
+                    tileDatabaseComboBox.Items.Add(new DatabaseOption { DisplayName = name, FilePath = relPath });
+                }
+            }
+
+            tileDatabaseComboBox.SelectedIndex = 0;
+            _isSuppressingDatabaseChange = false;
+        }
+
+        private void RefreshTileDataComponentDropdown(Map map)
+        {
+            _isSuppressingComponentChange = true;
+            tileDataComponentComboBox.Items.Clear();
+            tileDataComponentComboBox.Items.Add("(None)");
+
+            if(map != null && map.TileDatabase != null)
+            {
+                try
+                {
+                    var prop = map.TileDatabase.GetType().GetProperty("Components") ?? map.TileDatabase.GetType().GetProperty("Items");
+                    if(prop != null && prop.GetValue(map.TileDatabase) is System.Collections.IEnumerable enumerable)
+                    {
+                        foreach(var comp in enumerable)
+                        {
+                            tileDataComponentComboBox.Items.Add(comp);
+                        }
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Log.Error($"[Metadata Panel] Failed to extract components from database: {ex.Message}");
+                }
+            }
+
+            tileDataComponentComboBox.DisplayMember = "Name";
+            if(tileDataComponentComboBox.Items.Count > 0)
+            {
+                tileDataComponentComboBox.SelectedIndex = 0;
+            }
+            _isSuppressingComponentChange = false;
+        }
+
+        private void TileDatabaseComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if(_isSuppressingDatabaseChange)
+                return;
+
+            var map = GetSelectedMap();
+            if(map == null)
+                return;
+
+            if(tileDatabaseComboBox.SelectedItem is DatabaseOption dbItem)
+            {
+                if(string.IsNullOrEmpty(dbItem.FilePath))
+                {
+                    map.TileDatabase = null;
+                    map.TileDatabaseName = string.Empty;
+                }
+                else
+                {
+                    map.TileDatabaseName = dbItem.FilePath; // Stored without .database
+                    string fullPath = Path.Combine(EditorContextManager.ContentPath, dbItem.FilePath + ".database");
+                    try
+                    {
+                        if(File.Exists(fullPath))
+                        {
+                            string json = File.ReadAllText(fullPath);
+                            map.TileDatabase = JsonSerializer.Deserialize<Database>(json);
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+                        Log.Error($"[Database] Failed to deserialize database: {ex.Message}");
+                        map.TileDatabase = null;
+                    }
+                }
+
+                NeedsToBeSaved = true;
+                RefreshTileDataComponentDropdown(map);
+            }
+        }
+
+        private void TileDataComponentComboBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if(_isSuppressingComponentChange)
+                return;
+
+            var map = GetSelectedMap();
+            if(map == null || selectedTileIndex < 0)
+                return;
+
+            if(tileDataComponentComboBox.SelectedItem is DataComponent selectedComponent)
+            {
+                if(map.TileIndexDataDictionary == null)
+                {
+                    map.TileIndexDataDictionary = new Dictionary<int, DataComponent>();
+                }
+
+                map.TileIndexDataDictionary[selectedTileIndex] = selectedComponent;
+                NeedsToBeSaved = true;
+                tilesetPictureBox.Invalidate();
+            }
+            else
+            {
+                // Selected "(None)" item
+                if(map.TileIndexDataDictionary != null && map.TileIndexDataDictionary.ContainsKey(selectedTileIndex))
+                {
+                    map.TileIndexDataDictionary.Remove(selectedTileIndex);
+                    NeedsToBeSaved = true;
+                    tilesetPictureBox.Invalidate();
+                }
+            }
+        }
+
         private void RefreshTilesetMetadataPanel()
         {
             var map = GetSelectedMap();
@@ -1598,6 +1702,9 @@ namespace WinFormsApp1
                 EditorContextManager.SelectedTileIndex = selectedTileIndex;
                 selectedTileLabel.Text = "Selected Tile: None";
                 tileValueNumeric.Enabled = false;
+                tileDatabaseComboBox.Enabled = false;
+                tileDataComponentComboBox.Enabled = false;
+                tilesetPictureBox.Invalidate();
                 return;
             }
 
@@ -1606,7 +1713,6 @@ namespace WinFormsApp1
             {
                 try
                 {
-                    // Load bitmap safely without locking the file handle
                     using(var tempBmp = new System.Drawing.Bitmap(fullPath))
                     {
                         currentTilesetBitmap?.Dispose();
@@ -1625,18 +1731,58 @@ namespace WinFormsApp1
                 tilesetPictureBox.Image = null;
             }
 
-            selectedTileIndex = -1;
-            selectedTileLabel.Text = "Selected Tile: None";
-            tileValueNumeric.Enabled = false;
+            // Populate Database list options
+            PopulateDatabaseDropdown(map);
+
+            if(selectedTileIndex >= 0)
+            {
+                selectedTileLabel.Text = $"Selected Tile Index: {selectedTileIndex}";
+                tileValueNumeric.Enabled = true;
+                tileDatabaseComboBox.Enabled = true;
+                tileDataComponentComboBox.Enabled = true;
+
+                int existingVal = 0;
+                if(map.TileProperties != null && map.TileProperties.TryGetValue(selectedTileIndex, out int val))
+                {
+                    existingVal = val;
+                }
+
+                _isSuppressingTileValueChange = true;
+                tileValueNumeric.Value = existingVal;
+                _isSuppressingTileValueChange = false;
+
+                // Populate and select assigned DataComponent if present
+                RefreshTileDataComponentDropdown(map);
+                if(map.TileIndexDataDictionary != null && map.TileIndexDataDictionary.TryGetValue(selectedTileIndex, out var assignedComp))
+                {
+                    _isSuppressingComponentChange = true;
+                    tileDataComponentComboBox.SelectedItem = assignedComp;
+                    _isSuppressingComponentChange = false;
+                }
+                else
+                {
+                    _isSuppressingComponentChange = true;
+                    if(tileDataComponentComboBox.Items.Count > 0)
+                        tileDataComponentComboBox.SelectedIndex = 0;
+                    _isSuppressingComponentChange = false;
+                }
+            }
+            else
+            {
+                selectedTileLabel.Text = "Selected Tile: None";
+                tileValueNumeric.Enabled = false;
+                tileDatabaseComboBox.Enabled = false;
+                tileDataComponentComboBox.Enabled = false;
+            }
+
             tilesetPictureBox.Invalidate();
         }
-
         private bool _isSuppressingTileValueChange = false;
 
         private void TilesetPictureBox_Paint(object sender, PaintEventArgs e)
         {
             var map = GetSelectedMap();
-            if(map == null || currentTilesetBitmap == null || map.TileSize <= 0)
+            if(map == null || currentTilesetBitmap == null || map.TileSize <= 0 || selectedTileIndex < 0)
                 return;
 
             int tileSize = map.TileSize;
@@ -1645,7 +1791,6 @@ namespace WinFormsApp1
 
             using(var gridPen = new Pen(System.Drawing.Color.FromArgb(100, 255, 255, 255), 1))
             {
-                // Draw grid lines
                 for(int x = 0; x <= currentTilesetBitmap.Width; x += tileSize)
                 {
                     e.Graphics.DrawLine(gridPen, x, 0, x, currentTilesetBitmap.Height);
@@ -1656,7 +1801,6 @@ namespace WinFormsApp1
                 }
             }
 
-            // Highlight selected tile if valid
             if(selectedTileIndex >= 0)
             {
                 int col = selectedTileIndex % cols;
@@ -1668,7 +1812,6 @@ namespace WinFormsApp1
                     e.Graphics.DrawRectangle(highlightPen, rect);
                 }
 
-                // Key = Tile Index, Value = Assigned Custom Int
                 int assignedVal = 0;
                 bool hasVal = false;
                 if(map.TileProperties != null && map.TileProperties.TryGetValue(selectedTileIndex, out int val))
@@ -1687,6 +1830,13 @@ namespace WinFormsApp1
             }
         }
 
+        private class DatabaseOption
+        {
+            public string DisplayName { get; set; } = "";
+            public string FilePath { get; set; } = "";
+            public override string ToString() => DisplayName;
+        }
+
         private void TilesetPictureBox_MouseClick(object sender, MouseEventArgs e)
         {
             var map = GetSelectedMap();
@@ -1695,13 +1845,12 @@ namespace WinFormsApp1
 
             int tileSize = map.TileSize;
             int cols = currentTilesetBitmap.Width / tileSize;
-            int maxCols = currentTilesetBitmap.Width / tileSize;
-            int maxRows = currentTilesetBitmap.Height / tileSize;
+            int rows = currentTilesetBitmap.Height / tileSize;
 
             int clickedCol = e.X / tileSize;
             int clickedRow = e.Y / tileSize;
 
-            if(clickedCol >= 0 && clickedCol < maxCols && clickedRow >= 0 && clickedRow < maxRows)
+            if(clickedCol >= 0 && clickedCol < cols && clickedRow >= 0 && clickedRow < rows)
             {
                 selectedTileIndex = clickedRow * cols + clickedCol;
                 EditorContextManager.SelectedTileIndex = selectedTileIndex;
@@ -1709,7 +1858,6 @@ namespace WinFormsApp1
 
                 tileValueNumeric.Enabled = true;
 
-                // Key = Tile Index, Value = Assigned Custom Int
                 int existingVal = 0;
                 if(map.TileProperties != null && map.TileProperties.TryGetValue(selectedTileIndex, out int val))
                 {
@@ -1740,7 +1888,6 @@ namespace WinFormsApp1
                 map.TileProperties = new Dictionary<int, int>();
             }
 
-            // Store the value directly in the dictionary, including 0!
             map.TileProperties[selectedTileIndex] = val;
 
             NeedsToBeSaved = true;
@@ -1749,23 +1896,18 @@ namespace WinFormsApp1
 
         private void InitializePropertiesToolstripEvents()
         {
-            // Create the master context menu container once
             AddComponentButton.DropDown = new ContextMenuStrip();
 
-            // 💡 Run this logic every single time the user clicks to open the dropdown menu
             AddComponentButton.DropDownOpening += (s, e) =>
             {
                 AddComponentButton.DropDownItems.Clear();
                 GameObject? selectedGo = GetSelectedGameObjectFromHierarchy();
 
-                // 1. Gather component types using a scoped, memory-safe assembly lookup
                 var componentTypes = new System.Collections.Generic.List<Type>();
 
-                // Add core engine components
                 var coreAssembly = typeof(GameComponent).Assembly;
                 componentTypes.AddRange(coreAssembly.GetTypes().Where(t => t.IsSubclassOf(typeof(GameComponent)) && !t.IsAbstract));
 
-                // Add user script components from the current hot-loaded assembly only
                 if(_scriptManager.CurrentAssembly != null)
                 {
                     try
@@ -1782,21 +1924,18 @@ namespace WinFormsApp1
 
                 foreach(var type in componentTypes)
                 {
-                    // Don't show the core Transform component since objects can't have duplicates or live without it
                     if(type == typeof(Engine.Core.ECS.Components.TransformComponent))
                         continue;
 
                     ToolStripMenuItem item = new ToolStripMenuItem(type.Name.Replace("Component", ""));
-                    Type targetType = type; // Lock the closure context safely
+                    Type targetType = type;
 
-                    // 💡 SMART FILTER: If a GameObject is selected, check if it already owns this component type
                     if(selectedGo != null && selectedGo.Components.ContainsKey(targetType))
                     {
-                        item.Enabled = false; // Gray it out!
+                        item.Enabled = false;
                         item.Text += " (Already Attached)";
                     }
 
-                    // The click execution pipeline
                     item.Click += (subSender, subArgs) =>
                     {
                         if(selectedGo == null)
@@ -1810,9 +1949,7 @@ namespace WinFormsApp1
                             selectedGo.AddComponent(newComp);
 
                             Log.Info($"[Editor UI] Attached component '{targetType.Name}' to '{selectedGo.Name}'");
-                            //NeedsToBeSaved = true;
 
-                            // Rebuild and refresh the card view layout panel
                             RebuildInspectorPanel(selectedGo, forceRebuild: true);
                         }
                     };
@@ -1821,7 +1958,6 @@ namespace WinFormsApp1
                 }
             };
 
-            // --- ➖ REMOVE COMPONENT BUTTON ---
             RemoveComponentButton.Click += (s, e) =>
             {
                 GameObject? selectedGo = GetSelectedGameObjectFromHierarchy();
@@ -1846,7 +1982,7 @@ namespace WinFormsApp1
                     NeedsToBeSaved = true;
 
                     Engine.Editor.WinFormsApp1.ComponentCardFactory.ClearSelection();
-                    RebuildInspectorPanel(selectedGo, forceRebuild : true);
+                    RebuildInspectorPanel(selectedGo, forceRebuild: true);
                 }
             };
         }
@@ -1858,9 +1994,7 @@ namespace WinFormsApp1
                 Log.Warning("[Simulation Error] Cannot start simulation: No active project or scene is loaded.");
                 return;
             }
-            // 1. Save the current scene state before starting simulation
             SaveScene();
-            // 3. Start the simulation in the MonoGame control
             mgWindowControl.StartSimulation();
         }
 
@@ -1869,12 +2003,10 @@ namespace WinFormsApp1
             if(mgWindowControl.SimulationRunning)
             {
                 mgWindowControl.pauseSimulation();
-
             }
             else
             {
                 Log.Warning("[Simulation Error] Cannot pause/resume: Simulation is not currently running.");
-
             }
         }
 
@@ -1883,10 +2015,7 @@ namespace WinFormsApp1
             if(mgWindowControl.SimulationRunning)
             {
                 mgWindowControl.StopSimulation();
-
-                // Optionally reload the clean scene to reset the state
                 LoadCleanScene();
-
             }
             else
             {
@@ -1908,16 +2037,13 @@ namespace WinFormsApp1
 
                     if(File.Exists(targetScenePath))
                     {
-                        // Silently load without prompts
                         GameScene revertedScene = SceneSerializer.LoadScene(targetScenePath);
 
                         EditorContextManager.ActiveLoadedScene = revertedScene;
                         EditorContextManager.ActiveLoadedScene.resetContextSceneInManagers();
 
-                        // 💡 FIX: Re-attach the scene events to the new scene's entity manager!
                         AttachSceneEvents(revertedScene);
 
-                        // Repopulate the main tree view panel UI
                         if(Form1.ActiveHierarchyTreeView != null)
                         {
                             Form1.ActiveHierarchyTreeView.BeginInvoke(new Action(() =>
@@ -1941,6 +2067,53 @@ namespace WinFormsApp1
                 }
             }
         }
+
+        public void ImportPyxelJsonToMap(string filePath)
+        {
+            string jsonContent = File.ReadAllText(filePath);
+            var pyxelDoc = JsonSerializer.Deserialize<PyxelJsonDocument>(jsonContent);
+
+            if(pyxelDoc == null)
+                return;
+
+            // Create your native engine Map instance
+            var newMap = new Map(pyxelDoc.tileswide, pyxelDoc.tileshigh)
+            {
+                MapName = Path.GetFileNameWithoutExtension(filePath),
+                TileSize = pyxelDoc.tilewidth,
+                IsEnabled = true,
+                GridFlattened = new List<int>()
+            };
+
+            // Initialize the flat grid array with default zeros (empty tiles)
+            int totalCells = pyxelDoc.tileswide * pyxelDoc.tileshigh;
+            for(int i = 0; i < totalCells; i++)
+            {
+                newMap.GridFlattened.Add(0);
+            }
+
+            // Pull tile data from the first layer (Layer 0)
+            if(pyxelDoc.layers != null && pyxelDoc.layers.Count > 0)
+            {
+                var layer = pyxelDoc.layers[0];
+                if(layer.tiles != null)
+                {
+                    foreach(var t in layer.tiles)
+                    {
+                        // Convert 2D coordinates into your 1D flattened index formula
+                        int index = (t.y * pyxelDoc.tileswide) + t.x;
+                        if(index >= 0 && index < newMap.GridFlattened.Count)
+                        {
+                            newMap.GridFlattened[index] = t.tile;
+                        }
+                    }
+                }
+            }
+
+            EditorContextManager.ActiveLoadedScene.SceneMaps.Add(newMap);
+            RefreshMapsTab();
+        }
+
         private bool FilterTreeNodes(TreeNodeCollection nodes, string filter)
         {
             bool anyChildVisible = false;
@@ -1965,8 +2138,6 @@ namespace WinFormsApp1
             return anyChildVisible;
         }
 
-
-
         private void toolStripComboBox1_Click(object sender, EventArgs e)
         {
 
@@ -1984,7 +2155,7 @@ namespace WinFormsApp1
 
         private void consoleSearchBar_SearchTextChanged(object sender, string e)
         {
-            string filterText = e; // Lowercase sanitized string passed directly from the event payload
+            string filterText = e;
 
             ConsoleTextBox.BeginUpdate();
             ConsoleTextBox.Clear();
@@ -1993,7 +2164,6 @@ namespace WinFormsApp1
             {
                 if(string.IsNullOrEmpty(filterText) || log.Message.Contains(filterText, StringComparison.CurrentCultureIgnoreCase))
                 {
-                    // Reapply colors during the historical filter stream build
                     System.Drawing.Color logColor = log.Severity switch
                     {
                         LogSeverity.Info => System.Drawing.Color.DarkGreen,
@@ -2009,7 +2179,7 @@ namespace WinFormsApp1
             }
 
             ConsoleTextBox.SelectionStart = ConsoleTextBox.TextLength;
-            ConsoleTextBox.SelectionColor = ConsoleTextBox.ForeColor; // Reset
+            ConsoleTextBox.SelectionColor = ConsoleTextBox.ForeColor;
 
             ConsoleTextBox.EndUpdate();
         }
@@ -2056,7 +2226,6 @@ namespace WinFormsApp1
             return null;
         }
 
-
         private bool ShowIntegerInputDialog(string title, string promptText, ref int value)
         {
             Form inputForm = new Form()
@@ -2093,7 +2262,6 @@ namespace WinFormsApp1
             return false;
         }
 
-        // Helper to prompt for Map Dimensions (Width & Height)
         private bool ShowMapSizeInputDialog(ref int width, ref int height)
         {
             Form inputForm = new Form()

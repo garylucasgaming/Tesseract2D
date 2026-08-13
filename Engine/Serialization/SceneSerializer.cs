@@ -13,36 +13,7 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Engine.Core.Serialization
 {
-    public class MapDataDto
-    {
 
-        public string MapName { get; set; } = string.Empty;
-        public int Width
-        {
-            get; set;
-        }
-        public int Height
-        {
-            get; set;
-        }
-        public int TileSize
-        {
-            get; set;
-        }
-        public int LayerOrder
-        {
-            get; set;
-        }
-        public string TilesetPath
-        {
-            get; set;
-        } = string.Empty;
-
-        public bool IsEnabled { get; set; } = true;
-
-        public Dictionary<int, int> TileProperties { get; set; } = new Dictionary<int, int>();
-        public List<int> GridFlattened { get; set; } = new List<int>();
-    }
 
     public class SceneDataDto
     {
@@ -54,12 +25,11 @@ namespace Engine.Core.Serialization
         {
             get; set;
         }
-        public MapDataDto SceneMap
-        {
-            get; set;
-        }
-        public List<MapDataDto> SceneMaps { get; set; } = new List<MapDataDto>();
+
+        // Replaced inline MapDataDto lists with separate map file references
+        public List<string> TileMapFiles { get; set; } = new List<string>();
         public int ActiveMapIndex { get; set; } = 0;
+
         public List<string> Managers { get; set; } = new List<string>();
         public List<string> Systems { get; set; } = new List<string>();
         public List<EntityDataDto> Entities { get; set; } = new List<EntityDataDto>();
@@ -89,12 +59,12 @@ namespace Engine.Core.Serialization
     public static class SceneSerializer
     {
         private static readonly ISerializer Serializer = new SerializerBuilder()
-            .WithNamingConvention(NullNamingConvention.Instance) // Keeps variable case clean
+            .WithNamingConvention(NullNamingConvention.Instance)
             .Build();
 
         private static readonly IDeserializer Deserializer = new DeserializerBuilder()
             .WithNamingConvention(NullNamingConvention.Instance)
-            .IgnoreUnmatchedProperties() // Prevents throwing if extra meta fields exist
+            .IgnoreUnmatchedProperties()
             .Build();
 
         private static Type ResolveType(string typeName)
@@ -125,79 +95,40 @@ namespace Engine.Core.Serialization
                 }
                 catch
                 {
-                    // Ignore assembly reflection errors on dynamic/restricted assemblies
+                    // Ignore assembly reflection errors
                 }
             }
-
             return null;
         }
 
         public static void SaveScene(GameScene scene, string absoluteFilePath)
         {
+            string sceneDir = Path.GetDirectoryName(absoluteFilePath) ?? string.Empty;
+            if(!string.IsNullOrEmpty(sceneDir) && !Directory.Exists(sceneDir))
+            {
+                Directory.CreateDirectory(sceneDir);
+            }
+
             var sceneDto = new SceneDataDto
             {
                 SceneName = scene.SceneName,
-                Id = scene.Id.ToString()
+                Id = scene.Id.ToString(),
+                TileMapFiles = new List<string>()
             };
 
-            // Serialize Map List
-            sceneDto.SceneMaps = new List<MapDataDto>();
+            // Serialize each map independently via TileMapSerializer
             foreach(var map in scene.SceneMaps)
             {
-                var mapDto = new MapDataDto
-                {
-                    MapName = map.MapName,
-                    Width = map.Width,
-                    Height = map.Height,
-                    TileSize = map.TileSize,
-                    LayerOrder = map.LayerOrder,
-                    TilesetPath = map.TileSetPath ?? string.Empty,
-                    TileProperties = map.TileProperties != null ? new Dictionary<int, int>(map.TileProperties) : new Dictionary<int, int>(),
-                    GridFlattened = new List<int>(map.Width * map.Height),
-                    IsEnabled = map.IsEnabled
+                string safeMapName = string.IsNullOrEmpty(map.MapName) ? "UntitledMap" : map.MapName.Replace(" ", "_");
+                string mapFileName = $"{scene.SceneName}_{safeMapName}.map.yaml";
+                string mapFilePath = Path.Combine(sceneDir, mapFileName);
 
-                };
-
-                for(int x = 0; x < map.Width; x++)
-                {
-                    for(int y = 0; y < map.Height; y++)
-                    {
-                        mapDto.GridFlattened.Add(map.Grid[x, y]);
-                    }
-                }
-
-                sceneDto.SceneMaps.Add(mapDto);
+                TileMapSerializer.SaveMap(map, mapFilePath);
+                sceneDto.TileMapFiles.Add(mapFileName);
             }
 
-            // Track active map index
-            sceneDto.ActiveMapIndex = scene.SceneMaps.IndexOf(scene.SceneMap);
-            if(sceneDto.ActiveMapIndex < 0)
-                sceneDto.ActiveMapIndex = 0;
-
-            // Backward compatibility field for single SceneMap
-            if(scene.SceneMap != null)
-            {
-                var activeMap = scene.SceneMap;
-                sceneDto.SceneMap = new MapDataDto
-                {
-                    MapName = activeMap.MapName,
-                    Width = activeMap.Width,
-                    Height = activeMap.Height,
-                    TileSize = activeMap.TileSize,
-                    LayerOrder = activeMap.LayerOrder,
-                    TilesetPath = activeMap.TileSetPath ?? string.Empty,
-                    IsEnabled = activeMap.IsEnabled,
-                    TileProperties = activeMap.TileProperties != null ? new Dictionary<int, int>(activeMap.TileProperties) : new Dictionary<int, int>(),
-                    GridFlattened = new List<int>(activeMap.Width * activeMap.Height)
-                };
-                for(int x = 0; x < activeMap.Width; x++)
-                {
-                    for(int y = 0; y < activeMap.Height; y++)
-                    {
-                        sceneDto.SceneMap.GridFlattened.Add(activeMap.Grid[x, y]);
-                    }
-                }
-            }
+            // Track active map index safely using GameScene's ActiveMapIndex
+            sceneDto.ActiveMapIndex = Math.Clamp(scene.ActiveMapIndex, 0, Math.Max(0, scene.SceneMaps.Count - 1));
 
             // Serialize Managers
             sceneDto.Managers = new List<string>();
@@ -207,7 +138,7 @@ namespace Engine.Core.Serialization
                 sceneDto.Managers.Add(typeName);
             }
 
-            // Serialize Custom Systems (excluding core built-in systems)
+            // Serialize Custom Systems
             sceneDto.Systems = new List<string>();
             foreach(var system in scene.Systems._systemEntityCache.Keys)
             {
@@ -226,6 +157,7 @@ namespace Engine.Core.Serialization
             }
 
             // Serialize Entities
+            sceneDto.Entities = new List<EntityDataDto>();
             foreach(var entity in scene.Entities.GetSerializableEntities())
             {
                 sceneDto.Entities.Add(GameObjectSerializer.ExportGameObject(entity));
@@ -235,10 +167,13 @@ namespace Engine.Core.Serialization
             {
                 Serializer.Serialize(writer, sceneDto);
             }
+            Log.Info($"[SceneSerializer] Saved Scene to {absoluteFilePath}");
         }
 
         public static GameScene LoadScene(string absoluteFilePath)
         {
+            string sceneDir = Path.GetDirectoryName(absoluteFilePath) ?? string.Empty;
+
             using(var reader = File.OpenText(absoluteFilePath))
             {
                 var sceneDto = Deserializer.Deserialize<SceneDataDto>(reader);
@@ -249,73 +184,26 @@ namespace Engine.Core.Serialization
                     Id = Guid.Parse(sceneDto.Id)
                 };
 
-                // Reconstruct Map List
+                // Reconstruct Maps by loading individual tilemap files
                 scene.SceneMaps.Clear();
-                if(sceneDto.SceneMaps != null && sceneDto.SceneMaps.Count > 0)
+                if(sceneDto.TileMapFiles != null && sceneDto.TileMapFiles.Count > 0)
                 {
-                    foreach(var mapDto in sceneDto.SceneMaps)
+                    foreach(var mapFileName in sceneDto.TileMapFiles)
                     {
-                        var map = new Map(mapDto.Width, mapDto.Height)
+                        string mapFilePath = Path.Combine(sceneDir, mapFileName);
+                        if(File.Exists(mapFilePath))
                         {
-                            MapName = mapDto.MapName ?? string.Empty,
-                            TileSize = mapDto.TileSize,
-                            LayerOrder = mapDto.LayerOrder,
-                            IsEnabled = mapDto.IsEnabled,
-                            TileSetPath = mapDto.TilesetPath ?? string.Empty,
-                            TileProperties = mapDto.TileProperties != null ? new Dictionary<int, int>(mapDto.TileProperties) : new Dictionary<int, int>()
-                        };
-
-                        int index = 0;
-                        for(int x = 0; x < mapDto.Width; x++)
-                        {
-                            for(int y = 0; y < mapDto.Height; y++)
-                            {
-                                if(index < mapDto.GridFlattened.Count)
-                                {
-                                    map.Grid[x, y] = mapDto.GridFlattened[index++];
-                                }
-                            }
+                            var map = TileMapSerializer.LoadMap(mapFilePath);
+                            scene.SceneMaps.Add(map);
                         }
-
-                        scene.SceneMaps.Add(map);
-                    }
-
-                    if(sceneDto.ActiveMapIndex >= 0 && sceneDto.ActiveMapIndex < scene.SceneMaps.Count)
-                    {
-                        scene.SceneMap = scene.SceneMaps[sceneDto.ActiveMapIndex];
-                    }
-                    else if(scene.SceneMaps.Count > 0)
-                    {
-                        scene.SceneMap = scene.SceneMaps[0];
-                    }
-                }
-                else if(sceneDto.SceneMap != null) // Fallback for legacy single-map scenes
-                {
-                    var mapDto = sceneDto.SceneMap;
-                    var map = new Map(mapDto.Width, mapDto.Height)
-                    {
-                        MapName = mapDto.MapName ?? string.Empty,
-                        TileSize = mapDto.TileSize,
-                        LayerOrder = mapDto.LayerOrder,
-                        IsEnabled = mapDto.IsEnabled,
-                        TileSetPath = mapDto.TilesetPath ?? string.Empty,
-                        TileProperties = mapDto.TileProperties != null ? new Dictionary<int, int>(mapDto.TileProperties) : new Dictionary<int, int>()
-                    };
-
-                    int index = 0;
-                    for(int x = 0; x < mapDto.Width; x++)
-                    {
-                        for(int y = 0; y < mapDto.Height; y++)
+                        else
                         {
-                            if(index < mapDto.GridFlattened.Count)
-                            {
-                                map.Grid[x, y] = mapDto.GridFlattened[index++];
-                            }
+                            Log.Error($"[SceneSerializer] Tilemap file not found: {mapFilePath}");
                         }
                     }
 
-                    scene.SceneMaps.Add(map);
-                    scene.SceneMap = map;
+                    // Assign active map index directly; the property setter handles bounds-clamping safely
+                    scene.ActiveMapIndex = sceneDto.ActiveMapIndex;
                 }
 
                 // Reconstruct Managers
@@ -402,8 +290,6 @@ namespace Engine.Core.Serialization
                         foreach(var compKvp in entityDto.Components)
                         {
                             string typeName = compKvp.Key;
-
-                            // Match component by type on live GameObject instance
                             foreach(var liveCompKvp in entity.Components)
                             {
                                 if(liveCompKvp.Key.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))

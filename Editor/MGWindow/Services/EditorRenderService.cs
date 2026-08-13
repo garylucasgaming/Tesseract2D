@@ -121,10 +121,10 @@ namespace Engine.Editor.MGWindow.Services
 
         public void RenderSceneGridAndBounds(SpriteBatch spriteBatch, GameScene activeScene, float cameraZoom = 1f)
         {
-            if(activeScene == null || activeScene.SceneMap == null)
+            if(activeScene == null || activeScene.SceneMaps == null || activeScene.SceneMaps.Count == 0)
                 return;
 
-            var map = activeScene.SceneMap; // This now correctly points to the selected map!
+            var map = activeScene.ActiveMap;
             int tileSize = map.TileSize;
             int mapWidthPx = map.Width * tileSize;
             int mapHeightPx = map.Height * tileSize;

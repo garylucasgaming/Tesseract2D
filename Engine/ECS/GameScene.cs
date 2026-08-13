@@ -10,6 +10,7 @@ using Microsoft.Xna.Framework.Graphics;
 using nkast.Aether.Physics2D.Dynamics;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -19,11 +20,8 @@ namespace Engine.Core.ECS
 {
     public class GameScene : Object
     {
-
-
         private int _loadOrder;
-
-        private Map _sceneMap = new Map(25,19);
+        private int _activeMapIndex = 0;
 
         private readonly TileMapRenderSystem _tileMapRenderer = new TileMapRenderSystem();
 
@@ -34,62 +32,46 @@ namespace Engine.Core.ECS
 
         // Core Data Entities
         public EntityManager Entities { get; private set; } = null!;
-
         public SystemsManager Systems { get; private set; } = null!;
-
         public ManagersManager Managers { get; private set; } = null!;
-
         public PhysicsManager Physics { get; private set; } = null!;
 
-        private List<Map> _sceneMaps = new List<Map>();
-
-        public List<Map> SceneMaps
+        private BindingList<Map> _sceneMaps = new BindingList<Map>();
+        public Map ActiveMap
+        {
+            get => _sceneMaps.ElementAtOrDefault(_activeMapIndex) ?? _sceneMaps.FirstOrDefault() ?? new Map(25, 19);
+        }
+        public BindingList<Map> SceneMaps
         {
             get => _sceneMaps;
-            set => _sceneMaps = value;
+            set => _sceneMaps = value ?? new BindingList<Map>();
         }
-        public Map SceneMap
+
+        public int ActiveMapIndex
         {
-            get => _sceneMap;
-            set => _sceneMap = value;
+            get => _activeMapIndex;
+            set => _activeMapIndex = Math.Clamp(value, 0, Math.Max(0, _sceneMaps.Count - 1));
         }
 
-
-        public int LoadOrder {
+        public int LoadOrder
+        {
             get => _loadOrder;
             set => _loadOrder = value;
         }
 
-        public DatabaseManager Database
-        {
-            get; private set; } = null!;
+        public DatabaseManager Database { get; private set; } = null!;
 
         public Guid Id { get; set; } = Guid.NewGuid();
-       
 
         public GameScene()
         {
             InitializeManagers();
-            if(!_sceneMaps.Contains(_sceneMap))
+
+            // Ensure there is always at least one map initialized in the scene
+            if(_sceneMaps.Count == 0)
             {
-                _sceneMaps.Add(_sceneMap);
+                _sceneMaps.Add(new Map(25, 19));
             }
-
-        }
-
-        
-
-        public void InitializeManagers() 
-        {
-            Entities = new EntityManager() { ContextScene = this };
-            Systems = new SystemsManager() { ContextScene = this};
-            Physics = new PhysicsManager() { ContextScene = this };
-            Managers = new ManagersManager() { ContextScene = this };
-            Database = new DatabaseManager() { ContextScene = this };
-            
-            InitializeManagerEvents();
-            Database.LoadAllDatabasesFromFolder(EditorContextManager.DatabasePath);
-
         }
 
         public void InitializeManagerEvents()
@@ -100,59 +82,46 @@ namespace Engine.Core.ECS
             Entities.OnEntityRemoved += entity => Systems.OnEntityDestroyed(entity);
         }
 
-        public void SetMapSize(int width, int height)
+        public void InitializeManagers()
         {
-            SceneMap = new Map(width, height);
-        }
+            Entities = new EntityManager() { ContextScene = this };
+            Systems = new SystemsManager() { ContextScene = this };
+            Physics = new PhysicsManager() { ContextScene = this };
+            Managers = new ManagersManager() { ContextScene = this };
+            Database = new DatabaseManager() { ContextScene = this };
 
-        public void ResizeMap(int newWidth, int newHeight)
-        {
-            var newMap = new Map(newWidth, newHeight);
-            // Copy existing data to the new map
-            for(int x = 0; x < Math.Min(SceneMap.Width, newWidth); x++)
-            {
-                for(int y = 0; y < Math.Min(SceneMap.Height, newHeight); y++)
-                {
-                    newMap.Grid[x, y] = SceneMap.Grid[x, y];
-                }
-            }
-            SceneMap = newMap;
+            InitializeManagerEvents();
+            Database.LoadAllDatabasesFromFolder(EditorContextManager.DatabasePath);
         }
 
         public void CleanupRuntimeEntities()
         {
-            // Grab all entities currently in the scene
             var allEntities = Entities.GetSerializableEntities();
-
-            // Find everything flagged as runtime-created
             var runtimeEntities = allEntities.Where(e => e.IsRuntimeCreated).ToList();
 
             foreach(var entity in runtimeEntities)
             {
-                // Call your existing Destroy method to safely unlink components, systems, and parent trees
                 entity.Destroy();
             }
 
             Log.Info($"[Scene] Cleaned up {runtimeEntities.Count} runtime-spawned GameObjects.");
         }
 
-        //centralized factory
+        // Centralized factory
         private GameObject CreateEntityInstance(string name)
         {
             var entity = new GameObject
             {
                 Name = name,
                 ContextScene = this,
-                // Automatically flag as runtime-created if the simulation is active OR if running a deployed build
                 IsRuntimeCreated = EditorContextManager.PlayState
             };
 
             return entity;
         }
-        //creates and returns a gameobject
-        public GameObject Spawn(string name) 
-        {
 
+        public GameObject Spawn(string name)
+        {
             var entity = CreateEntityInstance(name);
             Entities.AddEntity(entity);
             return entity;
@@ -161,7 +130,6 @@ namespace Engine.Core.ECS
         public GameObject Spawn(string name, params GameComponent[] components)
         {
             var entity = CreateEntityInstance(name);
-
             Entities.AddEntity(entity);
 
             foreach(var component in components)
@@ -172,7 +140,6 @@ namespace Engine.Core.ECS
             return entity;
         }
 
-        // 1. In GameScene.cs, add an overload that handles initial placement:
         public GameObject Spawn(string name, float initialX, float initialY)
         {
             var entity = CreateEntityInstance(name);
@@ -185,8 +152,6 @@ namespace Engine.Core.ECS
             return entity;
         }
 
-        // 1. In GameScene.cs, add an overload that handles initial placement:
-       
         public GameObject Spawn(string name, GameObject parentEntity)
         {
             var entity = CreateEntityInstance(name);
@@ -216,13 +181,24 @@ namespace Engine.Core.ECS
         }
 
         /// <summary>
-        /// Adds a new map to the scene's map collection and makes it active.
+        /// Retrieves a map by its display name (case-insensitive search).
+        /// </summary>
+        public Map? GetMapByName(string mapName)
+        {
+            if(string.IsNullOrEmpty(mapName))
+                return null;
+            return _sceneMaps.FirstOrDefault(m => m.MapName.Equals(mapName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        /// <summary>
+        /// Adds a new map to the scene's map collection and switches the active index to it.
         /// </summary>
         public Map AddNewMap(int width, int height)
         {
             var newMap = new Map(width, height);
+            newMap.ContextScene = this;
             _sceneMaps.Add(newMap);
-            SceneMap = newMap;
+            _activeMapIndex = _sceneMaps.Count - 1;
             return newMap;
         }
 
@@ -232,29 +208,25 @@ namespace Engine.Core.ECS
         public void RemoveMap(Map mapToRemove)
         {
             if(_sceneMaps.Count > 1 && _sceneMaps.Contains(mapToRemove))
-                {
+            {
                 _sceneMaps.Remove(mapToRemove);
-                SceneMap = _sceneMaps.Last();
+                if(_activeMapIndex >= _sceneMaps.Count)
+                {
+                    _activeMapIndex = _sceneMaps.Count - 1;
+                }
             }
         }
 
-
-
         #region Main Loop Execution
 
-        /// <summary>
-        /// The main execution  step called 60 times a second by MonoGame.
-        /// </summary>
-        /// <param name="deltaTime">The elapsed timestamp scale in seconds since the last frame draw.</param>
         public void Update(float deltaTime, bool playModeActive = false)
         {
-            
             Systems.Update(deltaTime, playModeActive);
         }
 
         public void TickUpdate(float fixeddeltaTime, bool playModeActive = false)
         {
-           Systems.TickUpdate(fixeddeltaTime, playModeActive);
+            Systems.TickUpdate(fixeddeltaTime, playModeActive);
         }
 
         public void Render(SpriteBatch sb, ContentManager cm)
@@ -276,14 +248,6 @@ namespace Engine.Core.ECS
                 system.ContextScene = this;
             }
         }
-
-
-       
-
     }
-
-
-    
-
 }
 

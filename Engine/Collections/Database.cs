@@ -29,5 +29,17 @@ namespace Engine.Core.Collections
 
         }
 
+        public DataComponent? GetComponent(string assetName)
+        {
+            foreach(var kvp in ComponentDatabase)
+            {
+                if(kvp.Value.DisplayName == assetName)
+                {
+                    return kvp.Value;
+                }
+            }
+            return null;
+        }
+
     }
 }
