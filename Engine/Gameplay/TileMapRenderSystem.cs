@@ -22,7 +22,10 @@ namespace Engine.Core.Gameplay
             if(maps == null || sb == null || cm == null)
                 return;
 
-            var sortedMaps = maps.OrderBy(m => m.LayerOrder).ToList();
+            var sortedMaps = maps
+    .Where(m => m != null)
+    .OrderBy(m => m.LayerOrder)
+    .ToList();
 
             foreach(var map in sortedMaps)
             {

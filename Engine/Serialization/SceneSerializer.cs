@@ -120,7 +120,7 @@ namespace Engine.Core.Serialization
             foreach(var map in scene.SceneMaps)
             {
                 string safeMapName = string.IsNullOrEmpty(map.MapName) ? "UntitledMap" : map.MapName.Replace(" ", "_");
-                string mapFileName = $"{scene.SceneName}_{safeMapName}.map.yaml";
+                string mapFileName = $"{scene.SceneName}_{safeMapName}.map";
                 string mapFilePath = Path.Combine(sceneDir, mapFileName);
 
                 TileMapSerializer.SaveMap(map, mapFilePath);

@@ -9,6 +9,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using YamlDotNet.Serialization;
 
 namespace Engine.Core.GamePlay
 {
@@ -24,10 +25,11 @@ namespace Engine.Core.GamePlay
         private string _tileDatabaseName = string.Empty;
         private GameScene _contextScene;
 
-      
 
+        [YamlIgnore]
         private DataComponent[,] _tileDataGrid;
 
+        [YamlIgnore]
         private List<int> _gridFlattened = new List<int>();
 
         private Dictionary<int, int> _tileProperties = new Dictionary<int, int>();
@@ -127,8 +129,55 @@ namespace Engine.Core.GamePlay
         [DatabaseIgnore]
         public List<int> GridFlattened
         {
-            get => _gridFlattened;
-            set => _gridFlattened = value;
+            get
+            {
+                _gridFlattened.Clear();
+                int w = Width;
+                int h = Height;
+
+                if(_grid == null || _grid.GetLength(0) != w || _grid.GetLength(1) != h)
+                {
+                    _grid = new int[w, h];
+                }
+
+                // Flatten in Row-Major order (Row by Row)
+                for(int y = 0; y < h; y++)
+                {
+                    for(int x = 0; x < w; x++)
+                    {
+                        _gridFlattened.Add(_grid[x, y]);
+                    }
+                }
+                return _gridFlattened;
+            }
+            set
+            {
+                _gridFlattened = value ?? new List<int>();
+
+                int w = Width;
+                int h = Height;
+
+                if(w > 0 && h > 0)
+                {
+                    _grid = new int[w, h];
+                    int index = 0;
+
+                    for(int y = 0; y < h; y++)
+                    {
+                        for(int x = 0; x < w; x++)
+                        {
+                            if(index < _gridFlattened.Count)
+                            {
+                                _grid[x, y] = _gridFlattened[index++];
+                            }
+                            else
+                            {
+                                _grid[x, y] = 0; // Default fill if array ends early
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         [Browsable(false)]
@@ -136,7 +185,11 @@ namespace Engine.Core.GamePlay
         public Dictionary<int, DataComponent> TileIndexDataDictionary
         {
             get => _tileIndexDataDictionary;
-            set => _tileIndexDataDictionary = value;
+            set
+            {
+                _tileIndexDataDictionary = value ?? new Dictionary<int, DataComponent>();
+                RebuildTileDataGrid();
+            }
         }
 
         public Map(int width, int height)
@@ -224,32 +277,73 @@ namespace Engine.Core.GamePlay
             return TileDatabase.GetComponent(dataId);
         }
 
-        public void ResolveDatabase(GameScene scene)
+        public void RebuildTileDataGrid()
         {
-            var targetScene = scene ?? EditorContextManager.ActiveLoadedScene;
+            
 
-            if(targetScene?.Database?.Databases == null || string.IsNullOrEmpty(TileDatabaseName))
+            int width = Width;
+            int height = Height;
+
+            // Ensure TileDataGrid matches the int grid dimensions
+            if(TileDataGrid == null || TileDataGrid.GetLength(0) != width || TileDataGrid.GetLength(1) != height)
+            {
+                TileDataGrid = new DataComponent[width, height];
+            }
+
+            for(int x = 0; x < width; x++)
+            {
+                for(int y = 0; y < height; y++)
+                {
+                    // 1. Get custom int value from map.Grid
+                    int customInt = GetGridValue(x, y);
+
+                    // 2. Resolve custom int to Tile Index via TileProperties
+                    int tileIndex = customInt;
+                    if(TileProperties != null)
+                    {
+                        foreach(var kvp in TileProperties)
+                        {
+                            if(kvp.Value == customInt)
+                            {
+                                tileIndex = kvp.Key;
+                                break;
+                            }
+                        }
+                    }
+
+                    // 3. Query TileIndexDataDictionary for assigned DataComponent
+                    if(TileIndexDataDictionary != null && TileIndexDataDictionary.TryGetValue(tileIndex, out var templateComponent))
+                    {
+                        // Instantiate a fresh per-tile copy so each tile can be modified independently at runtime
+                        SetTileData(x, y, (DataComponent) templateComponent.Clone());
+                    }
+                    else
+                    {
+                       SetTileData(x, y, null);
+                    }
+                }
+            }
+        }
+
+        public void ResolveDatabase(GameScene scene = null)
+        {
+            var activeScene = scene ?? EditorContextManager.ActiveLoadedScene;
+
+            if(activeScene?.Database?.Databases == null || string.IsNullOrEmpty(TileDatabaseName))
             {
                 TileDatabase = null;
                 return;
             }
 
-            // Match database name flexibly (trimming spaces & ignoring case)
-            TileDatabase = targetScene.Database.Databases.FirstOrDefault(db =>
-                db.Name.Trim().Equals(TileDatabaseName.Trim(), StringComparison.OrdinalIgnoreCase));
+            // Extract clean name if TileDatabaseName is a relative path like "Databases/ItemDb.database"
+            string cleanName = Path.GetFileNameWithoutExtension(TileDatabaseName).Trim();
+
+            TileDatabase = activeScene.Database.Databases.FirstOrDefault(db =>
+                db.Name.Trim().Equals(cleanName, StringComparison.OrdinalIgnoreCase));
+            RebuildTileDataGrid();
         }
 
-        public void PopulateTileDataGrid()
-        {
-            if(TileDatabase != null)
-            {
-
-                foreach(var data in TileDatabase.ComponentDatabase)
-                {
-                    
-                }
-            }
-        }
+    
 
         public int GetCustomValueForTile(int tileIndex)
         {

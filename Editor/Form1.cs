@@ -1123,20 +1123,23 @@ namespace WinFormsApp1
 
                 string columnName = MapGridDataView.Columns[e.ColumnIndex].Name;
 
-                // 1. When Tile Database selection changes
-                if(columnName == "ColTileDatabase")
+                if(e.ColumnIndex >= 0 && MapGridDataView.Columns[e.ColumnIndex].Name == "ColTileDatabase")
                 {
                     if(MapGridDataView.Rows[e.RowIndex].DataBoundItem is Map map)
                     {
-                        var scene = EditorContextManager.ActiveLoadedScene;
-                        if(scene?.Database != null)
+                        // Sanitize string to ensure it's purely the database name
+                        if(!string.IsNullOrEmpty(map.TileDatabaseName))
                         {
-                            map.TileDatabase = scene.Database.Databases.FirstOrDefault(db =>
-                                db.Name.Equals(map.TileDatabaseName, StringComparison.OrdinalIgnoreCase));
+                            map.TileDatabaseName = Path.GetFileNameWithoutExtension(map.TileDatabaseName);
+                        }
+
+                        var scene = EditorContextManager.ActiveLoadedScene;
+                        if(scene != null)
+                        {
+                            map.ResolveDatabase(scene);
                         }
                     }
 
-                    // Refresh panel to populate tileDataComponentComboBox with the newly selected database
                     RefreshTilesetMetadataPanel();
                 }
                 // 2. When Tileset Path selection changes
@@ -1176,36 +1179,35 @@ namespace WinFormsApp1
             if(scene == null)
                 return;
 
-            // 1. Re-populate Database Dropdown Options
+            string contentDir = EditorContextManager.ContentPath;
+
+            // 1. Setup Database Dropdown Options from in-memory Scene Databases
             var dbOptions = new List<DatabaseOption>
     {
         new DatabaseOption { DisplayName = "(None)", FilePath = string.Empty }
     };
 
-            string contentDir = EditorContextManager.ContentPath;
-            if(Directory.Exists(contentDir))
+            if(scene.Database?.Databases != null)
             {
-                string[] dbFiles = Directory.GetFiles(contentDir, "*.database", SearchOption.AllDirectories);
-                foreach(string file in dbFiles)
+                foreach(var db in scene.Database.Databases)
                 {
-                    string relPath = Path.GetRelativePath(contentDir, file).Replace('\\', '/');
-                    if(relPath.EndsWith(".database", StringComparison.OrdinalIgnoreCase))
+                    if(db != null && !string.IsNullOrEmpty(db.Name))
                     {
-                        relPath = relPath.Substring(0, relPath.Length - 9);
+                        // Store DisplayName AND FilePath as pure Database.Name
+                        dbOptions.Add(new DatabaseOption { DisplayName = db.Name, FilePath = db.Name });
                     }
-                    string name = Path.GetFileNameWithoutExtension(file);
-                    dbOptions.Add(new DatabaseOption { DisplayName = name, FilePath = relPath });
                 }
             }
 
             if(MapGridDataView.Columns["ColTileDatabase"] is DataGridViewComboBoxColumn dbColumn)
             {
+                dbColumn.DataSource = null; // Reset before re-assigning
                 dbColumn.DataSource = dbOptions;
                 dbColumn.DisplayMember = "DisplayName";
                 dbColumn.ValueMember = "FilePath";
             }
 
-            // 2. Re-populate Tileset Dropdown Options
+            // 2. Re-populate Tileset Dropdown Options from Content Directory
             var tilesetOptions = new List<object>
     {
         new { DisplayName = "(None)", FilePath = string.Empty }
@@ -1228,25 +1230,37 @@ namespace WinFormsApp1
 
             if(MapGridDataView.Columns["ColTilesetPath"] is DataGridViewComboBoxColumn tilesetColumn)
             {
+                tilesetColumn.DataSource = null;
                 tilesetColumn.DataSource = tilesetOptions;
                 tilesetColumn.DisplayMember = "DisplayName";
                 tilesetColumn.ValueMember = "FilePath";
             }
 
-            // 3. Ensure existing map values exist in dropdown options to prevent mismatch errors
+            // 3. Clean up Map Database Names & Resolve Database Objects
             foreach(var map in scene.SceneMaps)
             {
-                if(!string.IsNullOrEmpty(map.TileDatabaseName) && !dbOptions.Any(o => o.FilePath.Equals(map.TileDatabaseName, StringComparison.OrdinalIgnoreCase)))
+                // Add null guard here
+                if(map == null)
+                    continue;
+
+                if(!string.IsNullOrEmpty(map.TileDatabaseName))
                 {
-                    dbOptions.Add(new DatabaseOption { DisplayName = map.TileDatabaseName, FilePath = map.TileDatabaseName });
+                    if(map.TileDatabaseName.Contains('/') || map.TileDatabaseName.Contains('\\') || map.TileDatabaseName.EndsWith(".database", StringComparison.OrdinalIgnoreCase))
+                    {
+                        map.TileDatabaseName = Path.GetFileNameWithoutExtension(map.TileDatabaseName);
+                    }
                 }
+
+                map.ResolveDatabase(scene);
             }
 
-            // 4. Bind main grid DataSource LAST
+            // 4. Re-bind Main Grid
             MapGridDataView.DataSource = null;
             MapGridDataView.DataSource = scene.SceneMaps;
-        }
 
+            // Refresh tile metadata panel for active selection
+            RefreshTilesetMetadataPanel();
+        }
         private void RefreshTileDatabaseDropdown(Map map)
         {
             _isSuppressingDatabaseChange = true;
@@ -1721,7 +1735,7 @@ namespace WinFormsApp1
                 NeedsToBeSaved = true;
 
                 // Rebuild the per-tile instance grid
-                RebuildTileDataGrid(map);
+                map.RebuildTileDataGrid();
                 tilesetPictureBox.Invalidate();
             }
             else
@@ -1732,60 +1746,13 @@ namespace WinFormsApp1
                     map.TileIndexDataDictionary.Remove(selectedTileIndex);
                     NeedsToBeSaved = true;
 
-                    RebuildTileDataGrid(map);
+                    map.RebuildTileDataGrid();
                     tilesetPictureBox.Invalidate();
                 }
             }
         }
 
-        private void RebuildTileDataGrid(Map map)
-        {
-            if(map == null)
-                return;
-
-            int width = map.Width;
-            int height = map.Height;
-
-            // Ensure TileDataGrid matches the int grid dimensions
-            if(map.TileDataGrid == null || map.TileDataGrid.GetLength(0) != width || map.TileDataGrid.GetLength(1) != height)
-            {
-                map.TileDataGrid = new DataComponent[width, height];
-            }
-
-            for(int x = 0; x < width; x++)
-            {
-                for(int y = 0; y < height; y++)
-                {
-                    // 1. Get custom int value from map.Grid
-                    int customInt = map.GetGridValue(x, y);
-
-                    // 2. Resolve custom int to Tile Index via TileProperties
-                    int tileIndex = customInt;
-                    if(map.TileProperties != null)
-                    {
-                        foreach(var kvp in map.TileProperties)
-                        {
-                            if(kvp.Value == customInt)
-                            {
-                                tileIndex = kvp.Key;
-                                break;
-                            }
-                        }
-                    }
-
-                    // 3. Query TileIndexDataDictionary for assigned DataComponent
-                    if(map.TileIndexDataDictionary != null && map.TileIndexDataDictionary.TryGetValue(tileIndex, out var templateComponent))
-                    {
-                        // Instantiate a fresh per-tile copy so each tile can be modified independently at runtime
-                        map.SetTileData(x, y, (DataComponent) templateComponent.Clone());
-                    }
-                    else
-                    {
-                        map.SetTileData(x, y, null);
-                    }
-                }
-            }
-        }
+       
 
         private void RefreshTilesetMetadataPanel()
         {
