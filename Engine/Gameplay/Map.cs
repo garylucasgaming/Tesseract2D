@@ -2,6 +2,7 @@
 using Engine.Core.ECS;
 using Engine.Core.ECS.Components;
 using Engine.Core.Runtime;
+using Engine.Core.Serialization;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -40,7 +41,7 @@ namespace Engine.Core.GamePlay
             set
             {
                 _contextScene = value;
-                ResolveDatabase();
+                ResolveDatabase(_contextScene);
             }
         }
         public string MapName
@@ -96,7 +97,7 @@ namespace Engine.Core.GamePlay
             set
             {
                 _tileDatabaseName = value ?? string.Empty;
-                ResolveDatabase();
+                ResolveDatabase(_contextScene);
             }
         }
 
@@ -223,21 +224,19 @@ namespace Engine.Core.GamePlay
             return TileDatabase.GetComponent(dataId);
         }
 
-        public void ResolveDatabase(GameScene? scene = null)
+        public void ResolveDatabase(GameScene scene)
         {
-            if(scene != null)
-            {
-                _contextScene = scene;
-            }
+            var targetScene = scene ?? EditorContextManager.ActiveLoadedScene;
 
-            if(_contextScene?.Database?.Databases == null || string.IsNullOrEmpty(_tileDatabaseName))
+            if(targetScene?.Database?.Databases == null || string.IsNullOrEmpty(TileDatabaseName))
             {
-                _tileDatabase = null;
+                TileDatabase = null;
                 return;
             }
 
-            _tileDatabase = _contextScene.Database.Databases.FirstOrDefault(db =>
-                db.Name.Equals(_tileDatabaseName, StringComparison.OrdinalIgnoreCase));
+            // Match database name flexibly (trimming spaces & ignoring case)
+            TileDatabase = targetScene.Database.Databases.FirstOrDefault(db =>
+                db.Name.Trim().Equals(TileDatabaseName.Trim(), StringComparison.OrdinalIgnoreCase));
         }
 
         public void PopulateTileDataGrid()

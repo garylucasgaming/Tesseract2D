@@ -1246,8 +1246,64 @@ namespace WinFormsApp1
             MapGridDataView.DataSource = null;
             MapGridDataView.DataSource = scene.SceneMaps;
         }
-        
-        
+
+        private void RefreshTileDatabaseDropdown(Map map)
+        {
+            _isSuppressingDatabaseChange = true;
+
+            tileDatabaseComboBox.BeginUpdate();
+            tileDatabaseComboBox.Items.Clear();
+            tileDatabaseComboBox.Items.Add("(None)");
+
+            var activeScene = EditorContextManager.ActiveLoadedScene;
+            if(activeScene?.Database?.Databases != null)
+            {
+                foreach(var db in activeScene.Database.Databases)
+                {
+                    tileDatabaseComboBox.Items.Add(db);
+                }
+            }
+
+            tileDatabaseComboBox.DisplayMember = "Name";
+            tileDatabaseComboBox.EndUpdate();
+
+            // Select the current database bound to the map
+            if(map != null && !string.IsNullOrEmpty(map.TileDatabaseName))
+            {
+                // Resolve database if missing
+                if(map.TileDatabase == null && activeScene != null)
+                {
+                    map.ResolveDatabase(activeScene);
+                }
+
+                if(map.TileDatabase != null)
+                {
+                    var matchedDb = tileDatabaseComboBox.Items
+                        .OfType<Database>()
+                        .FirstOrDefault(d => d.Name.Equals(map.TileDatabaseName, StringComparison.OrdinalIgnoreCase));
+
+                    if(matchedDb != null)
+                    {
+                        tileDatabaseComboBox.SelectedItem = matchedDb;
+                    }
+                    else
+                    {
+                        tileDatabaseComboBox.SelectedIndex = 0;
+                    }
+                }
+                else
+                {
+                    tileDatabaseComboBox.SelectedIndex = 0;
+                }
+            }
+            else
+            {
+                tileDatabaseComboBox.SelectedIndex = 0;
+            }
+
+            _isSuppressingDatabaseChange = false;
+        }
+
         private void AddMapButton_Click(object sender, EventArgs e)
         {
             var scene = EditorContextManager.ActiveLoadedScene;
@@ -1577,26 +1633,33 @@ namespace WinFormsApp1
             tileDataComponentComboBox.Items.Clear();
             tileDataComponentComboBox.Items.Add("(None)");
 
-            // Ensure database reference is resolved against the active scene
-            if(map.TileDatabase == null)
+            var activeScene = EditorContextManager.ActiveLoadedScene;
+
+            // Ensure database reference is resolved against in-memory databases if missing
+            if(map?.TileDatabase == null && map != null && !string.IsNullOrEmpty(map.TileDatabaseName))
             {
-                var activeScene = EditorContextManager.ActiveLoadedScene;
                 if(activeScene != null)
                 {
                     map.ResolveDatabase(activeScene);
                 }
             }
 
-            // Populate dropdown with DataComponents from ComponentDatabase
-            if(map.TileDatabase?.ComponentDatabase != null)
+            if(map?.TileDatabase?.ComponentDatabase != null)
             {
+                Log.Info($"[Editor UI] Found {map.TileDatabase.ComponentDatabase.Count} components in database '{map.TileDatabase.Name}'.");
+
                 foreach(var kvp in map.TileDatabase.ComponentDatabase)
                 {
                     if(kvp.Value != null)
                     {
+                        Log.Info($"[Editor UI] Adding DataComponent '{kvp.Value.DisplayName}' to dropdown.");
                         tileDataComponentComboBox.Items.Add(kvp.Value);
                     }
                 }
+            }
+            else
+            {
+                Log.Warning($"[Editor UI] Map '{map?.MapName}' has no active TileDatabase assigned or ComponentDatabase is empty.");
             }
 
             tileDataComponentComboBox.DisplayMember = "DisplayName";
@@ -1604,7 +1667,9 @@ namespace WinFormsApp1
 
             _isSuppressingComponentChange = false;
         }
-
+        
+        
+        
         private void TileDatabaseComboBox_SelectedIndexChanged(object sender, EventArgs e)
         {
             if(_isSuppressingDatabaseChange)
@@ -1614,33 +1679,23 @@ namespace WinFormsApp1
             if(map == null)
                 return;
 
-            if(tileDatabaseComboBox.SelectedItem is DatabaseOption dbItem)
+            // Check if a Database object from ActiveLoadedScene is selected
+            if(tileDatabaseComboBox.SelectedItem is Database selectedDb)
             {
-                if(string.IsNullOrEmpty(dbItem.FilePath))
-                {
-                    map.TileDatabase = null;
-                    map.TileDatabaseName = string.Empty;
-                }
-                else
-                {
-                    map.TileDatabaseName = dbItem.FilePath; // Stored without .database
-                    string fullPath = Path.Combine(EditorContextManager.ContentPath, dbItem.FilePath + ".database");
-                    try
-                    {
-                        if(File.Exists(fullPath))
-                        {
-                            string json = File.ReadAllText(fullPath);
-                            map.TileDatabase = JsonSerializer.Deserialize<Database>(json);
-                        }
-                    }
-                    catch(Exception ex)
-                    {
-                        Log.Error($"[Database] Failed to deserialize database: {ex.Message}");
-                        map.TileDatabase = null;
-                    }
-                }
-
+                map.TileDatabase = selectedDb;
+                map.TileDatabaseName = selectedDb.Name;
                 NeedsToBeSaved = true;
+
+                // Refresh DataComponent dropdown with components from the selected database
+                RefreshTileDataComponentDropdown(map);
+            }
+            else
+            {
+                // Selected "(None)" or an invalid option
+                map.TileDatabase = null;
+                map.TileDatabaseName = string.Empty;
+                NeedsToBeSaved = true;
+
                 RefreshTileDataComponentDropdown(map);
             }
         }
