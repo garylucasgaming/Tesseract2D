@@ -1005,6 +1005,12 @@ namespace WinFormsApp1
             MapGridDataView.MultiSelect = false;
             MapGridDataView.ReadOnly = false;
 
+            MapGridDataView.DataError += (sender, e) =>
+            {
+                // Suppress default WinForms modal error popups
+                e.ThrowException = false;
+            };
+
             MapGridDataView.Columns.Clear();
 
             MapGridDataView.Columns.Add(new DataGridViewTextBoxColumn
@@ -1115,38 +1121,22 @@ namespace WinFormsApp1
                     if(MapGridDataView.Rows[e.RowIndex].DataBoundItem is Map map)
                     {
                         var scene = EditorContextManager.ActiveLoadedScene;
-                        if(scene != null)
+                        if(scene?.Database != null)
                         {
-                            if(string.IsNullOrEmpty(map.TileDatabaseName))
-                            {
-                                map.TileDatabase = null;
-                            }
-                            else
-                            {
-                                // Append .database back when resolving the file path
-                                string absolutePath = Path.Combine(EditorContextManager.ContentPath, map.TileDatabaseName + ".database");
-                                string dbName = Path.GetFileNameWithoutExtension(map.TileDatabaseName);
-
-                                Database? matchedDb = scene.Database.Databases.FirstOrDefault(db =>
-                                    db.Name.Equals(dbName, StringComparison.OrdinalIgnoreCase));
-
-                                if(matchedDb == null && File.Exists(absolutePath))
-                                {
-                                    matchedDb = scene.Database.LoadDatabase(absolutePath);
-                                }
-
-                                map.TileDatabase = matchedDb;
-                            }
+                            map.TileDatabase = scene.Database.Databases.FirstOrDefault(db =>
+                                db.Name.Equals(map.TileDatabaseName, StringComparison.OrdinalIgnoreCase));
                         }
                     }
-                }
 
-                if(e.ColumnIndex >= 0 && MapGridDataView.Columns[e.ColumnIndex].Name == "ColTilesetPath")
-                {
-                    RefreshTilesetMetadataPanel();
+                    if(e.ColumnIndex >= 0 && MapGridDataView.Columns[e.ColumnIndex].Name == "ColTilesetPath")
+                    {
+                        RefreshTilesetMetadataPanel();
+                    }
                 }
             };
+            
         }
+            
         private void MapGridDataView_SelectionChanged(object sender, EventArgs e)
         {
             var scene = EditorContextManager.ActiveLoadedScene;
@@ -1175,57 +1165,78 @@ namespace WinFormsApp1
             if(scene == null)
                 return;
 
-            string contentDirectory = EditorContextManager.ContentPath;
-            var tilesetOptions = new System.Collections.Generic.List<object>();
+            // 1. Re-populate Database Dropdown Options
+            var dbOptions = new List<DatabaseOption>
+    {
+        new DatabaseOption { DisplayName = "(None)", FilePath = string.Empty }
+    };
 
-            tilesetOptions.Add(new
+            string contentDir = EditorContextManager.ContentPath;
+            if(Directory.Exists(contentDir))
             {
-                DisplayName = "(None)",
-                FilePath = string.Empty
-            });
-
-            if(Directory.Exists(contentDirectory))
-            {
-                string[] imageFiles = Directory.GetFiles(contentDirectory, "*.png", SearchOption.AllDirectories);
-                foreach(string filePath in imageFiles)
+                string[] dbFiles = Directory.GetFiles(contentDir, "*.database", SearchOption.AllDirectories);
+                foreach(string file in dbFiles)
                 {
-                    string relativePath = Path.GetRelativePath(contentDirectory, filePath).Replace('\\', '/');
-                    string fileName = Path.GetFileName(filePath);
+                    string relPath = Path.GetRelativePath(contentDir, file).Replace('\\', '/');
+                    if(relPath.EndsWith(".database", StringComparison.OrdinalIgnoreCase))
+                    {
+                        relPath = relPath.Substring(0, relPath.Length - 9);
+                    }
+                    string name = Path.GetFileNameWithoutExtension(file);
+                    dbOptions.Add(new DatabaseOption { DisplayName = name, FilePath = relPath });
+                }
+            }
+
+            if(MapGridDataView.Columns["ColTileDatabase"] is DataGridViewComboBoxColumn dbColumn)
+            {
+                dbColumn.DataSource = dbOptions;
+                dbColumn.DisplayMember = "DisplayName";
+                dbColumn.ValueMember = "FilePath";
+            }
+
+            // 2. Re-populate Tileset Dropdown Options
+            var tilesetOptions = new List<object>
+    {
+        new { DisplayName = "(None)", FilePath = string.Empty }
+    };
+
+            if(Directory.Exists(contentDir))
+            {
+                string[] imageFiles = Directory.GetFiles(contentDir, "*.png", SearchOption.AllDirectories);
+                foreach(string file in imageFiles)
+                {
+                    string relPath = Path.GetRelativePath(contentDir, file).Replace('\\', '/');
+                    string fileName = Path.GetFileName(file);
                     tilesetOptions.Add(new
                     {
                         DisplayName = fileName,
-                        FilePath = relativePath
+                        FilePath = relPath
                     });
                 }
             }
 
-            if(MapGridDataView.Columns["ColTilesetPath"] is DataGridViewComboBoxColumn cbColumn)
+            if(MapGridDataView.Columns["ColTilesetPath"] is DataGridViewComboBoxColumn tilesetColumn)
             {
-                cbColumn.DataSource = tilesetOptions;
-                cbColumn.DisplayMember = "DisplayName";
-                cbColumn.ValueMember = "FilePath";
+                tilesetColumn.DataSource = tilesetOptions;
+                tilesetColumn.DisplayMember = "DisplayName";
+                tilesetColumn.ValueMember = "FilePath";
             }
 
-            var currentSelectedMap = GetSelectedMap();
-
-            MapGridDataView.SelectionChanged -= MapGridDataView_SelectionChanged;
-            MapGridDataView.DataSource = null;
-            MapGridDataView.DataSource = scene.SceneMaps;
-            MapGridDataView.SelectionChanged += MapGridDataView_SelectionChanged;
-
-            if(currentSelectedMap != null)
+            // 3. Ensure existing map values exist in dropdown options to prevent mismatch errors
+            foreach(var map in scene.SceneMaps)
             {
-                foreach(DataGridViewRow row in MapGridDataView.Rows)
+                if(!string.IsNullOrEmpty(map.TileDatabaseName) && !dbOptions.Any(o => o.FilePath.Equals(map.TileDatabaseName, StringComparison.OrdinalIgnoreCase)))
                 {
-                    if(row.DataBoundItem == currentSelectedMap)
-                    {
-                        row.Selected = true;
-                        break;
-                    }
+                    dbOptions.Add(new DatabaseOption { DisplayName = map.TileDatabaseName, FilePath = map.TileDatabaseName });
                 }
             }
-        }
 
+            // 4. Bind main grid DataSource LAST
+            MapGridDataView.DataSource = null;
+            MapGridDataView.DataSource = scene.SceneMaps;
+        }
+        
+        
         private void AddMapButton_Click(object sender, EventArgs e)
         {
             var scene = EditorContextManager.ActiveLoadedScene;
@@ -1562,19 +1573,12 @@ namespace WinFormsApp1
             tileDatabaseComboBox.Items.Clear();
             tileDatabaseComboBox.Items.Add(new DatabaseOption { DisplayName = "(None)", FilePath = string.Empty });
 
-            string contentDirectory = EditorContextManager.ContentPath;
-            if(Directory.Exists(contentDirectory))
+            var scene = EditorContextManager.ActiveLoadedScene;
+            if(scene?.Database?.Databases != null)
             {
-                string[] dbFiles = Directory.GetFiles(contentDirectory, "*.database", SearchOption.AllDirectories);
-                foreach(string file in dbFiles)
+                foreach(var db in scene.Database.Databases)
                 {
-                    string relPath = Path.GetRelativePath(contentDirectory, file).Replace('\\', '/');
-                    if(relPath.EndsWith(".database", StringComparison.OrdinalIgnoreCase))
-                    {
-                        relPath = relPath.Substring(0, relPath.Length - 9);
-                    }
-                    string name = Path.GetFileName(file);
-                    tileDatabaseComboBox.Items.Add(new DatabaseOption { DisplayName = name, FilePath = relPath });
+                    tileDatabaseComboBox.Items.Add(new DatabaseOption { DisplayName = db.Name, FilePath = db.Name });
                 }
             }
 

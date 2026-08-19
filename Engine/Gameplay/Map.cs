@@ -15,7 +15,7 @@ namespace Engine.Core.GamePlay
     {
         private int[,] _grid;
         private int _tileSize = 32;
-        private string _tileSetPath = "";
+        private string _tileSetPath = string.Empty;
         private string _MapName = "Untitled Map";
         private int _LayerOrder = 0;
         private bool _isEnabled = true;
@@ -23,6 +23,7 @@ namespace Engine.Core.GamePlay
         private string _tileDatabaseName = string.Empty;
         private GameScene _contextScene;
 
+      
 
         private DataComponent[,] _tileDataGrid;
 
@@ -36,7 +37,11 @@ namespace Engine.Core.GamePlay
         public GameScene ContextScene
         {
             get => _contextScene;
-            set => _contextScene = value;
+            set
+            {
+                _contextScene = value;
+                ResolveDatabase();
+            }
         }
         public string MapName
         {
@@ -82,20 +87,16 @@ namespace Engine.Core.GamePlay
         }
         public string TileSetPath
         {
-            get => _tileSetPath;
-            set => _tileSetPath = value;
+            get => _tileSetPath ?? string.Empty;
+            set => _tileSetPath = value ?? string.Empty;
         }
         public string TileDatabaseName
         {
-            get => _tileDatabaseName;
+            get => _tileDatabaseName ?? string.Empty;
             set
             {
-                if(!string.IsNullOrEmpty(value))
-                {
-                    _tileDatabaseName = value;
-                   // TileDatabase = ContextScene.Database.GetDatabaseByName(value);
-                }
-               
+                _tileDatabaseName = value ?? string.Empty;
+                ResolveDatabase();
             }
         }
 
@@ -112,9 +113,10 @@ namespace Engine.Core.GamePlay
             set => _isEnabled = value;
         }
 
-        
-        
-        public Database TileDatabase
+
+        [Browsable (false)]
+        [DatabaseIgnore]
+        public Database? TileDatabase
         {
             get => _tileDatabase;
             set => _tileDatabase = value;
@@ -227,6 +229,35 @@ namespace Engine.Core.GamePlay
                 return null;
 
             return TileDatabase.GetComponent(dataId);
+        }
+
+        public void ResolveDatabase(GameScene? scene = null)
+        {
+            if(scene != null)
+            {
+                _contextScene = scene;
+            }
+
+            if(_contextScene?.Database?.Databases == null || string.IsNullOrEmpty(_tileDatabaseName))
+            {
+                _tileDatabase = null;
+                return;
+            }
+
+            _tileDatabase = _contextScene.Database.Databases.FirstOrDefault(db =>
+                db.Name.Equals(_tileDatabaseName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public void PopulateTileDataGrid()
+        {
+            if(TileDatabase != null)
+            {
+
+                foreach(var data in TileDatabase.ComponentDatabase)
+                {
+                    
+                }
+            }
         }
 
         public int GetCustomValueForTile(int tileIndex)
