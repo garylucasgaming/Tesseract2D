@@ -1104,7 +1104,9 @@ namespace WinFormsApp1
 
             MapGridDataView.CurrentCellDirtyStateChanged += (s, e) =>
             {
-                if(MapGridDataView.IsCurrentCellDirty)
+                // Force combo box selections in MapGridDataView to commit immediately
+                if(MapGridDataView.IsCurrentCellDirty &&
+                    MapGridDataView.CurrentCell is DataGridViewComboBoxCell)
                 {
                     MapGridDataView.CommitEdit(DataGridViewDataErrorContexts.Commit);
                 }
@@ -1113,10 +1115,16 @@ namespace WinFormsApp1
             // Automatically resolve and assign the Database reference whenever TileDatabaseName changes
             MapGridDataView.CellValueChanged += (s, e) =>
             {
+                if(e.RowIndex < 0 || e.ColumnIndex < 0)
+                    return;
+
                 NeedsToBeSaved = true;
                 mgWindowControl?.Invalidate();
 
-                if(e.ColumnIndex >= 0 && MapGridDataView.Columns[e.ColumnIndex].Name == "ColTileDatabase")
+                string columnName = MapGridDataView.Columns[e.ColumnIndex].Name;
+
+                // 1. When Tile Database selection changes
+                if(columnName == "ColTileDatabase")
                 {
                     if(MapGridDataView.Rows[e.RowIndex].DataBoundItem is Map map)
                     {
@@ -1128,13 +1136,16 @@ namespace WinFormsApp1
                         }
                     }
 
-                    if(e.ColumnIndex >= 0 && MapGridDataView.Columns[e.ColumnIndex].Name == "ColTilesetPath")
-                    {
-                        RefreshTilesetMetadataPanel();
-                    }
+                    // Refresh panel to populate tileDataComponentComboBox with the newly selected database
+                    RefreshTilesetMetadataPanel();
+                }
+                // 2. When Tileset Path selection changes
+                else if(columnName == "ColTilesetPath")
+                {
+                    RefreshTilesetMetadataPanel();
                 }
             };
-            
+
         }
             
         private void MapGridDataView_SelectionChanged(object sender, EventArgs e)
@@ -1556,35 +1567,41 @@ namespace WinFormsApp1
             layout.Controls.Add(propPanel, 1, 0);
             splitContainer4.Panel2.Controls.Add(layout);
         }
-        
+
 
         private void RefreshTileDataComponentDropdown(Map map)
         {
             _isSuppressingComponentChange = true;
+
+            tileDataComponentComboBox.BeginUpdate();
             tileDataComponentComboBox.Items.Clear();
             tileDataComponentComboBox.Items.Add("(None)");
 
-            // Ensure map.TileDatabase is assigned from Scene if missing
-            if(map.TileDatabase == null && !string.IsNullOrEmpty(map.TileDatabaseName))
+            // Ensure database reference is resolved against the active scene
+            if(map.TileDatabase == null)
             {
-                var scene = EditorContextManager.ActiveLoadedScene;
-                if(scene?.Database?.Databases != null)
+                var activeScene = EditorContextManager.ActiveLoadedScene;
+                if(activeScene != null)
                 {
-                    map.TileDatabase = scene.Database.Databases.FirstOrDefault(db =>
-                        db.Name.Equals(map.TileDatabaseName, StringComparison.OrdinalIgnoreCase));
+                    map.ResolveDatabase(activeScene);
                 }
             }
 
-            // Scan dictionary inside map.TileDatabase
+            // Populate dropdown with DataComponents from ComponentDatabase
             if(map.TileDatabase?.ComponentDatabase != null)
             {
                 foreach(var kvp in map.TileDatabase.ComponentDatabase)
                 {
-                    tileDataComponentComboBox.Items.Add(kvp.Value);
+                    if(kvp.Value != null)
+                    {
+                        tileDataComponentComboBox.Items.Add(kvp.Value);
+                    }
                 }
             }
 
             tileDataComponentComboBox.DisplayMember = "DisplayName";
+            tileDataComponentComboBox.EndUpdate();
+
             _isSuppressingComponentChange = false;
         }
 
@@ -1730,10 +1747,24 @@ namespace WinFormsApp1
                 EditorContextManager.SelectedTileIndex = selectedTileIndex;
                 selectedTileLabel.Text = "Selected Tile: None";
                 tileValueNumeric.Enabled = false;
+
+                // Disable controls when no map or tileset is active
                 tileDataComponentComboBox.Enabled = false;
+                tileDataComponentComboBox.Items.Clear();
+
                 tilesetPictureBox.Invalidate();
                 return;
             }
+
+            // Always ensure database reference is resolved for selected map
+            var scene = EditorContextManager.ActiveLoadedScene;
+            if(scene != null)
+            {
+                map.ResolveDatabase(scene);
+            }
+
+            // Populate dropdown with available DataComponents from map.TileDatabase
+            RefreshTileDataComponentDropdown(map);
 
             string fullPath = Path.Combine(EditorContextManager.ContentPath, map.TileSetPath);
             if(File.Exists(fullPath))
@@ -1758,10 +1789,13 @@ namespace WinFormsApp1
                 tilesetPictureBox.Image = null;
             }
 
+            // Enable and bind controls if a tile from the tileset picture box is selected
             if(selectedTileIndex >= 0)
             {
                 selectedTileLabel.Text = $"Selected Tile Index: {selectedTileIndex}";
                 tileValueNumeric.Enabled = true;
+
+                // ENABLE DROPDOWN HERE
                 tileDataComponentComboBox.Enabled = true;
 
                 int existingVal = 0;
@@ -1774,22 +1808,24 @@ namespace WinFormsApp1
                 tileValueNumeric.Value = existingVal;
                 _isSuppressingTileValueChange = false;
 
-                // Populate dropdown with active database components and select assigned component
-                RefreshTileDataComponentDropdown(map);
-
-                if(map.TileIndexDataDictionary != null && map.TileIndexDataDictionary.TryGetValue(selectedTileIndex, out var assignedComp))
+                // Select previously stored component for this tile index if exists
+                _isSuppressingComponentChange = true;
+                if(map.TileIndexDataDictionary != null &&
+                    map.TileIndexDataDictionary.TryGetValue(selectedTileIndex, out var assignedComp))
                 {
-                    _isSuppressingComponentChange = true;
-                    tileDataComponentComboBox.SelectedItem = assignedComp;
-                    _isSuppressingComponentChange = false;
+                    // Find item in combo box by Guid/AssetID or reference
+                    var match = tileDataComponentComboBox.Items
+                        .OfType<DataComponent>()
+                        .FirstOrDefault(c => c.AssetID == assignedComp.AssetID || c.DisplayName == assignedComp.DisplayName);
+
+                    tileDataComponentComboBox.SelectedItem = match ?? tileDataComponentComboBox.Items[0];
                 }
                 else
                 {
-                    _isSuppressingComponentChange = true;
                     if(tileDataComponentComboBox.Items.Count > 0)
-                        tileDataComponentComboBox.SelectedIndex = 0;
-                    _isSuppressingComponentChange = false;
+                        tileDataComponentComboBox.SelectedIndex = 0; // Default to "(None)"
                 }
+                _isSuppressingComponentChange = false;
             }
             else
             {
@@ -1800,8 +1836,7 @@ namespace WinFormsApp1
 
             tilesetPictureBox.Invalidate();
         }
-        
-        
+
         private bool _isSuppressingTileValueChange = false;
 
         private void TilesetPictureBox_Paint(object sender, PaintEventArgs e)
@@ -1881,8 +1916,11 @@ namespace WinFormsApp1
                 EditorContextManager.SelectedTileIndex = selectedTileIndex;
                 selectedTileLabel.Text = $"Selected Tile Index: {selectedTileIndex}";
 
+                // Enable BOTH controls for the clicked tile
                 tileValueNumeric.Enabled = true;
+                tileDataComponentComboBox.Enabled = true;
 
+                // 1. Restore Custom Int Value for NumericUpDown
                 int existingVal = 0;
                 if(map.TileProperties != null && map.TileProperties.TryGetValue(selectedTileIndex, out int val))
                 {
@@ -1892,6 +1930,29 @@ namespace WinFormsApp1
                 _isSuppressingTileValueChange = true;
                 tileValueNumeric.Value = existingVal;
                 _isSuppressingTileValueChange = false;
+
+                // 2. Populate Dropdown from the map's current database
+                RefreshTileDataComponentDropdown(map);
+
+                // 3. Select the stored DataComponent reference if this tile index already has one assigned
+                _isSuppressingComponentChange = true;
+                if(map.TileIndexDataDictionary != null &&
+                    map.TileIndexDataDictionary.TryGetValue(selectedTileIndex, out var assignedComponent) &&
+                    assignedComponent != null)
+                {
+                    // Find component in combo box by DisplayName or AssetID
+                    var match = tileDataComponentComboBox.Items
+                        .OfType<DataComponent>()
+                        .FirstOrDefault(c => c.DisplayName == assignedComponent.DisplayName || c.AssetID == assignedComponent.AssetID);
+
+                    tileDataComponentComboBox.SelectedItem = match ?? tileDataComponentComboBox.Items[0];
+                }
+                else
+                {
+                    if(tileDataComponentComboBox.Items.Count > 0)
+                        tileDataComponentComboBox.SelectedIndex = 0; // Default to "(None)"
+                }
+                _isSuppressingComponentChange = false;
 
                 tilesetPictureBox.Invalidate();
             }
