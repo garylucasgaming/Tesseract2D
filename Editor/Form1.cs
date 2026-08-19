@@ -1536,24 +1536,14 @@ namespace WinFormsApp1
             {
                 Minimum = -9999,
                 Maximum = 9999,
-                Width = 80,
+                Width = 140,
                 Enabled = false
             };
             tileValueNumeric.ValueChanged += TileValueNumeric_ValueChanged;
             propPanel.Controls.Add(tileValueNumeric);
 
-            // --- Database & DataComponent Assignment Controls ---
-            propPanel.Controls.Add(new Label { Text = "Tile Database:", AutoSize = true, ForeColor = System.Drawing.Color.Black, Margin = new Padding(0, 10, 0, 0) });
-            tileDatabaseComboBox = new ComboBox
-            {
-                Width = 160,
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Enabled = false
-            };
-            tileDatabaseComboBox.SelectedIndexChanged += TileDatabaseComboBox_SelectedIndexChanged;
-            propPanel.Controls.Add(tileDatabaseComboBox);
-
-            propPanel.Controls.Add(new Label { Text = "Data Component:", AutoSize = true, ForeColor = System.Drawing.Color.Black, Margin = new Padding(0, 5, 0, 0) });
+            // Data Component Dropdown (Database selector removed as it's assigned in the DataGridView)
+            propPanel.Controls.Add(new Label { Text = "Data Component:", AutoSize = true, ForeColor = System.Drawing.Color.Black, Margin = new Padding(0, 10, 0, 0) });
             tileDataComponentComboBox = new ComboBox
             {
                 Width = 160,
@@ -1566,25 +1556,7 @@ namespace WinFormsApp1
             layout.Controls.Add(propPanel, 1, 0);
             splitContainer4.Panel2.Controls.Add(layout);
         }
-
-        private void PopulateDatabaseDropdown(Map map)
-        {
-            _isSuppressingDatabaseChange = true;
-            tileDatabaseComboBox.Items.Clear();
-            tileDatabaseComboBox.Items.Add(new DatabaseOption { DisplayName = "(None)", FilePath = string.Empty });
-
-            var scene = EditorContextManager.ActiveLoadedScene;
-            if(scene?.Database?.Databases != null)
-            {
-                foreach(var db in scene.Database.Databases)
-                {
-                    tileDatabaseComboBox.Items.Add(new DatabaseOption { DisplayName = db.Name, FilePath = db.Name });
-                }
-            }
-
-            tileDatabaseComboBox.SelectedIndex = 0;
-            _isSuppressingDatabaseChange = false;
-        }
+        
 
         private void RefreshTileDataComponentDropdown(Map map)
         {
@@ -1592,30 +1564,27 @@ namespace WinFormsApp1
             tileDataComponentComboBox.Items.Clear();
             tileDataComponentComboBox.Items.Add("(None)");
 
-            if(map != null && map.TileDatabase != null)
+            // Ensure map.TileDatabase is assigned from Scene if missing
+            if(map.TileDatabase == null && !string.IsNullOrEmpty(map.TileDatabaseName))
             {
-                try
+                var scene = EditorContextManager.ActiveLoadedScene;
+                if(scene?.Database?.Databases != null)
                 {
-                    var prop = map.TileDatabase.GetType().GetProperty("Components") ?? map.TileDatabase.GetType().GetProperty("Items");
-                    if(prop != null && prop.GetValue(map.TileDatabase) is System.Collections.IEnumerable enumerable)
-                    {
-                        foreach(var comp in enumerable)
-                        {
-                            tileDataComponentComboBox.Items.Add(comp);
-                        }
-                    }
-                }
-                catch(Exception ex)
-                {
-                    Log.Error($"[Metadata Panel] Failed to extract components from database: {ex.Message}");
+                    map.TileDatabase = scene.Database.Databases.FirstOrDefault(db =>
+                        db.Name.Equals(map.TileDatabaseName, StringComparison.OrdinalIgnoreCase));
                 }
             }
 
-            tileDataComponentComboBox.DisplayMember = "Name";
-            if(tileDataComponentComboBox.Items.Count > 0)
+            // Scan dictionary inside map.TileDatabase
+            if(map.TileDatabase?.ComponentDatabase != null)
             {
-                tileDataComponentComboBox.SelectedIndex = 0;
+                foreach(var kvp in map.TileDatabase.ComponentDatabase)
+                {
+                    tileDataComponentComboBox.Items.Add(kvp.Value);
+                }
             }
+
+            tileDataComponentComboBox.DisplayMember = "DisplayName";
             _isSuppressingComponentChange = false;
         }
 
@@ -1675,18 +1644,73 @@ namespace WinFormsApp1
                     map.TileIndexDataDictionary = new Dictionary<int, DataComponent>();
                 }
 
+                // Store selected DataComponent reference against tile index
                 map.TileIndexDataDictionary[selectedTileIndex] = selectedComponent;
                 NeedsToBeSaved = true;
+
+                // Rebuild the per-tile instance grid
+                RebuildTileDataGrid(map);
                 tilesetPictureBox.Invalidate();
             }
             else
             {
-                // Selected "(None)" item
+                // Selected "(None)" - clear binding
                 if(map.TileIndexDataDictionary != null && map.TileIndexDataDictionary.ContainsKey(selectedTileIndex))
                 {
                     map.TileIndexDataDictionary.Remove(selectedTileIndex);
                     NeedsToBeSaved = true;
+
+                    RebuildTileDataGrid(map);
                     tilesetPictureBox.Invalidate();
+                }
+            }
+        }
+
+        private void RebuildTileDataGrid(Map map)
+        {
+            if(map == null)
+                return;
+
+            int width = map.Width;
+            int height = map.Height;
+
+            // Ensure TileDataGrid matches the int grid dimensions
+            if(map.TileDataGrid == null || map.TileDataGrid.GetLength(0) != width || map.TileDataGrid.GetLength(1) != height)
+            {
+                map.TileDataGrid = new DataComponent[width, height];
+            }
+
+            for(int x = 0; x < width; x++)
+            {
+                for(int y = 0; y < height; y++)
+                {
+                    // 1. Get custom int value from map.Grid
+                    int customInt = map.GetGridValue(x, y);
+
+                    // 2. Resolve custom int to Tile Index via TileProperties
+                    int tileIndex = customInt;
+                    if(map.TileProperties != null)
+                    {
+                        foreach(var kvp in map.TileProperties)
+                        {
+                            if(kvp.Value == customInt)
+                            {
+                                tileIndex = kvp.Key;
+                                break;
+                            }
+                        }
+                    }
+
+                    // 3. Query TileIndexDataDictionary for assigned DataComponent
+                    if(map.TileIndexDataDictionary != null && map.TileIndexDataDictionary.TryGetValue(tileIndex, out var templateComponent))
+                    {
+                        // Instantiate a fresh per-tile copy so each tile can be modified independently at runtime
+                        map.SetTileData(x, y, (DataComponent) templateComponent.Clone());
+                    }
+                    else
+                    {
+                        map.SetTileData(x, y, null);
+                    }
                 }
             }
         }
@@ -1706,7 +1730,6 @@ namespace WinFormsApp1
                 EditorContextManager.SelectedTileIndex = selectedTileIndex;
                 selectedTileLabel.Text = "Selected Tile: None";
                 tileValueNumeric.Enabled = false;
-                tileDatabaseComboBox.Enabled = false;
                 tileDataComponentComboBox.Enabled = false;
                 tilesetPictureBox.Invalidate();
                 return;
@@ -1735,14 +1758,10 @@ namespace WinFormsApp1
                 tilesetPictureBox.Image = null;
             }
 
-            // Populate Database list options
-            PopulateDatabaseDropdown(map);
-
             if(selectedTileIndex >= 0)
             {
                 selectedTileLabel.Text = $"Selected Tile Index: {selectedTileIndex}";
                 tileValueNumeric.Enabled = true;
-                tileDatabaseComboBox.Enabled = true;
                 tileDataComponentComboBox.Enabled = true;
 
                 int existingVal = 0;
@@ -1755,8 +1774,9 @@ namespace WinFormsApp1
                 tileValueNumeric.Value = existingVal;
                 _isSuppressingTileValueChange = false;
 
-                // Populate and select assigned DataComponent if present
+                // Populate dropdown with active database components and select assigned component
                 RefreshTileDataComponentDropdown(map);
+
                 if(map.TileIndexDataDictionary != null && map.TileIndexDataDictionary.TryGetValue(selectedTileIndex, out var assignedComp))
                 {
                     _isSuppressingComponentChange = true;
@@ -1775,12 +1795,13 @@ namespace WinFormsApp1
             {
                 selectedTileLabel.Text = "Selected Tile: None";
                 tileValueNumeric.Enabled = false;
-                tileDatabaseComboBox.Enabled = false;
                 tileDataComponentComboBox.Enabled = false;
             }
 
             tilesetPictureBox.Invalidate();
         }
+        
+        
         private bool _isSuppressingTileValueChange = false;
 
         private void TilesetPictureBox_Paint(object sender, PaintEventArgs e)

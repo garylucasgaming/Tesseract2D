@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Engine.Core.ECS.Components
 {
-    public abstract class DataComponent : GameComponent
+    public abstract class DataComponent : GameComponent, ICloneable
     {
 
         public abstract string DisplayName
@@ -43,6 +43,13 @@ namespace Engine.Core.ECS.Components
         public DataComponent? DataReference
         {
             get; set;
+        }
+
+
+
+        public virtual object Clone()
+        {
+            return this.MemberwiseClone();
         }
 
 

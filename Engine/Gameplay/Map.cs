@@ -205,22 +205,14 @@ namespace Engine.Core.GamePlay
             return Guid.Empty;
         }
 
-        public void settiledata(int x, int y, DataComponent data)
+        public void SetTileData(int x, int y, DataComponent data)
         {
             if(TileDatabase == null)
                 return;
             TileDataGrid [x, y] = data;
         }
 
-        public void SetTileData(int x, int y, string dataName)
-        {
-            if(TileDatabase == null)
-                return;
-            DataComponent? data = TileDatabase.GetComponent(dataName);
-            if(data == null)
-                return;
-            TileDataGrid[x, y] = data;
-        }
+     
 
         public DataComponent? GetTileData(int x, int y )
         {
