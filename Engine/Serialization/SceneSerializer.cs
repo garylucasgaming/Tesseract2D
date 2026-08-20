@@ -120,7 +120,7 @@ namespace Engine.Core.Serialization
             foreach(var map in scene.SceneMaps)
             {
                 string safeMapName = string.IsNullOrEmpty(map.MapName) ? "UntitledMap" : map.MapName.Replace(" ", "_");
-                string mapFileName = $"{scene.SceneName}_{safeMapName}.map";
+                string mapFileName = $"{scene.SceneName}_{safeMapName}.yaml";
                 string mapFilePath = Path.Combine(sceneDir, mapFileName);
 
                 TileMapSerializer.SaveMap(map, mapFilePath);
@@ -188,13 +188,23 @@ namespace Engine.Core.Serialization
                 scene.SceneMaps.Clear();
                 if(sceneDto.TileMapFiles != null && sceneDto.TileMapFiles.Count > 0)
                 {
+
+
+
                     foreach(var mapFileName in sceneDto.TileMapFiles)
                     {
+                        
+                        // Standard combination (scene directory + map file name)
                         string mapFilePath = Path.Combine(sceneDir, mapFileName);
+                     
+
                         if(File.Exists(mapFilePath))
                         {
-                            var map = TileMapSerializer.LoadMap(mapFilePath);
-                            scene.SceneMaps.Add(map);
+                            var map = TileMapSerializer.LoadMap(mapFilePath, scene);
+                            if(map != null)
+                            {
+                                scene.SceneMaps.Add(map);
+                            }
                         }
                         else
                         {
@@ -202,7 +212,7 @@ namespace Engine.Core.Serialization
                         }
                     }
 
-                    // Assign active map index directly; the property setter handles bounds-clamping safely
+                    // Assign active map index directly
                     scene.ActiveMapIndex = sceneDto.ActiveMapIndex;
                 }
 

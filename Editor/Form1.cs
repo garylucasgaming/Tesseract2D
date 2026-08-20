@@ -1752,7 +1752,7 @@ namespace WinFormsApp1
             }
         }
 
-       
+
 
         private void RefreshTilesetMetadataPanel()
         {
@@ -1770,7 +1770,6 @@ namespace WinFormsApp1
                 selectedTileLabel.Text = "Selected Tile: None";
                 tileValueNumeric.Enabled = false;
 
-                // Disable controls when no map or tileset is active
                 tileDataComponentComboBox.Enabled = false;
                 tileDataComponentComboBox.Items.Clear();
 
@@ -1778,7 +1777,7 @@ namespace WinFormsApp1
                 return;
             }
 
-            // Always ensure database reference is resolved for selected map
+            // Ensure database reference is resolved for selected map
             var scene = EditorContextManager.ActiveLoadedScene;
             if(scene != null)
             {
@@ -1817,7 +1816,6 @@ namespace WinFormsApp1
                 selectedTileLabel.Text = $"Selected Tile Index: {selectedTileIndex}";
                 tileValueNumeric.Enabled = true;
 
-                // ENABLE DROPDOWN HERE
                 tileDataComponentComboBox.Enabled = true;
 
                 int existingVal = 0;
@@ -1830,23 +1828,40 @@ namespace WinFormsApp1
                 tileValueNumeric.Value = existingVal;
                 _isSuppressingTileValueChange = false;
 
-                // Select previously stored component for this tile index if exists
+                // --- FIXED SELECTION MATCHING HERE ---
                 _isSuppressingComponentChange = true;
+
                 if(map.TileIndexDataDictionary != null &&
-                    map.TileIndexDataDictionary.TryGetValue(selectedTileIndex, out var assignedComp))
+    map.TileIndexDataDictionary.TryGetValue(selectedTileIndex, out var assignedComp) &&
+    assignedComp != null)
                 {
-                    // Find item in combo box by Guid/AssetID or reference
+                    string targetName = assignedComp.DisplayName ?? assignedComp.DisplayName ?? string.Empty;
+                    Guid targetGuid = assignedComp.AssetID;
+
+                    // Search ComboBox items (which are live DataComponent objects from map.TileDatabase)
                     var match = tileDataComponentComboBox.Items
                         .OfType<DataComponent>()
-                        .FirstOrDefault(c => c.AssetID == assignedComp.AssetID || c.DisplayName == assignedComp.DisplayName);
+                        .FirstOrDefault(c =>
+                            (targetGuid != Guid.Empty && c.AssetID == targetGuid) ||
+                            (!string.IsNullOrEmpty(targetName) && c.DisplayName.Equals(targetName, StringComparison.OrdinalIgnoreCase)) ||
+                            (!string.IsNullOrEmpty(targetName) && c.DisplayName.Equals(targetName, StringComparison.OrdinalIgnoreCase))
+                        );
 
-                    tileDataComponentComboBox.SelectedItem = match ?? tileDataComponentComboBox.Items[0];
+                    if(match != null)
+                    {
+                        tileDataComponentComboBox.SelectedItem = match;
+                    }
+                    else if(tileDataComponentComboBox.Items.Count > 0)
+                    {
+                        tileDataComponentComboBox.SelectedIndex = 0; // Default to "(None)"
+                    }
                 }
                 else
                 {
                     if(tileDataComponentComboBox.Items.Count > 0)
                         tileDataComponentComboBox.SelectedIndex = 0; // Default to "(None)"
                 }
+
                 _isSuppressingComponentChange = false;
             }
             else
@@ -1858,6 +1873,7 @@ namespace WinFormsApp1
 
             tilesetPictureBox.Invalidate();
         }
+
 
         private bool _isSuppressingTileValueChange = false;
 
@@ -1938,7 +1954,6 @@ namespace WinFormsApp1
                 EditorContextManager.SelectedTileIndex = selectedTileIndex;
                 selectedTileLabel.Text = $"Selected Tile Index: {selectedTileIndex}";
 
-                // Enable BOTH controls for the clicked tile
                 tileValueNumeric.Enabled = true;
                 tileDataComponentComboBox.Enabled = true;
 
@@ -1956,18 +1971,21 @@ namespace WinFormsApp1
                 // 2. Populate Dropdown from the map's current database
                 RefreshTileDataComponentDropdown(map);
 
-                // 3. Select the stored DataComponent reference if this tile index already has one assigned
+                // 3. Select the stored DataComponent reference with robust property checks
                 _isSuppressingComponentChange = true;
                 if(map.TileIndexDataDictionary != null &&
                     map.TileIndexDataDictionary.TryGetValue(selectedTileIndex, out var assignedComponent) &&
                     assignedComponent != null)
                 {
-                    // Find component in combo box by DisplayName or AssetID
                     var match = tileDataComponentComboBox.Items
                         .OfType<DataComponent>()
-                        .FirstOrDefault(c => c.DisplayName == assignedComponent.DisplayName || c.AssetID == assignedComponent.AssetID);
+                        .FirstOrDefault(c =>
+                            (c.AssetID != Guid.Empty && c.AssetID == assignedComponent.AssetID) ||
+                            (!string.IsNullOrEmpty(c.DisplayName) && c.DisplayName.Equals(assignedComponent.DisplayName, StringComparison.OrdinalIgnoreCase)) ||
+                            (!string.IsNullOrEmpty(c.DisplayName) && c.DisplayName.Equals(assignedComponent.DisplayName, StringComparison.OrdinalIgnoreCase))
+                        );
 
-                    tileDataComponentComboBox.SelectedItem = match ?? tileDataComponentComboBox.Items[0];
+                    tileDataComponentComboBox.SelectedItem = match ?? (tileDataComponentComboBox.Items.Count > 0 ? tileDataComponentComboBox.Items[0] : null);
                 }
                 else
                 {
@@ -1979,7 +1997,6 @@ namespace WinFormsApp1
                 tilesetPictureBox.Invalidate();
             }
         }
-
         private void TileValueNumeric_ValueChanged(object sender, EventArgs e)
         {
             if(_isSuppressingTileValueChange)

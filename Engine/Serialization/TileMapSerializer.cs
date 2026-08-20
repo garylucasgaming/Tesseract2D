@@ -35,11 +35,23 @@ namespace Engine.Core.Serialization
 
         public List<int> GridFlattened { get; set; } = new List<int>();
         public Dictionary<int, int> TileProperties { get; set; } = new Dictionary<int, int>();
-        public Dictionary<int, DataComponent> TileIndexDataDictionary { get; set; } = new Dictionary<int, DataComponent>();
+
+        // Use object dictionary for deserialization safety so YamlDotNet doesn't throw on polymorphic DataComponent reflection
+        public Dictionary<int, object> TileIndexDataDictionary { get; set; } = new Dictionary<int, object>();
     }
 
     public static class TileMapSerializer
     {
+        private static readonly ISerializer Serializer = new SerializerBuilder()
+            .WithNamingConvention(NullNamingConvention.Instance)
+            .IgnoreFields()
+            .Build();
+
+        private static readonly IDeserializer Deserializer = new DeserializerBuilder()
+            .WithNamingConvention(NullNamingConvention.Instance)
+            .IgnoreUnmatchedProperties()
+            .Build();
+
         public static void SaveMap(Map map, string targetPath)
         {
             if(map == null)
@@ -58,17 +70,20 @@ namespace Engine.Core.Serialization
                     IsEnabled = map.IsEnabled,
                     TileDatabaseName = map.TileDatabaseName,
                     TileProperties = map.TileProperties,
-                    TileIndexDataDictionary = map.TileIndexDataDictionary,
                     GridFlattened = map.GridFlattened
                 };
 
-                var serializer = new SerializerBuilder()
-                    .WithNamingConvention(PascalCaseNamingConvention.Instance)
-                    .IgnoreFields()
-                    .Build();
+                string dir = Path.GetDirectoryName(targetPath);
+                if(!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
 
-                string yaml = serializer.Serialize(dto);
-                File.WriteAllText(targetPath, yaml);
+                using(var writer = File.CreateText(targetPath))
+                {
+                    Serializer.Serialize(writer, dto);
+                }
+
                 Log.Info($"[TileMapSerializer] Map saved successfully to {targetPath}");
             }
             catch(Exception ex)
@@ -77,16 +92,8 @@ namespace Engine.Core.Serialization
             }
         }
 
-        public static Map LoadMap(string relativeFilePath, GameScene activeScene = null)
+        public static Map LoadMap(string absoluteFilePath, GameScene activeScene = null)
         {
-            string activeProjectDir = EditorContextManager.CurrentProjectRoot ?? string.Empty;
-            string absoluteFilePath = relativeFilePath;
-
-            if(!Path.IsPathRooted(relativeFilePath))
-            {
-                absoluteFilePath = Path.Combine(activeProjectDir, relativeFilePath);
-            }
-
             if(!File.Exists(absoluteFilePath))
             {
                 Log.Error($"[TileMapSerializer] Map file not found at: {absoluteFilePath}");
@@ -95,20 +102,20 @@ namespace Engine.Core.Serialization
 
             try
             {
-                string yaml = File.ReadAllText(absoluteFilePath);
-                var deserializer = new DeserializerBuilder()
-                    .WithNamingConvention(PascalCaseNamingConvention.Instance)
-                    .IgnoreUnmatchedProperties()
-                    .Build();
+                MapDataDto dto;
+                using(var reader = File.OpenText(absoluteFilePath))
+                {
+                    dto = Deserializer.Deserialize<MapDataDto>(reader);
+                }
 
-                var dto = deserializer.Deserialize<MapDataDto>(yaml);
                 if(dto == null)
                     return null;
 
                 // 1. Create instance with dimensions
                 var map = new Map(dto.Width, dto.Height);
 
-                // 2. Set primitive metadata & dictionaries FIRST
+                // 2. Set primitive metadata FIRST
+                map.ContextScene = activeScene;
                 map.MapName = dto.MapName;
                 map.TileSize = dto.TileSize;
                 map.LayerOrder = dto.LayerOrder;
@@ -116,14 +123,46 @@ namespace Engine.Core.Serialization
                 map.IsEnabled = dto.IsEnabled;
                 map.TileDatabaseName = dto.TileDatabaseName;
                 map.TileProperties = dto.TileProperties ?? new Dictionary<int, int>();
-                map.TileIndexDataDictionary = dto.TileIndexDataDictionary ?? new Dictionary<int, DataComponent>();
 
                 // 3. Resolve database reference against active scene BEFORE rebuilding grids
                 if(activeScene != null)
                 {
                     map.ResolveDatabase(activeScene);
                 }
+                map.TileIndexDataDictionary = new Dictionary<int, DataComponent>();
+                if(dto.TileIndexDataDictionary != null && map.TileDatabase?.ComponentDatabase != null)
+                {
+                    foreach(var kvp in dto.TileIndexDataDictionary)
+                    {
+                        int tileIdx = kvp.Key;
+                        var rawObj = kvp.Value;
 
+                        if(rawObj is DataComponent directComp)
+                        {
+                            map.TileIndexDataDictionary[tileIdx] = directComp;
+                        }
+                        else if(rawObj is IDictionary<object, object> yamlDict)
+                        {
+                            // Extract identifier/name fields saved in the YAML dictionary
+                            string compName = yamlDict.TryGetValue("DisplayName", out var dn) ? dn?.ToString() :
+                                             (yamlDict.TryGetValue("Name", out var n) ? n?.ToString() : string.Empty);
+
+                            string assetIdStr = yamlDict.TryGetValue("AssetID", out var id) ? id?.ToString() : string.Empty;
+
+                            // Find matching live DataComponent from the map's resolved TileDatabase
+                            var matchedDbComponent = map.TileDatabase.ComponentDatabase.Values.FirstOrDefault(c =>
+                                (Guid.TryParse(assetIdStr, out var g) && g != Guid.Empty && c.AssetID == g) ||
+                                (!string.IsNullOrEmpty(compName) && c.DisplayName.Equals(compName, StringComparison.OrdinalIgnoreCase)) ||
+                                (!string.IsNullOrEmpty(compName) && c.DisplayName.Equals(compName, StringComparison.OrdinalIgnoreCase))
+                            );
+
+                            if(matchedDbComponent != null)
+                            {
+                                map.TileIndexDataDictionary[tileIdx] = matchedDbComponent;
+                            }
+                        }
+                    }
+                }
                 // 4. Assign GridFlattened LAST (triggers UnflattenGrid & RebuildTileDataGrid with active database reference)
                 map.GridFlattened = dto.GridFlattened ?? new List<int>();
 
@@ -132,7 +171,7 @@ namespace Engine.Core.Serialization
             }
             catch(Exception ex)
             {
-                Log.Error($"[TileMapSerializer] Failed to load map from {absoluteFilePath}: {ex.Message}");
+                Log.Error($"[TileMapSerializer] Failed to load map from {absoluteFilePath}: {ex.ToString()}");
                 return null;
             }
         }
