@@ -221,6 +221,10 @@ namespace WinFormsApp1
                 if(result.Success)
                 {
                     _scriptManager.LoadGameplayAssembly(result.AssemblyPath);
+
+                    // Re-sync global script assembly manager
+                    ScriptAssemblyManager.ReloadProjectAssemblies();
+
                     _lastBuildTimestamp = DateTime.Now;
 
                     RefreshEditor();
@@ -309,13 +313,13 @@ namespace WinFormsApp1
             progressBarTextBox.Text = text;
         }
 
-        public void OnProjectLoaded()
+        public async void OnProjectLoaded()
         {
             UpdateEditorTitle();
 
             if(EditorContextManager.IsProjectLoaded)
             {
-                InitializeAndLoadGameplayAssembly();
+                await InitializeAndLoadGameplayAssemblyAsync();
 
                 string absoluteBinContentPath = Path.Combine(EditorContextManager.BinPath, "Content");
                 mgWindowControl.Editor.Content.RootDirectory = absoluteBinContentPath;
@@ -943,7 +947,7 @@ namespace WinFormsApp1
             return SceneHierarchyTreeView.SelectedNode.Tag as GameObject;
         }
 
-        private void InitializeAndLoadGameplayAssembly()
+        private async Task InitializeAndLoadGameplayAssemblyAsync()
         {
             if(string.IsNullOrEmpty(EditorContextManager.CurrentProjectRoot))
                 return;
@@ -957,25 +961,15 @@ namespace WinFormsApp1
 
             try
             {
-                var oldContext = System.Threading.SynchronizationContext.Current;
-                BuildResult result;
-                try
-                {
-                    System.Threading.SynchronizationContext.SetSynchronizationContext(null);
-
-                    result = ScriptCompiler.CompileGameplayProjectAsync(
-                        EditorContextManager.CurrentProjectRoot,
-                        EditorContextManager.CurrentProjectName
-                    ).Result;
-                }
-                finally
-                {
-                    System.Threading.SynchronizationContext.SetSynchronizationContext(oldContext);
-                }
+                BuildResult result = await ScriptCompiler.CompileGameplayProjectAsync(
+                    EditorContextManager.CurrentProjectRoot,
+                    EditorContextManager.CurrentProjectName
+                );
 
                 if(result.Success && !string.IsNullOrEmpty(result.AssemblyPath))
                 {
                     _scriptManager.LoadGameplayAssembly(result.AssemblyPath);
+                    ScriptAssemblyManager.ReloadProjectAssemblies();
                     _lastBuildTimestamp = DateTime.Now;
                     Log.Info("[Script Manager] Gameplay assembly successfully loaded. Custom components are ready.");
                 }
@@ -1602,32 +1596,80 @@ namespace WinFormsApp1
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
-                AutoScroll = true
+                AutoScroll = true,
+                Padding = new Padding(10) // Optional padding for visual spacing from edge
             };
 
-            propPanel.Controls.Add(new Label { Text = "Tileset Tile Properties", Font = new System.Drawing.Font("Segoe UI", 10, System.Drawing.FontStyle.Bold), AutoSize = true, ForeColor = System.Drawing.Color.White });
+            // Dynamically adjust control widths when propPanel resizes
+            propPanel.SizeChanged += (s, e) =>
+            {
+                int availableWidth = propPanel.ClientSize.Width - propPanel.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth;
+                if(availableWidth <= 0)
+                    return;
 
-            selectedTileLabel = new Label { Text = "Selected Tile: None", AutoSize = true, ForeColor = System.Drawing.Color.Black };
+                propPanel.SuspendLayout();
+                foreach(Control ctrl in propPanel.Controls)
+                {
+                    // Do not override AutoSize labels unless needed, but input controls will fill panel width
+                    if(ctrl is ComboBox || ctrl is NumericUpDown)
+                    {
+                        ctrl.Width = availableWidth;
+                    }
+                    else if(ctrl is Label label && !label.AutoSize)
+                    {
+                        label.Width = availableWidth;
+                    }
+                }
+                propPanel.ResumeLayout(true);
+            };
+
+            propPanel.Controls.Add(new Label
+            {
+                Text = "Tileset Tile Properties",
+                Font = new System.Drawing.Font("Segoe UI", 10, System.Drawing.FontStyle.Bold),
+                AutoSize = true,
+                ForeColor = System.Drawing.Color.White,
+                Margin = new Padding(0, 0, 0, 10)
+            });
+
+            selectedTileLabel = new Label
+            {
+                Text = "Selected Tile: None",
+                AutoSize = true,
+                ForeColor = System.Drawing.Color.Black, 
+                Margin = new Padding(0, 0, 0, 8)
+            };
             propPanel.Controls.Add(selectedTileLabel);
 
-            var valueLabel = new Label { Text = "Custom Int Value:", AutoSize = true, ForeColor = System.Drawing.Color.Black };
+            var valueLabel = new Label
+            {
+                Text = "Custom Int Value:",
+                AutoSize = true,
+                ForeColor = System.Drawing.Color.Black, 
+                Margin = new Padding(0, 5, 0, 2)
+            };
             propPanel.Controls.Add(valueLabel);
 
             tileValueNumeric = new NumericUpDown
             {
                 Minimum = -9999,
                 Maximum = 9999,
-                Width = 140,
                 Enabled = false
             };
             tileValueNumeric.ValueChanged += TileValueNumeric_ValueChanged;
             propPanel.Controls.Add(tileValueNumeric);
 
-            // Data Component Dropdown (Database selector removed as it's assigned in the DataGridView)
-            propPanel.Controls.Add(new Label { Text = "Data Component:", AutoSize = true, ForeColor = System.Drawing.Color.Black, Margin = new Padding(0, 10, 0, 0) });
+            // Data Component Dropdown
+            propPanel.Controls.Add(new Label
+            {
+                Text = "Data Component:",
+                AutoSize = true,
+                ForeColor = System.Drawing.Color.White,
+                Margin = new Padding(0, 10, 0, 2)
+            });
+
             tileDataComponentComboBox = new ComboBox
             {
-                Width = 160,
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 Enabled = false
             };
@@ -1637,7 +1679,6 @@ namespace WinFormsApp1
             layout.Controls.Add(propPanel, 1, 0);
             splitContainer4.Panel2.Controls.Add(layout);
         }
-
 
         private void RefreshTileDataComponentDropdown(Map map)
         {
@@ -2112,13 +2153,15 @@ namespace WinFormsApp1
             };
         }
 
-        public void StartSimulationButton_Click(object sender, EventArgs e)
+        public async void StartSimulationButton_Click(object sender, EventArgs e)
         {
             if(!EditorContextManager.IsProjectLoaded || EditorContextManager.ActiveLoadedScene == null)
             {
                 Log.Warning("[Simulation Error] Cannot start simulation: No active project or scene is loaded.");
                 return;
             }
+
+            await CompileAndReloadScriptsAsync();
             SaveScene();
             mgWindowControl.StartSimulation();
         }
@@ -2336,6 +2379,7 @@ namespace WinFormsApp1
 
         private void databaseViewerToolStripMenuItem_Click(object sender, EventArgs e)
         {
+            ScriptAssemblyManager.ReloadProjectAssemblies();
             var viewer = new DatabaseViewer();
             viewer.Show(this);
         }

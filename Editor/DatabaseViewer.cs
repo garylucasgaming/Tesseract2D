@@ -3,6 +3,7 @@ using Engine.Core.ECS.Components;
 using Engine.Core.Runtime;
 using Engine.Core.Serialization;
 using Engine.Core.Utilities;
+using Engine.Editor.Utilities;
 using Engine.Editor.WinFormsApp1;
 using System;
 using System.Collections;
@@ -327,15 +328,33 @@ namespace Engine.Editor
 
         private void btnNewDatabase_Click(object sender, EventArgs e)
         {
+            // 1. Force-load project assemblies into the AppDomain before reflection scan
+            ScriptAssemblyManager.ReloadProjectAssemblies();
+
             List<Type> availableComponents = new List<Type>();
+
             foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
             {
                 try
                 {
-                    var found = assembly.GetTypes().Where(t => t.IsClass && !t.IsAbstract && typeof(DataComponent).IsAssignableFrom(t));
+                    // Use IsAssignableFrom to find all classes inheriting from DataComponent
+                    var found = assembly.GetTypes()
+                        .Where(t => t.IsClass && !t.IsAbstract && typeof(DataComponent).IsAssignableFrom(t));
+
                     availableComponents.AddRange(found);
                 }
-                catch { }
+                catch(ReflectionTypeLoadException ex)
+                {
+                    // Safely fetch types that succeeded loading even if some failed
+                    var found = ex.Types
+                        .Where(t => t != null && t.IsClass && !t.IsAbstract && typeof(DataComponent).IsAssignableFrom(t));
+
+                    availableComponents.AddRange(found!);
+                }
+                catch
+                {
+                    // Ignore non-reflectable system or dynamic assemblies
+                }
             }
 
             using(var dialog = new DatabaseDialog(availableComponents))
@@ -364,6 +383,38 @@ namespace Engine.Editor
                     {
                         mainForm.RefreshProjectFolderView();
                     }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Scans the current project's build folder and loads compiled game/script DLLs into memory[cite: 1858, 1860].
+                    /// </summary>
+        private void EnsureProjectAssembliesLoaded()
+        {
+            if(string.IsNullOrEmpty(EditorContextManager.CurrentProjectRoot))
+                return;
+
+            string binPath = Path.Combine(EditorContextManager.CurrentProjectRoot, "bin");
+            if(!Directory.Exists(binPath))
+                return;
+
+            // Retrieve all compiled assembly files in the project's output path [cite: 1860]
+            foreach(var dllPath in Directory.GetFiles(binPath, "*.dll", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    var assemblyName = System.Reflection.AssemblyName.GetAssemblyName(dllPath);
+
+                    // Check if assembly isn't loaded into AppDomain yet [cite: 1861]
+                    if(!AppDomain.CurrentDomain.GetAssemblies().Any(a => a.FullName == assemblyName.FullName))
+                    {
+                        System.Reflection.Assembly.LoadFrom(dllPath); // Load into memory [cite: 1861]
+                    }
+                }
+                catch
+                {
+                    // Ignore non-.NET or unreadable DLLs
                 }
             }
         }

@@ -71,6 +71,8 @@ namespace Engine.Editor.Utilities
                         $"{projectName}.Gameplay.dll"
                     );
 
+                    ScriptAssemblyManager.ReloadProjectAssemblies();
+
                     return new BuildResult
                     {
                         Success = success && File.Exists(dllPath),
