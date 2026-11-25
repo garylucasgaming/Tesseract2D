@@ -12,6 +12,8 @@ namespace Engine.Core.Serialization
 {
     public class MapDataDto
     {
+        public int Version { get; set; } = SerializationVersion.Current;
+
         public string MapName { get; set; } = string.Empty;
         public int Width
         {
@@ -59,6 +61,14 @@ namespace Engine.Core.Serialization
 
             try
             {
+                var tileIndexData = new Dictionary<int, object>();
+                foreach(var kvp in map.TileIndexDataDictionary)
+                {
+                    var exported = ComponentSerializer.ExportComponent(kvp.Value);
+                    exported["AssetID"] = kvp.Value.AssetID.ToString();
+                    tileIndexData[kvp.Key] = exported;
+                }
+
                 var dto = new MapDataDto
                 {
                     MapName = map.MapName,
@@ -70,7 +80,8 @@ namespace Engine.Core.Serialization
                     IsEnabled = map.IsEnabled,
                     TileDatabaseName = map.TileDatabaseName,
                     TileProperties = map.TileProperties,
-                    GridFlattened = map.GridFlattened
+                    GridFlattened = map.GridFlattened,
+                    TileIndexDataDictionary = tileIndexData
                 };
 
                 string dir = Path.GetDirectoryName(targetPath);
@@ -92,7 +103,7 @@ namespace Engine.Core.Serialization
             }
         }
 
-        public static Map LoadMap(string absoluteFilePath, GameScene activeScene = null)
+        public static Map LoadMap(string absoluteFilePath, GameScene activeScene = null, bool strict = false)
         {
             if(!File.Exists(absoluteFilePath))
             {
@@ -110,6 +121,8 @@ namespace Engine.Core.Serialization
 
                 if(dto == null)
                     return null;
+
+                SerializationVersion.Validate(dto.Version, "Map", absoluteFilePath);
 
                 // 1. Create instance with dimensions
                 var map = new Map(dto.Width, dto.Height);
@@ -130,44 +143,72 @@ namespace Engine.Core.Serialization
                     map.ResolveDatabase(activeScene);
                 }
                 map.TileIndexDataDictionary = new Dictionary<int, DataComponent>();
-                if(dto.TileIndexDataDictionary != null && map.TileDatabase?.ComponentDatabase != null)
+                if(dto.TileIndexDataDictionary != null && dto.TileIndexDataDictionary.Count > 0)
                 {
-                    foreach(var kvp in dto.TileIndexDataDictionary)
+                    if(map.TileDatabase?.ComponentDatabase == null)
                     {
-                        int tileIdx = kvp.Key;
-                        var rawObj = kvp.Value;
-
-                        if(rawObj is DataComponent directComp)
+                        if(strict)
                         {
-                            map.TileIndexDataDictionary[tileIdx] = directComp;
+                            throw new InvalidOperationException(
+                                $"[TileMapSerializer] Map '{dto.MapName}' has tile data but database '{map.TileDatabaseName}' could not be resolved in '{absoluteFilePath}'.");
                         }
-                        else if(rawObj is IDictionary<object, object> yamlDict)
+                    }
+                    else
+                    {
+                        foreach(var kvp in dto.TileIndexDataDictionary)
                         {
-                            // Extract identifier/name fields saved in the YAML dictionary
-                            string compName = yamlDict.TryGetValue("DisplayName", out var dn) ? dn?.ToString() :
-                                             (yamlDict.TryGetValue("Name", out var n) ? n?.ToString() : string.Empty);
+                            int tileIdx = kvp.Key;
+                            var rawObj = kvp.Value;
+                            bool resolved = false;
 
-                            string assetIdStr = yamlDict.TryGetValue("AssetID", out var id) ? id?.ToString() : string.Empty;
-
-                            // Find matching live DataComponent from the map's resolved TileDatabase
-                            var matchedDbComponent = map.TileDatabase.ComponentDatabase.Values.FirstOrDefault(c =>
-                                (Guid.TryParse(assetIdStr, out var g) && g != Guid.Empty && c.AssetID == g) ||
-                                (!string.IsNullOrEmpty(compName) && c.DisplayName.Equals(compName, StringComparison.OrdinalIgnoreCase)) ||
-                                (!string.IsNullOrEmpty(compName) && c.DisplayName.Equals(compName, StringComparison.OrdinalIgnoreCase))
-                            );
-
-                            if(matchedDbComponent != null)
+                            if(rawObj is DataComponent directComp)
                             {
-                                map.TileIndexDataDictionary[tileIdx] = matchedDbComponent;
+                                map.TileIndexDataDictionary[tileIdx] = directComp;
+                                resolved = true;
+                            }
+                            else if(rawObj is IDictionary<object, object> yamlDict)
+                            {
+                                // Extract identifier/name fields saved in the YAML dictionary
+                                string compName = yamlDict.TryGetValue("DisplayName", out var dn) ? dn?.ToString() :
+                                                 (yamlDict.TryGetValue("Name", out var n) ? n?.ToString() : string.Empty);
+
+                                string assetIdStr = yamlDict.TryGetValue("AssetID", out var id) ? id?.ToString() : string.Empty;
+
+                                // Find matching live DataComponent from the map's resolved TileDatabase
+                                var matchedDbComponent = map.TileDatabase.ComponentDatabase.Values.FirstOrDefault(c =>
+                                    (Guid.TryParse(assetIdStr, out var g) && g != Guid.Empty && c.AssetID == g) ||
+                                    (!string.IsNullOrEmpty(compName) && c.DisplayName.Equals(compName, StringComparison.OrdinalIgnoreCase))
+                                );
+
+                                if(matchedDbComponent != null)
+                                {
+                                    map.TileIndexDataDictionary[tileIdx] = matchedDbComponent;
+                                    resolved = true;
+                                }
+                            }
+
+                            if(strict && !resolved)
+                            {
+                                throw new InvalidOperationException(
+                                    $"[TileMapSerializer] Tile data at index {tileIdx} in '{absoluteFilePath}' could not be resolved against database '{map.TileDatabaseName}'.");
                             }
                         }
                     }
                 }
-                // 4. Assign GridFlattened LAST (triggers UnflattenGrid & RebuildTileDataGrid with active database reference)
+                // 4. Assign GridFlattened LAST, then rebuild the derived grid against the completed data map.
                 map.GridFlattened = dto.GridFlattened ?? new List<int>();
+                map.RebuildTileDataGrid();
 
                 Log.Info($"[TileMapSerializer] Loaded map '{map.MapName}' from {absoluteFilePath}");
                 return map;
+            }
+            catch(SerializationVersionException)
+            {
+                throw;
+            }
+            catch(InvalidOperationException)
+            {
+                throw;
             }
             catch(Exception ex)
             {

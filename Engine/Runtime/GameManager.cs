@@ -21,8 +21,8 @@ namespace Engine.Core.Runtime
         public bool IsPersistent { get; protected set; } = false; // Dictates whether this manager should persist across GameScene transitions. True for global hubs (like an SaveGameManager); False for localized maps (like a CombatManager).
 
 
-        // Lifecycle Initialization Hook. Called automatically by the GameScene once the entire scene has loaded into memory,
-        // ensuring all GameObjects and Systems exist.
+        // Lifecycle Initialization Hook. GameHost calls this once before the first
+        // update for each active registered manager in the current scene.
         public abstract void Initialize();
 
 
@@ -32,8 +32,8 @@ namespace Engine.Core.Runtime
         public abstract void Update(float deltaTime);
 
 
-        // Lifecycle Shutdown Hook. Called automatically when the scene is being torn down 
-        // by the SceneDirector. Perfect for cleanly unsubscribing from GameEvents to prevent memory leaks.
+        // Lifecycle Shutdown Hook. GameHost calls this on scene swap or host shutdown
+        // for every registered manager in the current scene, so subscriptions can be released.
         public abstract void Shutdown();
 
         

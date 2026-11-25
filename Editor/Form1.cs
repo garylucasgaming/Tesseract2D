@@ -55,6 +55,7 @@ namespace WinFormsApp1
         private System.Drawing.Bitmap currentTilesetBitmap = null;
         private readonly System.Collections.Generic.List<string> _uiScreenNames = new System.Collections.Generic.List<string>();
         private ScriptAssemblyManager _scriptManager = new ScriptAssemblyManager();
+        private DatabaseManager? _projectDatabaseManager;
         private DateTime _lastBuildTimestamp = DateTime.MinValue;
         private bool _isCompiling = false;
         public static TreeView ActiveHierarchyTreeView
@@ -134,6 +135,16 @@ namespace WinFormsApp1
             InitializeSceneManagementTabs();
         }
 
+        private DatabaseManager GetProjectDatabaseManager()
+        {
+            if(_projectDatabaseManager == null)
+            {
+                _projectDatabaseManager = new DatabaseManager();
+                _projectDatabaseManager.LoadAllDatabasesFromFolder(EditorContextManager.DatabasePath);
+            }
+            return _projectDatabaseManager;
+        }
+
         private void TextSearchBarControl1_TextChanged(object sender, EventArgs e)
         {
 
@@ -149,7 +160,7 @@ namespace WinFormsApp1
             }
 
             string sceneName = PromptUserForSceneName();
-            var newScene = new GameScene();
+            var newScene = new GameScene(EditorContextManager.Context, GetProjectDatabaseManager());
             newScene.SceneName = sceneName;
             string sceneFileName = sceneName + ".scene";
             string scenePath = Path.Combine(EditorContextManager.CurrentProjectRoot, "Content", "Assets", "Scenes", sceneFileName);
@@ -167,7 +178,7 @@ namespace WinFormsApp1
             if(string.IsNullOrEmpty(EditorContextManager.CurrentProjectRoot))
                 return;
 
-            string sourceFolder = Path.Combine(EditorContextManager.CurrentProjectRoot, "Source");
+            string sourceFolder = ProjectPaths.GetScriptSourceRoot(EditorContextManager.CurrentProjectRoot);
             if(!Directory.Exists(sourceFolder))
                 return;
 
@@ -184,7 +195,7 @@ namespace WinFormsApp1
             _scriptWatcher.Renamed += (s, e) => TriggerScriptRebuildThrottled(ref lastTriggerTime);
 
             _scriptWatcher.EnableRaisingEvents = true;
-            Log.Info("[Script Manager] Background file system watcher active on Source scripts.");
+            Log.Info("[Script Manager] Background file system watcher active on Content/Assets scripts.");
         }
 
         private void TriggerScriptRebuildThrottled(ref DateTime lastTriggerTime)
@@ -333,8 +344,11 @@ namespace WinFormsApp1
                     {
                         Log.Info($"[Editor UI] Found existing workspace state file. Deserializing active layout tree...");
 
-                        var loadedScene = new GameScene();
-                        loadedScene = SceneSerializer.LoadScene(targetScenePath);
+                        var loadedScene = new GameScene(EditorContextManager.Context, GetProjectDatabaseManager());
+                        loadedScene = SceneSerializer.LoadScene(
+                            targetScenePath,
+                            context: EditorContextManager.Context,
+                            database: GetProjectDatabaseManager());
                         loadedScene.resetContextSceneInManagers();
 
                         EditorContextManager.ActiveLoadedScene = loadedScene;
@@ -561,8 +575,11 @@ namespace WinFormsApp1
                     {
                         Log.Info($"[Editor UI] Found existing Scene file. Deserializing active layout tree...");
 
-                        var loadedScene = new GameScene();
-                        loadedScene = SceneSerializer.LoadScene(targetScenePath);
+                        var loadedScene = new GameScene(EditorContextManager.Context, GetProjectDatabaseManager());
+                        loadedScene = SceneSerializer.LoadScene(
+                            targetScenePath,
+                            context: EditorContextManager.Context,
+                            database: GetProjectDatabaseManager());
 
                         EditorContextManager.ActiveLoadedScene = loadedScene;
                         UpdateSceneTextBox(EditorContextManager.ActiveLoadedScene.SceneName);
@@ -592,7 +609,10 @@ namespace WinFormsApp1
                 Log.Info($"[Editor UI] Found existing Scene file. Deserializing active layout tree...");
 
                 var loadedScene = sceneToLoad;
-                loadedScene = SceneSerializer.LoadScene(targetScenePath);
+                loadedScene = SceneSerializer.LoadScene(
+                            targetScenePath,
+                            context: EditorContextManager.Context,
+                            database: GetProjectDatabaseManager());
 
                 EditorContextManager.ActiveLoadedScene = loadedScene;
                 AttachSceneEvents(loadedScene);
@@ -2205,7 +2225,10 @@ namespace WinFormsApp1
 
                     if(File.Exists(targetScenePath))
                     {
-                        GameScene revertedScene = SceneSerializer.LoadScene(targetScenePath);
+                        GameScene revertedScene = SceneSerializer.LoadScene(
+                            targetScenePath,
+                            context: EditorContextManager.Context,
+                            database: GetProjectDatabaseManager());
 
                         EditorContextManager.ActiveLoadedScene = revertedScene;
                         EditorContextManager.ActiveLoadedScene.resetContextSceneInManagers();

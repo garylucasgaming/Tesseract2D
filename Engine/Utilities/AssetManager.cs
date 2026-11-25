@@ -1,4 +1,4 @@
-﻿using Engine.Core.Serialization; // Access to EditorContextManager
+﻿using Engine.Core.Runtime;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -54,15 +54,16 @@ namespace Engine.Core.Utilities
         /// <summary>
         /// Scans raw assets and returns fully stripped relative keys.
         /// </summary>
-        public static List<string> GetAvailableKeys(AssetType type)
+        public static List<string> GetAvailableKeys(AssetType type, IEngineContext? context = null)
         {
             var keys = new List<string>();
+            context ??= EngineContext.Current;
 
-            if(!EditorContextManager.IsProjectLoaded)
+            if(!context.IsProjectLoaded)
                 return keys;
 
             string subfolder = GetSubfolderName(type);
-            string targetDir = Path.Combine(EditorContextManager.AssetsPath, subfolder);
+            string targetDir = Path.Combine(context.AssetsPath, subfolder);
 
             if(!Directory.Exists(targetDir))
                 return keys;
@@ -104,16 +105,17 @@ namespace Engine.Core.Utilities
         /// <summary>
         /// Translates a key to its physical .xnb file on disk.
         /// </summary>
-        public static string GetAbsolutePhysicalPath(string assetKey, AssetType type)
+        public static string GetAbsolutePhysicalPath(string assetKey, AssetType type, IEngineContext? context = null)
         {
             if(string.IsNullOrEmpty(assetKey))
                 return string.Empty;
 
+            context ??= EngineContext.Current;
             string cleanKey = StripExtension(assetKey);
             string subfolder = GetSubfolderName(type);
 
             return Path.Combine(
-                EditorContextManager.BinPath,
+                context.BinPath,
                 "Content",
                 "Assets",
                 subfolder,

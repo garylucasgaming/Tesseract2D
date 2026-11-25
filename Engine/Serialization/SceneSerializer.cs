@@ -17,6 +17,8 @@ namespace Engine.Core.Serialization
 
     public class SceneDataDto
     {
+        public int Version { get; set; } = SerializationVersion.Current;
+
         public string SceneName
         {
             get; set;
@@ -38,6 +40,8 @@ namespace Engine.Core.Serialization
     // A clean representation of an individual GameObject
     public class EntityDataDto
     {
+        public int Version { get; set; } = SerializationVersion.Current;
+
         public string Name
         {
             get; set;
@@ -66,40 +70,6 @@ namespace Engine.Core.Serialization
             .WithNamingConvention(NullNamingConvention.Instance)
             .IgnoreUnmatchedProperties()
             .Build();
-
-        private static Type ResolveType(string typeName)
-        {
-            if(string.IsNullOrEmpty(typeName))
-                return null;
-
-            Type type = Type.GetType(typeName);
-            if(type != null)
-                return type;
-
-            foreach(var assembly in AppDomain.CurrentDomain.GetAssemblies())
-            {
-                type = assembly.GetType(typeName);
-                if(type != null)
-                    return type;
-
-                try
-                {
-                    foreach(var t in assembly.GetTypes())
-                    {
-                        if(t.FullName.Equals(typeName, StringComparison.OrdinalIgnoreCase) ||
-                           t.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))
-                        {
-                            return t;
-                        }
-                    }
-                }
-                catch
-                {
-                    // Ignore assembly reflection errors
-                }
-            }
-            return null;
-        }
 
         public static void SaveScene(GameScene scene, string absoluteFilePath)
         {
@@ -170,18 +140,36 @@ namespace Engine.Core.Serialization
             Log.Info($"[SceneSerializer] Saved Scene to {absoluteFilePath}");
         }
 
-        public static GameScene LoadScene(string absoluteFilePath)
+        public static GameScene LoadScene(
+            string absoluteFilePath,
+            bool strict = false,
+            IEngineContext? context = null,
+            DatabaseManager? database = null,
+            SessionGlobals? session = null)
         {
             string sceneDir = Path.GetDirectoryName(absoluteFilePath) ?? string.Empty;
 
             using(var reader = File.OpenText(absoluteFilePath))
             {
                 var sceneDto = Deserializer.Deserialize<SceneDataDto>(reader);
+                SerializationVersion.Validate(sceneDto.Version, "Scene", absoluteFilePath);
 
-                var scene = new GameScene
+                Guid sceneId;
+                if(!Guid.TryParse(sceneDto.Id, out sceneId))
+                {
+                    if(strict)
+                    {
+                        throw new InvalidOperationException($"[SceneSerializer] Scene '{sceneDto.SceneName}' has an invalid Id '{sceneDto.Id}' in '{absoluteFilePath}'.");
+                    }
+
+                    Log.Warning($"[SceneSerializer] Scene '{sceneDto.SceneName}' has an invalid Id '{sceneDto.Id}'. Generating a recovery GUID.");
+                    sceneId = Guid.NewGuid();
+                }
+
+                var scene = new GameScene(context, database, session)
                 {
                     SceneName = sceneDto.SceneName,
-                    Id = Guid.Parse(sceneDto.Id)
+                    Id = sceneId
                 };
 
                 // Reconstruct Maps by loading individual tilemap files
@@ -200,11 +188,19 @@ namespace Engine.Core.Serialization
 
                         if(File.Exists(mapFilePath))
                         {
-                            var map = TileMapSerializer.LoadMap(mapFilePath, scene);
+                            var map = TileMapSerializer.LoadMap(mapFilePath, scene, strict);
                             if(map != null)
                             {
                                 scene.SceneMaps.Add(map);
                             }
+                            else if(strict)
+                            {
+                                throw new InvalidOperationException($"[SceneSerializer] Failed to load tilemap '{mapFilePath}' for scene '{absoluteFilePath}'.");
+                            }
+                        }
+                        else if(strict)
+                        {
+                            throw new InvalidOperationException($"[SceneSerializer] Tilemap file not found: {mapFilePath}");
                         }
                         else
                         {
@@ -221,21 +217,34 @@ namespace Engine.Core.Serialization
                 {
                     foreach(string managerTypeName in sceneDto.Managers)
                     {
-                        Type managerType = ResolveType(managerTypeName);
-                        if(managerType != null && managerType.IsSubclassOf(typeof(GameManager)) && !managerType.IsAbstract)
+                        Type? managerType = TypeResolver.FindType(managerTypeName, typeof(GameManager));
+                        if(managerType == null || managerType.IsAbstract)
                         {
-                            try
+                            if(strict)
                             {
-                                if(Activator.CreateInstance(managerType) is GameManager managerInstance)
-                                {
-                                    managerInstance.ContextScene = scene;
-                                    scene.Managers.AddManager(managerInstance);
-                                }
+                                throw new InvalidOperationException($"[SceneSerializer] Unknown manager type '{managerTypeName}' in '{absoluteFilePath}'.");
                             }
-                            catch(Exception ex)
+
+                            Log.Warning($"[SceneSerializer] Skipping manager '{managerTypeName}': unknown type or not derived from GameManager.");
+                            continue;
+                        }
+
+                        try
+                        {
+                            if(Activator.CreateInstance(managerType) is GameManager managerInstance)
                             {
-                                Log.Error($"[SceneSerializer] Failed to instantiate manager '{managerTypeName}': {ex.Message}");
+                                managerInstance.ContextScene = scene;
+                                scene.Managers.AddManager(managerInstance);
                             }
+                        }
+                        catch(Exception ex)
+                        {
+                            if(strict)
+                            {
+                                throw new InvalidOperationException($"[SceneSerializer] Failed to instantiate manager '{managerTypeName}' in '{absoluteFilePath}'.", ex);
+                            }
+
+                            Log.Error($"[SceneSerializer] Failed to instantiate manager '{managerTypeName}': {ex.Message}");
                         }
                     }
                 }
@@ -245,20 +254,33 @@ namespace Engine.Core.Serialization
                 {
                     foreach(string systemTypeName in sceneDto.Systems)
                     {
-                        Type systemType = ResolveType(systemTypeName);
-                        if(systemType != null && systemType.IsSubclassOf(typeof(GameSystem)) && !systemType.IsAbstract)
+                        Type? systemType = TypeResolver.FindType(systemTypeName, typeof(GameSystem));
+                        if(systemType == null || systemType.IsAbstract)
                         {
-                            try
+                            if(strict)
                             {
-                                if(Activator.CreateInstance(systemType) is GameSystem systemInstance)
-                                {
-                                    scene.Systems.AddSystem(systemInstance);
-                                }
+                                throw new InvalidOperationException($"[SceneSerializer] Unknown system type '{systemTypeName}' in '{absoluteFilePath}'.");
                             }
-                            catch(Exception ex)
+
+                            Log.Warning($"[SceneSerializer] Skipping system '{systemTypeName}': unknown type or not derived from GameSystem.");
+                            continue;
+                        }
+
+                        try
+                        {
+                            if(Activator.CreateInstance(systemType) is GameSystem systemInstance)
                             {
-                                Log.Error($"[SceneSerializer] Failed to instantiate system '{systemTypeName}': {ex.Message}");
+                                scene.Systems.AddSystem(systemInstance);
                             }
+                        }
+                        catch(Exception ex)
+                        {
+                            if(strict)
+                            {
+                                throw new InvalidOperationException($"[SceneSerializer] Failed to instantiate system '{systemTypeName}' in '{absoluteFilePath}'.", ex);
+                            }
+
+                            Log.Error($"[SceneSerializer] Failed to instantiate system '{systemTypeName}': {ex.Message}");
                         }
                     }
                 }
@@ -271,7 +293,7 @@ namespace Engine.Core.Serialization
                 // Pass 1: Instantiate GameObjects & Load Primitives
                 foreach(var entityDto in sceneDto.Entities)
                 {
-                    var entity = GameObjectSerializer.ImportGameObject(entityDto);
+                    var entity = GameObjectSerializer.ImportGameObject(entityDto, strict);
                     entityList.Add(entity);
                     idToEntityMap[entity.Id] = entity;
                 }
@@ -292,26 +314,27 @@ namespace Engine.Core.Serialization
                     scene.AddGameObject(entity);
                 }
 
-                // Pass 4: Resolve Component GameObject & Component References
-                foreach(var entityDto in sceneDto.Entities)
+                // Pass 4: Resolve Component GameObject & Component References.
+                // Pair by index because ImportGameObject may generate a recovery ID for a malformed DTO Id.
+                for(int i = 0; i < sceneDto.Entities.Count; i++)
                 {
-                    if(Guid.TryParse(entityDto.Id, out Guid goId) && idToEntityMap.TryGetValue(goId, out var entity))
+                    var entityDto = sceneDto.Entities[i];
+                    var entity = entityList[i];
+                    foreach(var compKvp in entityDto.Components)
                     {
-                        foreach(var compKvp in entityDto.Components)
+                        string typeName = compKvp.Key;
+                        foreach(var liveCompKvp in entity.Components)
                         {
-                            string typeName = compKvp.Key;
-                            foreach(var liveCompKvp in entity.Components)
+                            if(liveCompKvp.Key.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))
                             {
-                                if(liveCompKvp.Key.Name.Equals(typeName, StringComparison.OrdinalIgnoreCase))
-                                {
-                                    ComponentSerializer.ResolveComponentReferences(liveCompKvp.Value, compKvp.Value, idToEntityMap);
-                                    break;
-                                }
+                                ComponentSerializer.ResolveComponentReferences(liveCompKvp.Value, compKvp.Value, idToEntityMap);
+                                break;
                             }
                         }
                     }
                 }
 
+                scene.FinalizeInitialization();
                 return scene;
             }
         }

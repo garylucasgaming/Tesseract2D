@@ -48,6 +48,9 @@ namespace Engine.Core.ECS
             get => _isEnabled;
             set
             {
+                if(_isEnabled == value)
+                    return;
+
                 _isEnabled = value;
                 if(_isEnabled == true)
                 {

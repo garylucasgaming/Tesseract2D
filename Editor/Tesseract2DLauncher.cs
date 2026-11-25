@@ -1,4 +1,5 @@
-﻿using Engine.Core.Serialization;
+﻿using Engine.Core.Runtime;
+using Engine.Core.Serialization;
 using Engine.Core.Utilities;
 using Engine.Editor.Theming;
 using System;
@@ -42,15 +43,11 @@ namespace Engine.Editor
                     try
                     {
                         // 1. Create project folder structure
-                        string projectRootPath = ProjectDirectoryFactory.CreateNewProject(folderDialog.SelectedPath, options.ProjectName);
+                        string projectRootPath = ProjectDirectoryFactory.CreateNewProject(folderDialog.SelectedPath, options.ProjectName, options.SelectedPlatforms);
                         
                         
-                        // Define explicit directory paths to pass into the solution generator
-                        string assetsPath = Path.Combine(projectRootPath, "Content", "Assets");
-                        string scriptsPath = Path.Combine(assetsPath, "Scripts");
-
-                        // 2. Generate custom .sln and .Gameplay.csproj with explicit directory injection
-                        SolutionGenerator.GenerateUserSolution(projectRootPath, options.ProjectName, options.SelectedPlatforms, assetsPath, scriptsPath);
+                        // 2. Generate custom .sln and .Gameplay.csproj using canonical script paths
+                        SolutionGenerator.GenerateUserSolution(projectRootPath, options.ProjectName, options.SelectedPlatforms);
                        
                         // 3. Record in launcher history
                         ProjectHistoryStore.RecordProjectAccess(options.ProjectName, projectRootPath, options.SelectedPlatforms);
@@ -112,10 +109,11 @@ namespace Engine.Editor
             // Read the freshest manifest state from disk
             var manifest = LoadManifest(manifestPath);
             var platforms = manifest?.TargetPlatforms ?? entry.TargetPlatforms;
+            var projectName = string.IsNullOrEmpty(manifest?.ProjectName) ? entry.Name : manifest.ProjectName;
 
             // Record access timestamp and launch editor
-            ProjectHistoryStore.RecordProjectAccess(entry.Name, entry.Path, platforms);
-            OpenAndLaunchEditor(entry.Name, entry.Path);
+            ProjectHistoryStore.RecordProjectAccess(projectName, entry.Path, platforms);
+            OpenAndLaunchEditor(projectName, entry.Path);
         }
 
         private void OpenAndLaunchEditor(string projectName, string projectRootPath)
@@ -124,7 +122,7 @@ namespace Engine.Editor
             EditorContextManager.OpenProjectContext(projectRootPath);
 
             // 💡 2. Explicitly load compiled user script assemblies into memory
-            LoadProjectAssemblies(projectRootPath);
+            LoadProjectAssemblies(projectName, projectRootPath);
 
             // 3. Instantiate and show Form1
             Form1 editorForm = new Form1();
@@ -136,14 +134,14 @@ namespace Engine.Editor
             this.Hide();
         }
 
-        private void LoadProjectAssemblies(string projectRootPath)
+        private void LoadProjectAssemblies(string projectName, string projectRootPath)
         {
-            string binPath = Path.Combine(projectRootPath, "bin");
-            if(!Directory.Exists(binPath))
+            string outputPath = ProjectPaths.GetGameplayOutputDirectory(projectRootPath, projectName);
+            if(!Directory.Exists(outputPath))
                 return;
 
-            // Scan all built output subfolders for user gameplay DLLs
-            foreach(var dllPath in Directory.GetFiles(binPath, "*.dll", SearchOption.AllDirectories))
+            // Scan the canonical gameplay build output for user script assemblies
+            foreach(var dllPath in Directory.GetFiles(outputPath, "*.dll", SearchOption.AllDirectories))
             {
                 try
                 {
@@ -343,10 +341,8 @@ namespace Engine.Editor
             }
         }
 
-        public static ProjectManifest? LoadManifest(string projectRootPath)
+        public static ProjectManifest? LoadManifest(string manifestPath)
         {
-            string manifestPath = Path.Combine(projectRootPath, "Content", "ProjectManifest.db");
-
             if(!File.Exists(manifestPath))
                 return null;
 

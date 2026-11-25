@@ -30,7 +30,7 @@ namespace Engine.Editor.PropertyWrappers
             }
             else if(_propertyName == nameof(GameEvent.TargetComponentTypeName))
             {
-                _customConverter = new GameEventComponentTypeConverter();
+                _customConverter = new GameEventTypeConverter();
             }
             else if(_propertyName == nameof(GameEvent.MethodName))
             {

@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engine.Android", "Engine.An
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engine.Gameplay", "Engine.Gameplay\Engine.Gameplay.csproj", "{A42F2BFB-B7A8-4E21-A4C8-FF895B85C5C5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Engine.Tests", "Engine.Tests\Engine.Tests.csproj", "{FF41DCBC-43C1-4086-B976-86D573F1F992}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,10 @@ Global
 		{A42F2BFB-B7A8-4E21-A4C8-FF895B85C5C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A42F2BFB-B7A8-4E21-A4C8-FF895B85C5C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A42F2BFB-B7A8-4E21-A4C8-FF895B85C5C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF41DCBC-43C1-4086-B976-86D573F1F992}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF41DCBC-43C1-4086-B976-86D573F1F992}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF41DCBC-43C1-4086-B976-86D573F1F992}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF41DCBC-43C1-4086-B976-86D573F1F992}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

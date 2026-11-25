@@ -1,0 +1,14 @@
+{
+  "EngineVersion": "1.0.0",
+  "ProjectName": "FontsFixture",
+  "LastUsedScene": "Main",
+  "TargetPlatforms": [
+    "Desktop"
+  ],
+  "AssetRegistry": {
+    "42a453b3-0f0d-49c4-95f7-03d2b43aab6e": "Content/Assets/Scenes/Main.scene",
+    "fb4d2be5-903d-49b3-85b0-af02d448f24a": "Content/Assets/Databases/tiledb.database",
+    "11111111-1111-1111-1111-111111111111": "Content/Assets/Scenes/Main_TestMap.yaml",
+    "22222222-2222-2222-2222-222222222222": "Content/Assets/Scripts/ListboxPopulater.cs"
+  }
+}

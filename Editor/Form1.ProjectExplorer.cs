@@ -92,7 +92,7 @@ namespace WinFormsApp1
 
             baseComponent.Click += (s, e) => CreateTemplateAndRefresh("Component");
             dataComponent.Click += (s, e) => CreateTemplateAndRefresh("DataComponent");
-            createNewSystem.Click += (s, e) => CreateTemplateAndRefresh("System");
+            createNewSystem.Click += (s, e) => CreateTemplateAndRefresh("SystemComponent");
             createNewManager.Click += (s, e) => CreateTemplateAndRefresh("Manager");
             createNewCSharpScript.Click += (s, e) => CreateTemplateAndRefresh("Script");
 

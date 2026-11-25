@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Engine.Core.Runtime;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -25,7 +26,7 @@ namespace Engine.Editor.Utilities
                 projectName = Path.GetFileName(projectRoot?.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
             }
 
-            string csprojPath = Path.Combine(projectRoot, "Source", $"{projectName}.Gameplay", $"{projectName}.Gameplay.csproj");
+            string csprojPath = ProjectPaths.GetGameplayProjectPath(projectRoot, projectName);
 
             if(!File.Exists(csprojPath))
             {
@@ -61,15 +62,7 @@ namespace Engine.Editor.Utilities
                     string output = string.IsNullOrWhiteSpace(stderr) ? stdout : $"{stdout}\nERRORS:\n{stderr}";
 
                     // Path to the compiled output DLL
-                    string dllPath = Path.Combine(
-                        projectRoot,
-                        "Source",
-                        $"{projectName}.Gameplay",
-                        "bin",
-                        "Debug",
-                        "net8.0",
-                        $"{projectName}.Gameplay.dll"
-                    );
+                    string dllPath = ProjectPaths.GetGameplayAssemblyPath(projectRoot, projectName);
 
                     ScriptAssemblyManager.ReloadProjectAssemblies();
 

@@ -11,7 +11,7 @@ using static System.ComponentModel.TypeConverter;
 
 namespace Engine.Editor.PropertyWrappers
 {
-    public class DataReferenceDropdownConverter : TypeConverter
+    public class DatabaseReferenceDropdownConverter : TypeConverter
     {
         public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
         public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => false;

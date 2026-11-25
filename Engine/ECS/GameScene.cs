@@ -61,10 +61,25 @@ namespace Engine.Core.ECS
 
         public DatabaseManager Database { get; private set; } = null!;
 
+        public IEngineContext Context { get; }
+
+        public SessionGlobals Session { get; }
+
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public GameScene()
+        private bool _managerEventsInitialized;
+        private bool _databasesLoaded;
+        private readonly bool _databaseExternallyOwned;
+
+        public GameScene(
+            IEngineContext? context = null,
+            DatabaseManager? database = null,
+            SessionGlobals? session = null)
         {
+            Context = context ?? session?.Context ?? EngineContext.Current;
+            Session = session ?? SessionGlobals.Current;
+            Database = database ?? new DatabaseManager();
+            _databaseExternallyOwned = database != null;
             InitializeManagers();
 
             // Ensure there is always at least one map initialized in the scene
@@ -76,22 +91,49 @@ namespace Engine.Core.ECS
 
         public void InitializeManagerEvents()
         {
+            if(_managerEventsInitialized)
+                return;
+
             Entities.OnEntityCreated += entity => Systems.OnEntityChanged(entity);
             Entities.OnComponentAdded += (entity, comp) => Systems.OnEntityChanged(entity);
             Entities.OnComponentRemoved += (entity, comp) => Systems.OnEntityChanged(entity);
             Entities.OnEntityRemoved += entity => Systems.OnEntityDestroyed(entity);
+            Entities.OnEntityActiveChanged += entity => Systems.OnEntityChanged(entity);
+            _managerEventsInitialized = true;
         }
 
         public void InitializeManagers()
         {
-            Entities = new EntityManager() { ContextScene = this };
-            Systems = new SystemsManager() { ContextScene = this };
-            Physics = new PhysicsManager() { ContextScene = this };
-            Managers = new ManagersManager() { ContextScene = this };
-            Database = new DatabaseManager() { ContextScene = this };
+            if(Entities == null)
+            {
+                Entities = new EntityManager() { ContextScene = this };
+                Systems = new SystemsManager(Session) { ContextScene = this };
+                Physics = new PhysicsManager() { ContextScene = this };
+                Managers = new ManagersManager() { ContextScene = this };
+            }
 
             InitializeManagerEvents();
-            Database.LoadAllDatabasesFromFolder(EditorContextManager.DatabasePath);
+
+            if(!_databasesLoaded && !_databaseExternallyOwned)
+            {
+                Database.LoadAllDatabasesFromFolder(Context.DatabasePath);
+                _databasesLoaded = true;
+            }
+
+            FinalizeInitialization();
+        }
+
+        /// <summary>
+        /// Canonical "scene is ready" step. Rebinds context pointers and rebuilds
+        /// derived system caches without duplicating event subscriptions or managers.
+        /// </summary>
+        public void FinalizeInitialization()
+        {
+            Entities.ContextScene = this;
+            Physics.ContextScene = this;
+            Managers.ContextScene = this;
+            Database.ContextScene = this;
+            Systems.SetContextScene(this);
         }
 
         public void CleanupRuntimeEntities()
@@ -108,13 +150,13 @@ namespace Engine.Core.ECS
         }
 
         // Centralized factory
-        private GameObject CreateEntityInstance(string name)
+        private GameObject CreateEntityInstance(string name, bool isRuntimeCreated = false)
         {
             var entity = new GameObject
             {
                 Name = name,
                 ContextScene = this,
-                IsRuntimeCreated = EditorContextManager.PlayState
+                IsRuntimeCreated = isRuntimeCreated
             };
 
             return entity;
@@ -122,7 +164,12 @@ namespace Engine.Core.ECS
 
         public GameObject Spawn(string name)
         {
-            var entity = CreateEntityInstance(name);
+            return Spawn(name, false);
+        }
+
+        public GameObject Spawn(string name, bool isRuntimeCreated)
+        {
+            var entity = CreateEntityInstance(name, isRuntimeCreated);
             Entities.AddEntity(entity);
             return entity;
         }
@@ -140,9 +187,9 @@ namespace Engine.Core.ECS
             return entity;
         }
 
-        public GameObject Spawn(string name, float initialX, float initialY)
+        public GameObject Spawn(string name, float initialX, float initialY, bool isRuntimeCreated = false)
         {
-            var entity = CreateEntityInstance(name);
+            var entity = CreateEntityInstance(name, isRuntimeCreated);
 
             var transform = entity.AddComponent<TransformComponent>();
             transform.X = initialX;
@@ -152,9 +199,9 @@ namespace Engine.Core.ECS
             return entity;
         }
 
-        public GameObject Spawn(string name, GameObject parentEntity)
+        public GameObject Spawn(string name, GameObject parentEntity, bool isRuntimeCreated = false)
         {
-            var entity = CreateEntityInstance(name);
+            var entity = CreateEntityInstance(name, isRuntimeCreated);
 
             var childTransform = entity.AddComponent<TransformComponent>();
             var parentTransform = parentEntity?.GetComponent<TransformComponent>();
@@ -238,15 +285,7 @@ namespace Engine.Core.ECS
 
         public void resetContextSceneInManagers()
         {
-            Entities.ContextScene = this;
-            Systems.ContextScene = this;
-            Physics.ContextScene = this;
-            Managers.ContextScene = this;
-
-            foreach(var system in Systems._systemEntityCache.Keys)
-            {
-                system.ContextScene = this;
-            }
+            FinalizeInitialization();
         }
     }
 }

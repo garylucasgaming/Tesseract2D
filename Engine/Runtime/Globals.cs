@@ -1,51 +1,44 @@
 ﻿using Engine.Core.Utilities;
 using Microsoft.Xna.Framework.Graphics;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Engine.Core.Runtime
 {
+    /// <summary>
+    /// Compatibility shim over <see cref="SessionGlobals.Current"/>. New hosts
+    /// should hold and inject their own <see cref="SessionGlobals"/> instance.
+    /// </summary>
     public static class Globals
     {
-
-        public static InputManager? InputManager
+        public static SessionGlobals Current
         {
-        get; private set; 
-        } = new InputManager();
-
-        public static Camera2D? EditorCamera
-        {
-            get; private set;
-        } = new Camera2D();
-
-        public static Viewport Viewport
-        {
-            get; private set;
+            get => SessionGlobals.Current;
+            set => SessionGlobals.Current = value;
         }
+
+        public static InputManager? InputManager => Current.InputManager;
+
+        public static Camera2D? EditorCamera => Current.EditorCamera;
+
+        public static Viewport Viewport => Current.Viewport;
 
         public static void Initialize()
         {
-            InputManager = new InputManager();
-            EditorCamera = new Camera2D();
+            Current = new SessionGlobals();
         }
 
         public static void SetInputManager(InputManager im)
         {
-            InputManager = im;
+            Current.InputManager = im;
         }
 
         public static void SetEditorCamera(Camera2D cam)
         {
-            EditorCamera = cam;
+            Current.EditorCamera = cam;
         }
 
         public static void SetViewport(Viewport view)
         {
-            Viewport = view;
+            Current.SetViewport(view);
         }
-
     }
 }

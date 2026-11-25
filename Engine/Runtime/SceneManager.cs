@@ -54,10 +54,11 @@ namespace Engine.Core.Runtime
 
         public static void LoadFirstScene()
         {
-            if(TotalScenes != null)
+            if(TotalScenes != null && TotalScenes.Count > 0)
             {
                 //TODO change to serializing the scene;
-                ActiveScene = TotalScenes[_currentSceneIndex];
+                _currentSceneIndex = 0;
+                ActiveScene = TotalScenes[GetOrderedLoadOrders()[0]];
                 SetNextScene();
                
             }
@@ -66,18 +67,33 @@ namespace Engine.Core.Runtime
            
         }
 
+        private static List<int> GetOrderedLoadOrders()
+        {
+            return TotalScenes.Keys.OrderBy(loadOrder => loadOrder).ToList();
+        }
+
         private static void SetNextScene()
         {
-            if(_currentSceneIndex + 1 >= 0 && _currentSceneIndex + 1 < TotalScenes.Count)
+            NextScene = null;
+
+            if(TotalScenes != null && TotalScenes.Count > 0)
             {
-                //todo, change to preloading scene
-                NextScene = TotalScenes[_currentSceneIndex + 1];
+                var loadOrders = GetOrderedLoadOrders();
+                int nextSceneIndex = _currentSceneIndex + 1;
+                if(nextSceneIndex < loadOrders.Count)
+                {
+                    //todo, change to preloading scene
+                    NextScene = TotalScenes[loadOrders[nextSceneIndex]];
+                }
             }
         }
 
 
         public static void LoadNextScene()
         {
+            if(NextScene == null)
+                return;
+
             //TODO change to serializing the scene;
             ActiveScene = NextScene;
 

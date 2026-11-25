@@ -24,6 +24,7 @@ namespace Engine.Core.ECS.Managers
         // Engine Events that systems can listen to
         public event Action<GameObject>? OnEntityCreated;
         public event Action<GameObject>? OnEntityRemoved;
+        public event Action<GameObject>? OnEntityActiveChanged;
         public event Action<GameObject, GameComponent>? OnComponentAdded;
         public event Action<GameObject, GameComponent>? OnComponentRemoved;
         public event Action<GameObject, GameComponent>? OnComponentModified;
@@ -41,6 +42,7 @@ namespace Engine.Core.ECS.Managers
 
             entity.OnComponentAdded += HandleComponentAddedOnEntity;
             entity.OnComponentRemoved += HandleComponentRemovedFromEntity;
+            entity.ActiveEvent += HandleActiveChangedOnEntity;
             
 
 
@@ -90,6 +92,7 @@ namespace Engine.Core.ECS.Managers
             _entities.Remove(entity.Id);
             entity.OnComponentAdded -= HandleComponentAddedOnEntity;
             entity.OnComponentRemoved -= HandleComponentRemovedFromEntity;
+            entity.ActiveEvent -= HandleActiveChangedOnEntity;
 
             // Scrape the entity out of all quick-lookup cache buckets
             foreach(var bucket in _componentTypeBuckets.Values)
@@ -141,6 +144,14 @@ namespace Engine.Core.ECS.Managers
                 bucket.Remove(entity);
             }
             OnComponentRemoved?.Invoke(entity, component);
+        }
+
+        private void HandleActiveChangedOnEntity(GameObject entity, bool isActive)
+        {
+            if(_entities.ContainsKey(entity.Id))
+            {
+                OnEntityActiveChanged?.Invoke(entity);
+            }
         }
 
         // finds a  entity  by its guid id. returns null if not found

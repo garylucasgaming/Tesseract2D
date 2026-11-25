@@ -23,13 +23,41 @@ public static class GameObjectSerializer
         return dto;
     }
 
-    public static GameObject ImportGameObject(EntityDataDto dto)
+    public static GameObject ImportGameObject(EntityDataDto dto) => ImportGameObject(dto, strict: false);
+
+    public static GameObject ImportGameObject(EntityDataDto dto, bool strict)
     {
+        SerializationVersion.Validate(dto.Version, "Scene entity", dto.Name);
+
+        Guid entityId;
+        if(!Guid.TryParse(dto.Id, out entityId))
+        {
+            if(strict)
+            {
+                throw new InvalidOperationException($"[GameObjectSerializer] Entity '{dto.Name}' has an invalid Id '{dto.Id}'.");
+            }
+
+            Engine.Core.Utilities.Log.Warning($"[GameObjectSerializer] Entity '{dto.Name}' has an invalid Id '{dto.Id}'. Generating a recovery GUID.");
+            entityId = Guid.NewGuid();
+        }
+
+        Guid parentId = Guid.Empty;
+        if(!string.IsNullOrEmpty(dto.ParentId) && !Guid.TryParse(dto.ParentId, out parentId))
+        {
+            if(strict)
+            {
+                throw new InvalidOperationException($"[GameObjectSerializer] Entity '{dto.Name}' has an invalid ParentId '{dto.ParentId}'.");
+            }
+
+            Engine.Core.Utilities.Log.Warning($"[GameObjectSerializer] Entity '{dto.Name}' has an invalid ParentId '{dto.ParentId}'. Treating it as a root entity.");
+            parentId = Guid.Empty;
+        }
+
         var go = new GameObject
         {
             Name = dto.Name,
-            Id = Guid.Parse(dto.Id),
-            ParentId = !string.IsNullOrEmpty(dto.ParentId) ? Guid.Parse(dto.ParentId) : Guid.Empty,
+            Id = entityId,
+            ParentId = parentId,
             tags = dto.Tags ?? new List<string>()
         };
 
@@ -56,6 +84,11 @@ public static class GameObjectSerializer
             }
             else
             {
+                if(strict)
+                {
+                    throw new InvalidOperationException($"[GameObjectSerializer] Unknown component type '{typeName}' on entity '{dto.Name}'.");
+                }
+
                 Engine.Core.Utilities.Log.Warning($"[Serialization] Skipped component: {typeName}. Type definition not found in any loaded assembly.");
             }
         }

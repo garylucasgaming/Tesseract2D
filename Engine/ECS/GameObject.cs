@@ -75,6 +75,22 @@ namespace Engine.Core.ECS
 
         // --- NEW: Hierarchy Management Methods ---
 
+        private bool IsDescendantOf(GameObject candidateAncestor)
+        {
+            var visited = new HashSet<GameObject>();
+            var current = Parent;
+
+            while(current != null && visited.Add(current))
+            {
+                if(current == candidateAncestor)
+                    return true;
+
+                current = current.Parent;
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Attaches a child GameObject to this object, automatically handling transform inheritance.
         /// </summary>
@@ -82,16 +98,15 @@ namespace Engine.Core.ECS
 
         public void AddChild(GameObject child)
         {
-            if(child == null || child == this)
+            if(child is null || child == this || IsDescendantOf(child))
                 return;
 
-            // If the child already has a different parent, cleanly detach it first
-            child.Parent?.RemoveChild(child);
+            // A bare child must be registered before SetParent so it joins scene queries and serialization.
+            if(ContextScene != null && child.ContextScene == null)
+                ContextScene.AddGameObject(child);
 
-            child.Parent = this;
-            Children.Add(child);
-
-
+            // SetParent detaches the old parent, writes ParentId, and fires ParentChangedEvent.
+            child.SetParent(this);
         }
 
         /// <summary>
@@ -99,11 +114,13 @@ namespace Engine.Core.ECS
         /// </summary>
         public void RemoveChild(GameObject child)
         {
-            if(Children.Contains(child))
-            {
-                child.Parent = null;
-                Children.Remove(child);
-            }
+            if(child is null || !Children.Contains(child))
+                return;
+
+            child.Parent = null;
+            child.ParentId = Guid.Empty;
+            Children.Remove(child);
+            child.ParentChangedEvent?.Invoke(child, null);
         }
 
         public List<GameObject> GetChildGameObjects()
@@ -204,6 +221,7 @@ namespace Engine.Core.ECS
             T newComponent = new T { gameObject = this };
 
             Components[typeof(T)] = newComponent;
+            newComponent.isEnabled = true;
             OnComponentAdded?.Invoke(this, newComponent);
 
             return newComponent;
@@ -214,8 +232,6 @@ namespace Engine.Core.ECS
             if(component == null)
                 return;
 
-            component.gameObject = this;
-            component.isEnabled = true;
             Type componentType = component.GetType();
 
             // Use your non-generic component list to check for duplicates safely at runtime
@@ -225,8 +241,9 @@ namespace Engine.Core.ECS
                 return;
             }
 
-
+            component.gameObject = this;
             Components[componentType] = component;
+            component.isEnabled = true;
 
             // This instantly updates the EntityManager's buckets in real-time!
             OnComponentAdded?.Invoke(this, component);
@@ -293,9 +310,15 @@ namespace Engine.Core.ECS
             if(componentToRemove == null)
                 return;
 
+            var storedKey = Components
+                .FirstOrDefault(kvp => ReferenceEquals(kvp.Value, componentToRemove))
+                .Key;
+            if(storedKey == null)
+                return;
+
             componentToRemove.gameObject = null;
             componentToRemove.isEnabled = false;
-            Components.Remove(typeof(T));
+            Components.Remove(storedKey);
             OnComponentRemoved?.Invoke(this, componentToRemove);
         }
 

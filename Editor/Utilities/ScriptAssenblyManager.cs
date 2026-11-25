@@ -1,4 +1,6 @@
-﻿using Engine.Core.Serialization;
+﻿using Engine.Core.Runtime;
+using Engine.Core.Serialization;
+using Engine.Core.Utilities;
 using System;
 using System.IO;
 using System.Reflection;
@@ -39,6 +41,8 @@ namespace Engine.Editor.Utilities
                 CurrentAssembly = _currentContext.LoadFromStream(dllStream, pdbStream);
             }
 
+            TypeResolver.ClearCache();
+
             Console.WriteLine($"[ScriptAssemblyManager] Successfully loaded {CurrentAssembly.FullName} into RAM!");
         }
 
@@ -47,13 +51,16 @@ namespace Engine.Editor.Utilities
             if(string.IsNullOrEmpty(EditorContextManager.CurrentProjectRoot))
                 return;
 
-            string binPath = Path.Combine(EditorContextManager.CurrentProjectRoot, "bin");
-            if(!Directory.Exists(binPath))
+            string projectRoot = EditorContextManager.CurrentProjectRoot!;
+            string projectName = EditorContextManager.CurrentProjectName
+                ?? Path.GetFileName(projectRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            string outputPath = ProjectPaths.GetGameplayOutputDirectory(projectRoot, projectName);
+            if(!Directory.Exists(outputPath))
                 return;
 
             _loadedProjectAssemblies.Clear();
 
-            foreach(var dllPath in Directory.GetFiles(binPath, "*.dll", SearchOption.AllDirectories))
+            foreach(var dllPath in Directory.GetFiles(outputPath, "*.dll", SearchOption.AllDirectories))
             {
                 try
                 {
@@ -81,6 +88,8 @@ namespace Engine.Editor.Utilities
                     // Ignore non-.NET or unreadable DLLs
                 }
             }
+
+            TypeResolver.ClearCache();
         }
 
 
@@ -89,6 +98,7 @@ namespace Engine.Editor.Utilities
             if(_currentContext != null)
             {
                 CurrentAssembly = null;
+                TypeResolver.ClearCache();
                 _currentContext.Unload();
                 _currentContext = null;
 

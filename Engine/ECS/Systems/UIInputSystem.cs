@@ -52,7 +52,7 @@ namespace Engine.Core.ECS.Systems
             bool isLeftPressedThisFrame = isLeftDown && !_previousLeftMouseButtonState;
 
             // Check if the game simulation is actively running
-            bool isPlaying = EditorContextManager.PlayState;
+            bool isPlaying = ContextScene?.Context.PlayState ?? false;
 
             foreach(var canvasGo in gameObjects)
             {

@@ -154,7 +154,8 @@ namespace Engine.Core.ECS.Components.UI
         public void Render(SpriteBatch sb, ContentManager cm)
         {
             CheckAndSyncHierarchy(cm);
-            bool shouldActAsScreenSpace = (Space == UISpace.Screen) && EditorContextManager.PlayState;
+            bool shouldActAsScreenSpace = (Space == UISpace.Screen) &&
+                (gameObject?.ContextScene?.Context.PlayState ?? false);
             var canvasTransform = gameObject.GetComponent<TransformComponent>();
 
             if(canvasTransform != null)

@@ -13,6 +13,8 @@ namespace Engine.Core.Serialization
 {
     public class DatabaseDataDTO
     {
+        public int Version { get; set; } = SerializationVersion.Current;
+
         public string ID
         {
             get; set;
@@ -82,7 +84,7 @@ namespace Engine.Core.Serialization
             }
         }
 
-        public static Database? LoadDatabase(string absoluteFilePath)
+        public static Database? LoadDatabase(string absoluteFilePath, bool strict = false)
         {
             if(!File.Exists(absoluteFilePath))
             {
@@ -93,10 +95,23 @@ namespace Engine.Core.Serialization
             using(var reader = File.OpenText(absoluteFilePath))
             {
                 var dto = Deserializer.Deserialize<DatabaseDataDTO>(reader);
+                SerializationVersion.Validate(dto.Version, "Database", absoluteFilePath);
+
+                Guid databaseId;
+                if(!Guid.TryParse(dto.ID, out databaseId))
+                {
+                    if(strict)
+                    {
+                        throw new InvalidOperationException($"[DatabaseSerializer] Database '{dto.Name}' has an invalid ID '{dto.ID}' in '{absoluteFilePath}'.");
+                    }
+
+                    Log.Warning($"[DatabaseSerializer] Database '{dto.Name}' has an invalid ID '{dto.ID}'. Generating a recovery GUID.");
+                    databaseId = Guid.NewGuid();
+                }
 
                 var dataBase = new Database
                 {
-                    ID = Guid.Parse(dto.ID),
+                    ID = databaseId,
                     DatabaseType = dto.DataType,
                     Name = dto.Name
                 };
@@ -109,6 +124,11 @@ namespace Engine.Core.Serialization
 
                 if(compType == null)
                 {
+                    if(strict)
+                    {
+                        throw new InvalidOperationException($"[DatabaseSerializer] Unknown database type '{typeName}' in '{absoluteFilePath}'.");
+                    }
+
                     Log.Error($"[DatabaseSerializer] Failed to load database. Type definition for '{typeName}' not found in any loaded assembly.");
                     return null;
                 }
@@ -132,6 +152,11 @@ namespace Engine.Core.Serialization
 
                     if(!assetGuidFound)
                     {
+                        if(strict)
+                        {
+                            throw new InvalidOperationException($"[DatabaseSerializer] Entry '{entryTitle}' in '{absoluteFilePath}' has a missing or invalid AssetID.");
+                        }
+
                         Log.Warning($"[DatabaseSerializer] Entry '{entryTitle}' was missing a valid internal 'AssetID'. Automatically generating a recovery GUID.");
                         assetGuid = Guid.NewGuid();
                     }

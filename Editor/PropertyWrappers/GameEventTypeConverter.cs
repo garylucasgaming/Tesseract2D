@@ -10,7 +10,7 @@ using static System.ComponentModel.TypeConverter;
 
 namespace Engine.Editor.PropertyWrappers
 {
-    public class GameEventComponentTypeConverter : TypeConverter
+    public class GameEventTypeConverter : TypeConverter
     {
         public override bool GetStandardValuesSupported(ITypeDescriptorContext context) => true;
         public override bool GetStandardValuesExclusive(ITypeDescriptorContext context) => true; // Forces strict dropdown selection

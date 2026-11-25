@@ -327,7 +327,7 @@ namespace Engine.Core.GamePlay
 
         public void ResolveDatabase(GameScene scene = null)
         {
-            var activeScene = scene ?? EditorContextManager.ActiveLoadedScene;
+            var activeScene = scene ?? ContextScene;
 
             if(activeScene?.Database?.Databases == null || string.IsNullOrEmpty(TileDatabaseName))
             {

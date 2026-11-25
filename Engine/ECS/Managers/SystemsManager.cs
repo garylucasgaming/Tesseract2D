@@ -20,7 +20,12 @@ namespace Engine.Core.ECS.Managers
         // 2. The Golden Nugget: A warm entity bucket mapped explicitly to each active system
         public readonly Dictionary<GameSystem, HashSet<GameObject>> _systemEntityCache = new();
 
+        // Stop a very small interval or a long frame from generating an unbounded catch-up burst.
+        private const int MaxFixedUpdateCatchUpTicks = 8;
+
         public GameScene ContextScene { get; set; } = null!;
+
+        public SessionGlobals Session { get; }
 
         public  TransformSystem transformSystem { get; private set; } = null!;
         public  SpriteRenderSystem spriteRenderSystem { get; private set; } = null!;
@@ -37,8 +42,10 @@ namespace Engine.Core.ECS.Managers
 
 
 
-        public SystemsManager()
+        public SystemsManager(SessionGlobals? session = null)
         {
+            Session = session ?? SessionGlobals.Current;
+
             // Automatically initialize a bucket list for every single policy enum type
             foreach(SystemUpdatePolicy policy in Enum.GetValues(typeof(SystemUpdatePolicy)))
             {
@@ -78,7 +85,7 @@ namespace Engine.Core.ECS.Managers
             }
             if(uiInputSystem == null)
             {
-                uiInputSystem = new UIInputSystem(Globals.InputManager,Globals.EditorCamera, Globals.Viewport ) { ContextScene = ContextScene };
+                uiInputSystem = new UIInputSystem(Session.InputManager, Session.EditorCamera, Session.Viewport) { ContextScene = ContextScene };
                 AddSystem(uiInputSystem);
             }
 
@@ -116,6 +123,36 @@ namespace Engine.Core.ECS.Managers
             }
         }
 
+        /// <summary>Rebinds this manager and every registered system to the owning scene,
+        /// then rebuilds each warm entity bucket from current entities.</summary>
+        public void SetContextScene(GameScene scene)
+        {
+            ContextScene = scene;
+            foreach(var system in _systemEntityCache.Keys)
+            {
+                system.ContextScene = scene;
+            }
+
+            RebuildCaches();
+        }
+
+        public void RebuildCaches()
+        {
+            foreach(var kvp in _systemEntityCache)
+            {
+                var cache = kvp.Value;
+                cache.Clear();
+
+                if(ContextScene?.Entities == null)
+                    continue;
+
+                foreach(var entity in ContextScene.Entities.GetQuery(kvp.Key.RequiredComponents))
+                {
+                    cache.Add(entity);
+                }
+            }
+        }
+
         /// Global execution ticks called by your core engine loop.
         /// Handles FrameUpdate and processes individual FixedUpdate custom interval clocks.
         public void Update(float deltaTime, bool playModeActive)
@@ -135,11 +172,28 @@ namespace Engine.Core.ECS.Managers
                 if(!playModeActive && !system.UsedInEditor)
                     continue;
 
-                system.timer += deltaTime;
-                if(system.timer >= system.UpdateInterval)
+                float interval = system.UpdateInterval;
+                if(interval <= 0f)
                 {
-                    system.timer = 0.0f; // Reset the clock
+                    // A non-positive interval cannot accumulate; run once per frame instead.
+                    system.timer = 0.0f;
                     system.Update(_systemEntityCache[system], deltaTime);
+                    continue;
+                }
+
+                system.timer += deltaTime;
+                int catchUpTicks = 0;
+                while(system.timer >= interval && catchUpTicks < MaxFixedUpdateCatchUpTicks)
+                {
+                    system.timer -= interval;
+                    system.Update(_systemEntityCache[system], interval);
+                    catchUpTicks++;
+                }
+
+                if(catchUpTicks == MaxFixedUpdateCatchUpTicks && system.timer >= interval)
+                {
+                    // Drop whole-interval backlog beyond the cap but keep the sub-interval remainder.
+                    system.timer %= interval;
                 }
             }
         }
@@ -158,7 +212,7 @@ namespace Engine.Core.ECS.Managers
                 if(!system.IsEnabled || !system.shouldUpdate)
                     continue;
 
-                if(system is SpriteRenderSystem srs && EditorContextManager.IsProjectLoaded)
+                if(system is SpriteRenderSystem srs && (ContextScene?.Context.IsProjectLoaded ?? false))
                 {
                     srs.LoadSprites(cm);
 
@@ -229,7 +283,7 @@ namespace Engine.Core.ECS.Managers
 
         // --- Reactive Engine Listeners: Hooked to your scene spawn/component change events ---
 
-        /// Call this whenever an entity spawns, gets activated, or gains a new component.
+        /// Call this whenever an entity spawns, gets activated/deactivated, or gains/loses a component.
         public void OnEntityChanged(GameObject entity, float deltaTime = 0.0f, bool playModeActive = true)
         {
             foreach(var kvp in _systemEntityCache)
@@ -238,33 +292,31 @@ namespace Engine.Core.ECS.Managers
                 var cache = kvp.Value;
 
                 bool wasInCache = cache.Contains(entity);
+                bool matches = entity.isActive && system.RequiredComponents.IsMatched(entity);
 
-                // Ingest any pre-existing entities in the scene that match this query immediately
-                if(ContextScene?.Entities != null)
+                // The cache is derived state: reconcile it on every mutation, including removal.
+                if(matches)
                 {
-                    if(wasInCache)
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        if(system.RequiredComponents.IsMatched(entity))
-                        {
-                            cache.Add(entity);
-                        }
-                    }
-
-                    // EntityUpdate Policy: If an entity mutates and matches, tick this system instantly!
-                    if(system.UpdatePolicy == SystemUpdatePolicy.EntityUpdate && system.IsEnabled && !wasInCache)
-                    {
-                        // 💡 FIX: Respect playModeActive context state during inline mutations
-                        if(!playModeActive && !system.UsedInEditor)
-                            continue;
-
-                        var singleEntityBatch = new HashSet<GameObject> { entity };
-                        system.Update(singleEntityBatch, deltaTime);
-                    }
+                    cache.Add(entity);
                 }
+                else
+                {
+                    cache.Remove(entity);
+                }
+
+                // EntityUpdate Policy: fire only on a non-match -> match transition.
+                if(!matches || wasInCache)
+                    continue;
+
+                if(system.UpdatePolicy != SystemUpdatePolicy.EntityUpdate || !system.IsEnabled)
+                    continue;
+
+                // Respect playModeActive context state during inline mutations
+                if(!playModeActive && !system.UsedInEditor)
+                    continue;
+
+                var singleEntityBatch = new HashSet<GameObject> { entity };
+                system.Update(singleEntityBatch, deltaTime);
             }
         }
 

@@ -21,6 +21,7 @@ namespace Editor
         private EditorInputService _inputService;
         private EditorRenderService _renderService;
         private InputManager _inputManager;
+        private GameHost _host;
         private float deltaTime;
         private GameScene _activeScene;
 
@@ -39,6 +40,8 @@ namespace Editor
             get; private set;
         } = new Camera2D();
 
+        public SessionGlobals Session { get; private set; } = SessionGlobals.Current;
+
 
         public MGWindowControl()
         {
@@ -47,15 +50,18 @@ namespace Editor
         protected override void Initialize()
         {
             GizmoRenderer.Initialize(Editor.GraphicsDevice);
-            Globals.Initialize();
-           
-            EditorCamera = Globals.EditorCamera;
-            Globals.SetViewport(Editor.GraphicsDevice.Viewport);
+
+            Session = new SessionGlobals(EditorContextManager.Context, new MonoGameInputSource());
+            Globals.Current = Session;
+
+            EditorCamera = Session.EditorCamera;
+            Session.SetViewport(Editor.GraphicsDevice.Viewport);
 
             var viewport = Editor.GraphicsDevice.Viewport;
             EditorCamera.Position = new Vector2(viewport.Width / 2f, viewport.Height / 2f);
 
-            _inputManager = Globals.InputManager;
+            _inputManager = Session.InputManager;
+            _host = new GameHost(EditorContextManager.Context, Session, new EditorFrameRenderer(this));
             _inputService = new EditorInputService(_inputManager, EditorCamera);
             _renderService = new EditorRenderService();
             Editor.FPSCounter.Visible = false;
@@ -75,55 +81,60 @@ namespace Editor
         {
             deltaTime = (float) gameTime.ElapsedGameTime.Ticks / TimeSpan.TicksPerSecond;
 
-            _inputManager.Update();
             _activeScene = EditorContextManager.ActiveLoadedScene;
-            
+            if(_activeScene == null)
+                return;
 
-            if(_activeScene != null)
+            if(!ReferenceEquals(_host.Scene, _activeScene))
+                _host.AttachScene(_activeScene);
+
+            EditorContextManager.PlayState = SimulationRunning && !SimulationPaused;
+
+            GameObject selectedGo = GetSelectedGameObject();
+            object selectedComponent = Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance;
+            _inputService.SetContext(_activeScene, selectedGo, Editor.GraphicsDevice.Viewport);
+
+            // Cap deltaTime to prevent huge physics steps after dragging/debugging.
+            float clampedDelta = Math.Min(deltaTime, 0.25f);
+
+            _host.Update(clampedDelta, () =>
             {
-               
-                EditorContextManager.PlayState = SimulationRunning && !SimulationPaused;
-                
-                GameObject selectedGo = GetSelectedGameObject();
-                object selectedComponent = Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance;
-                _inputService.SetContext(_activeScene, selectedGo, Editor.GraphicsDevice.Viewport);
                 _inputService.Update(deltaTime);
-                
-                // 1. Cap deltaTime to 0.25s (prevents massive physics spikes/crashes when dragging window/debugging)
-                float clampedDelta = Math.Min(deltaTime, 0.25f);
 
-                // 2. Only tick the rigid simulation systems (Physics) when play mode is active
                 if(EditorContextManager.PlayState)
                 {
                     _physicsAccumulator += clampedDelta;
                     while(_physicsAccumulator >= TargetTickTime)
                     {
-                        // Run TickUpdate (including your PhysicsSystem)
-                        _activeScene.TickUpdate(TargetTickTime, EditorContextManager.PlayState);
+                        _host.TickUpdate(TargetTickTime);
                         _physicsAccumulator -= TargetTickTime;
                     }
                 }
                 else
                 {
-                    // Clear the buffer if simulation is not active so it doesn't 
-                    // "catch up" instantly when you resume/start the simulation.
                     _physicsAccumulator = 0.0f;
                 }
-
-                // 3. Update all standard systems (FrameUpdate & FixedUpdate)
-                // Note: Ensure your Scene's Update handles passing this parameter down to Systems.Update()
-                _activeScene.Update(clampedDelta, EditorContextManager.PlayState);
-
-            }
+            });
         }
 
         protected override void Draw()
         {
-            Editor.GraphicsDevice.Clear(Color.Black);
-
             _activeScene = EditorContextManager.ActiveLoadedScene;
             if(_activeScene == null)
                 return;
+
+            if(!ReferenceEquals(_host.Scene, _activeScene))
+                _host.AttachScene(_activeScene);
+
+            _host.Render();
+        }
+
+        /// <summary>
+        /// Editor-specific frame drawing, invoked by <see cref="GameHost.Render"/>.
+        /// </summary>
+        private void RenderScene(GameScene scene)
+        {
+            Editor.GraphicsDevice.Clear(Color.Black);
 
             GameObject selectedGo = GetSelectedGameObject();
 
@@ -133,21 +144,21 @@ namespace Editor
 
             if(!EditorContextManager.PlayState)
             {
-                _renderService.RenderSceneGridAndBounds(Editor.spriteBatch, _activeScene, EditorCamera.Zoom);
+                _renderService.RenderSceneGridAndBounds(Editor.spriteBatch, scene, EditorCamera.Zoom);
             }
 
-            _activeScene.Render(Editor.spriteBatch, Editor.Content);
-            _activeScene.Systems.Render(Editor.spriteBatch, Editor.Content);
-            _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.World);
+            scene.Render(Editor.spriteBatch, Editor.Content);
+            scene.Systems.Render(Editor.spriteBatch, Editor.Content);
+            scene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.World);
             if(!EditorContextManager.PlayState)
             {
-                _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.Screen);
+                scene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.Screen);
             }
             if(!EditorContextManager.PlayState)
             {
                 _renderService.RenderSceneViewport(
                  Editor.spriteBatch,
-                 _activeScene,
+                 scene,
                  selectedGo,
                  Engine.Editor.WinFormsApp1.ComponentCardFactory.SelectedComponentInstance,
                  _inputService.CurrentMode,
@@ -161,7 +172,7 @@ namespace Editor
             if(EditorContextManager.PlayState)
             {
                 Editor.spriteBatch.Begin(samplerState: SamplerState.PointClamp);
-                _activeScene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.Screen);
+                scene.Systems.RenderUI(Editor.spriteBatch, Editor.Content, Engine.Core.ECS.Components.UI.UISpace.Screen);
                 Editor.spriteBatch.End();
             }
             // screenspace/ui render
@@ -248,6 +259,33 @@ namespace Editor
                         break;
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// Adapts the editor's drawing code to the engine's host-owned render
+        /// pass. This is editor-only; the engine depends only on IFrameRenderer.
+        /// </summary>
+        private sealed class EditorFrameRenderer : IFrameRenderer
+        {
+            private readonly MGWindowControl _owner;
+
+            public EditorFrameRenderer(MGWindowControl owner)
+            {
+                _owner = owner;
+            }
+
+            public void Initialize(SessionGlobals session)
+            {
+            }
+
+            public void Render(GameScene scene, SessionGlobals session)
+            {
+                _owner.RenderScene(scene);
+            }
+
+            public void Shutdown()
+            {
             }
         }
 

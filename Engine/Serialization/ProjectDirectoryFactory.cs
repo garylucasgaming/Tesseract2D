@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Engine.Core.ECS;
@@ -16,8 +17,9 @@ namespace Engine.Core.Serialization
         /// </summary>
         /// <param name="parentDirectory">The absolute drive path where the project directory will be created.</param>
         /// <param name="projectName">The name of the new game project.</param>
+        /// <param name="selectedPlatforms">Target platforms written to the project manifest. Defaults to Desktop.</param>
         /// <returns>The absolute path to the newly created project root directory.</returns>
-        public static string CreateNewProject(string parentDirectory, string projectName)
+        public static string CreateNewProject(string parentDirectory, string projectName, List<string>? selectedPlatforms = null)
         {
             try
             {
@@ -67,9 +69,8 @@ namespace Engine.Core.Serialization
 
                 Log.Info($"[Project Factory] Successfully initialized workspace layouts at: {projectRoot}");
 
-                // 5. Stamp out a blank, fresh Project Manifest JSON database inside the data Content folder
-                string manifestPath = Path.Combine(contentRoot, "ProjectManifest.db");
-                File.WriteAllText(manifestPath, "{}");
+                // 5. Stamp out a populated Project Manifest JSON database inside the data Content folder
+                ProjectManifest.CreateInitialManifest(projectRoot, projectName, selectedPlatforms ?? new List<string> { "Desktop" });
                 Log.Info("[Project Factory] Stamped data-link ProjectManifest.db file.");
 
                 // 6. Bake our initial boilerplate scene data asset into Content/Scenes/

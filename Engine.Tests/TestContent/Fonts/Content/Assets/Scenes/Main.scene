@@ -1,0 +1,446 @@
+SceneName: Main
+Id: 42a453b3-0f0d-49c4-95f7-03d2b43aab6e
+TileMapFiles:
+- Main_TestMap.yaml
+ActiveMapIndex: 0
+Managers: []
+Systems: []
+Entities:
+- Name: canvas
+  Id: a70230fd-b41c-4ffd-881e-50fb87be3834
+  ParentId: 00000000-0000-0000-0000-000000000000
+  Tags: []
+  Components:
+    TransformComponent:
+      Origin: TopLeft
+      X: 290.43478
+      Y: -40
+      XOffset: 0
+      YOffset: 0
+      SizeX: 166
+      SizeY: 100
+      ScaleX: 4
+      ScaleY: 4
+      Rotation: 0
+      WorldPosition:
+        X: 290.43478
+        Y: -40
+      LocalPosition:
+        X: 0
+        Y: 0
+      Size:
+        X: 166
+        Y: 100
+      Scale:
+        X: 4
+        Y: 4
+    UICanvasComponent:
+      isInitialized: true
+      ChildElements:
+      - $ref: Component
+        GameObjectId: 03e42be4-b37f-44c3-bb16-75eb6d590f8e
+        ComponentType: LabelComponent
+      - $ref: Component
+        GameObjectId: a135f19c-1a08-4f76-8aa5-c51e9460cd00
+        ComponentType: LayoutComponent
+      - $ref: Component
+        GameObjectId: c219df89-2984-4a05-a992-3671c4938ea9
+        ComponentType: PanelComponent
+      - $ref: Component
+        GameObjectId: 798bb577-bf41-400a-840f-2d6ca35a7a97
+        ComponentType: UIImageComponent
+      Space: Screen
+      CanvasDrawLayer: Background
+      IsActive: true
+      isHovered: false
+      isClicked: false
+      Hovered:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      HoverExit:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Clicked:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Released:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+- Name: label
+  Id: 03e42be4-b37f-44c3-bb16-75eb6d590f8e
+  ParentId: a70230fd-b41c-4ffd-881e-50fb87be3834
+  Tags: []
+  Components:
+    TransformComponent:
+      Origin: TopLeft
+      X: 341.71063
+      Y: -4.5172424
+      XOffset: 51.275864
+      YOffset: 35.482758
+      SizeX: 16
+      SizeY: 16
+      ScaleX: 1
+      ScaleY: 1
+      Rotation: 0
+      WorldPosition:
+        X: 341.71063
+        Y: -4.5172424
+      LocalPosition:
+        X: 51.275864
+        Y: 35.482758
+      Size:
+        X: 16
+        Y: 16
+      Scale:
+        X: 1
+        Y: 1
+    LabelComponent:
+      ChildElements: []
+      Text: Health
+      TextSize: 12
+      FontAssetPath: defaultFont
+      IsActive: true
+      isHovered: false
+      isClicked: false
+      Hovered:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      HoverExit:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Clicked:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Released:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+- Name: Listbox
+  Id: a135f19c-1a08-4f76-8aa5-c51e9460cd00
+  ParentId: a70230fd-b41c-4ffd-881e-50fb87be3834
+  Tags:
+  - Listbox
+  Components:
+    TransformComponent:
+      Origin: TopLeft
+      X: 398.43478
+      Y: 64
+      XOffset: 108
+      YOffset: 104
+      SizeX: 16
+      SizeY: 16
+      ScaleX: 4
+      ScaleY: 4
+      Rotation: 0
+      WorldPosition:
+        X: 398.43478
+        Y: 64
+      LocalPosition:
+        X: 108
+        Y: 104
+      Size:
+        X: 16
+        Y: 16
+      Scale:
+        X: 4
+        Y: 4
+    SpriteComponent:
+      isUI: true
+      SortingLayer: Background
+      LayerDepth: 0
+      Effects: None
+      UseSpriteOrigin: false
+      SprteOrigin:
+        X: 0
+        Y: 0
+    LayoutComponent:
+      ChildElements: []
+      Layout: Stack
+      Direction: Vertical
+      Padding: 0
+      MinWidth: 0
+      MinHeight: 0
+      PreferredHeight: 0
+      PreferredWidth: 0
+      Sprite:
+        $ref: Component
+        GameObjectId: a135f19c-1a08-4f76-8aa5-c51e9460cd00
+        ComponentType: SpriteComponent
+      IsActive: true
+      isHovered: false
+      isClicked: false
+      Hovered:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      HoverExit:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Clicked:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Released:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+    ListBoxComponent:
+      ChildElements: []
+      ItemsPanel:
+        $ref: Component
+        GameObjectId: a135f19c-1a08-4f76-8aa5-c51e9460cd00
+        ComponentType: LayoutComponent
+      CachedItems: []
+      Items: []
+      SelectedIndex: -1
+      IsActive: true
+      isHovered: false
+      isClicked: false
+      Hovered:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      HoverExit:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Clicked:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Released:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+- Name: listboxPopulator
+  Id: 879bd5d4-263a-4dae-9958-3dd192bd5e73
+  ParentId: 00000000-0000-0000-0000-000000000000
+  Tags: []
+  Components:
+    TransformComponent:
+      Origin: TopLeft
+      X: 0
+      Y: 0
+      XOffset: 0
+      YOffset: 0
+      SizeX: 16
+      SizeY: 16
+      ScaleX: 7
+      ScaleY: 7
+      Rotation: 0
+      WorldPosition:
+        X: 0
+        Y: 0
+      LocalPosition:
+        X: 0
+        Y: 0
+      Size:
+        X: 16
+        Y: 16
+      Scale:
+        X: 7
+        Y: 7
+    ListboxPopulater:
+      names: []
+      hasStarted: false
+      listbox:
+        $ref: Component
+        GameObjectId: a135f19c-1a08-4f76-8aa5-c51e9460cd00
+        ComponentType: ListBoxComponent
+      IsActive: false
+- Name: Panel
+  Id: c219df89-2984-4a05-a992-3671c4938ea9
+  ParentId: a70230fd-b41c-4ffd-881e-50fb87be3834
+  Tags: []
+  Components:
+    TransformComponent:
+      Origin: TopLeft
+      X: 520.4348
+      Y: 31
+      XOffset: 230
+      YOffset: 71
+      SizeX: 16
+      SizeY: 16
+      ScaleX: 4
+      ScaleY: 4
+      Rotation: 0
+      WorldPosition:
+        X: 520.4348
+        Y: 31
+      LocalPosition:
+        X: 230
+        Y: 71
+      Size:
+        X: 16
+        Y: 16
+      Scale:
+        X: 4
+        Y: 4
+    SpriteComponent:
+      isUI: true
+      TexturePath: defaultBox
+      SortingLayer: Background
+      LayerDepth: 0
+      Effects: None
+      UseSpriteOrigin: false
+      SprteOrigin:
+        X: 0
+        Y: 0
+    PanelComponent:
+      ChildElements: []
+      Sprite:
+        $ref: Component
+        GameObjectId: c219df89-2984-4a05-a992-3671c4938ea9
+        ComponentType: SpriteComponent
+      IsActive: true
+      isHovered: false
+      isClicked: false
+      Hovered:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      HoverExit:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Clicked:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Released:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+- Name: Guy
+  Id: 798bb577-bf41-400a-840f-2d6ca35a7a97
+  ParentId: a70230fd-b41c-4ffd-881e-50fb87be3834
+  Tags: []
+  Components:
+    TransformComponent:
+      Origin: TopLeft
+      X: 633.4348
+      Y: 145
+      XOffset: 343
+      YOffset: 185
+      SizeX: 16
+      SizeY: 16
+      ScaleX: 4
+      ScaleY: 4
+      Rotation: 0
+      WorldPosition:
+        X: 633.4348
+        Y: 145
+      LocalPosition:
+        X: 343
+        Y: 185
+      Size:
+        X: 16
+        Y: 16
+      Scale:
+        X: 4
+        Y: 4
+    SpriteComponent:
+      isUI: true
+      TexturePath: guy
+      SortingLayer: Background
+      LayerDepth: 0
+      Effects: None
+      UseSpriteOrigin: false
+      SprteOrigin:
+        X: 0
+        Y: 0
+    UIImageComponent:
+      ChildElements: []
+      Sprite:
+        $ref: Component
+        GameObjectId: 798bb577-bf41-400a-840f-2d6ca35a7a97
+        ComponentType: SpriteComponent
+      IsActive: true
+      isHovered: false
+      isClicked: false
+      Hovered:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      HoverExit:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Clicked:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+      Released:
+        $ref: GameEvent
+        TargetGameObjectId: 00000000-0000-0000-0000-000000000000
+        TargetComponentTypeName: ''
+        MethodName: ''
+- Name: New GameObject
+  Id: 31654245-f270-418f-a9db-1360ea0c5f1a
+  ParentId: 00000000-0000-0000-0000-000000000000
+  Tags: []
+  Components:
+    TransformComponent:
+      Origin: TopLeft
+      X: 452.19873
+      Y: 49.90059
+      XOffset: 0
+      YOffset: 0
+      SizeX: 16
+      SizeY: 16
+      ScaleX: 4
+      ScaleY: 4
+      Rotation: 0
+      WorldPosition:
+        X: 452.19873
+        Y: 49.90059
+      LocalPosition:
+        X: 0
+        Y: 0
+      Size:
+        X: 16
+        Y: 16
+      Scale:
+        X: 4
+        Y: 4
+    SpriteComponent:
+      isUI: false
+      TexturePath: defaultBox
+      SortingLayer: Default
+      LayerDepth: 0
+      Effects: None
+      UseSpriteOrigin: false
+      SprteOrigin:
+        X: 0
+        Y: 0

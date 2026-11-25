@@ -86,7 +86,7 @@ namespace Engine.Core.ECS.Components.UI
 
             Guid newItemGuid;
             GameObject newItem;
-            newItem = gameObject.ContextScene.Spawn($"ListItem_{Items.Count + 1}", this.gameObject);
+            newItem = gameObject.ContextScene.Spawn($"ListItem_{Items.Count + 1}", this.gameObject, isRuntimeCreated: true);
             Log.Info($"ListBoxComponent: Adding item '{newItem.Name}' to the scene.");
             newItemGuid = newItem.Id;
             var itemComp = new ListBoxItemComponent()

@@ -107,7 +107,7 @@ namespace Engine.Editor.WinFormsApp1
             }
             else if(baseDescriptor.Name.Equals("DataReference", StringComparison.OrdinalIgnoreCase))
             {
-                _customConverter = new DataReferenceDropdownConverter();
+                _customConverter = new DatabaseReferenceDropdownConverter();
             }
             // Fallback to default engine property converters
             else if(typeof(System.Collections.IList).IsAssignableFrom(propType))

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Engine.Core.Runtime;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -7,21 +8,22 @@ namespace Engine.Core.Serialization
 {
     public static class SolutionGenerator
     {
-        public static void GenerateUserSolution(string projectRoot, string projectName, List<string> selectedPlatforms, string assetsPath, string scriptsPath)
+        public static void GenerateUserSolution(string projectRoot, string projectName, List<string> selectedPlatforms)
         {
             // 1. Locate the engine root source folder
             string engineInstallDir = GetEngineSourceRoot();
 
             // 2. Create the Source/Gameplay project directory
-            string gameplayDir = Path.Combine(projectRoot, "Source", $"{projectName}.Gameplay");
+            string gameplayDir = ProjectPaths.GetGameplayProjectDirectory(projectRoot, projectName);
             Directory.CreateDirectory(gameplayDir);
 
             // 3. Create Gameplay.csproj referencing Engine.Core.csproj and linking Content/Assets
             string engineCorePath = FindProjectFile(engineInstallDir, "Engine.Core.csproj");
             string relativeEngineCore = Path.GetRelativePath(gameplayDir, engineCorePath);
 
-            // Compute relative paths from the gameplay project directory to the passed asset directories
-            string relativeAssetsPath = Path.GetRelativePath(gameplayDir, assetsPath);
+            // Compile the canonical Content/Assets script tree from the gameplay project.
+            string scriptSourceRoot = ProjectPaths.GetScriptSourceRoot(projectRoot);
+            string relativeAssetsPath = Path.GetRelativePath(gameplayDir, scriptSourceRoot);
 
             string gameplayCsprojContent = $@"<Project Sdk=""Microsoft.NET.Sdk"">
   <PropertyGroup>

@@ -23,6 +23,10 @@ namespace Engine.Core.Utilities
 
         public MockGraphicsDeviceService(GraphicsDevice device) => GraphicsDevice = device;
     }
+    /// <summary>
+    /// Sentinel required by the author's external dev-branch MonoGame content builder.
+    /// It has no behaviour of its own; do not delete it as dead code or wire gameplay into it.
+    /// </summary>
     public class MockGame : Game
     {
 

@@ -420,7 +420,12 @@ namespace WinFormsApp1
         private void LoadDefaultSandboxScene()
         {
             // FIX: Rebuilt initialization steps to use the exact structural factory API layout
-            GameScene sandbox = new GameScene() { SceneName = "Main" };
+            GameScene sandbox = new GameScene(
+                EditorContextManager.Context,
+                GetProjectDatabaseManager())
+            {
+                SceneName = "Main"
+            };
             sandbox.InitializeManagers();
 
             var camera = sandbox.Spawn("Main Camera");

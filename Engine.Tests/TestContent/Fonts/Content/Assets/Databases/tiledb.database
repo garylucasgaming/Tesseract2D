@@ -1,0 +1,28 @@
+ID: fb4d2be5-903d-49b3-85b0-af02d448f24a
+DataType: TileDataComponent
+Name: tiledb
+DataEntries:
+  waterTile:
+    DisplayName: waterTile
+    TileSize: 0
+    TileType: Water
+    hasCollider: true
+    AssetID: cdbd33eb-bd9f-4091-826c-5bde028fb442
+  stoneTile:
+    DisplayName: stoneTile
+    TileSize: 0
+    TileType: Stone
+    hasCollider: true
+    AssetID: 3c200462-c7dd-4522-bba3-baf6bceef243
+  grassTile:
+    DisplayName: grassTile
+    TileSize: 0
+    TileType: Grass
+    hasCollider: true
+    AssetID: e62fef10-8292-4f35-be5a-0016d405ad9b
+  airTile:
+    DisplayName: airTile
+    TileSize: 0
+    TileType: Air
+    hasCollider: false
+    AssetID: 79378f0e-3c95-4c49-8f3e-695b32ec4c77
